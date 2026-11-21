@@ -308,6 +308,8 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     ageRating: en.ageCertification || (isShow ? "TV-MA" : "PG-13"),
     genres: genres.length ? genres : [isShow ? "剧情" : "电影"],
     synopsis: zh.shortDescription || en.shortDescription || "",
+    synopsisEn: en.shortDescription || "",
+    genreCodes: rawGenres.map((g) => g.shortName).filter(Boolean).slice(0, 3),
     posterHd: formatImageUrl(rawPoster, "s718"),
     posterThumb: formatImageUrl(rawPoster, "s332"),
     backdrops,
@@ -361,7 +363,7 @@ function daysSinceDateStr(dateStr) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=1200, stale-while-revalidate=3600");
+  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
 
   try {
     const country = "US";

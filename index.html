@@ -19,6 +19,8 @@
         var theme = saved === "light" ? "light" : "dark";
         var bg = theme === "light" ? "#eef2f9" : "#05070d";
         document.documentElement.setAttribute("data-theme", theme);
+        var lang = localStorage.getItem("dramov_lang_v1");
+        document.documentElement.lang = lang === "en" ? "en" : lang === "zh-Hans" ? "zh-CN" : "zh-TW";
         document.documentElement.style.backgroundColor = bg;
         var meta = document.getElementById("themeColorMeta");
         if (meta) meta.setAttribute("content", bg);
@@ -597,6 +599,9 @@
     .detail-topbar.scrolled .detail-center-pill {
       opacity: 1;
     }
+    #platformTopbar.scrolled:not(.show-title) .detail-center-pill {
+      opacity: 0;
+    }
 
     /* Full-bleed edge-to-edge Detail Poster (no box, no margin, bleeds to top 0) */
     .detail-hero {
@@ -935,56 +940,67 @@
     }
 
     /* =========================================================================
-       iOS 26 Liquid Glass 底部导航（Dramov 优化版）
-       原则：通透的底色 + 适度模糊 + 提饱和 + 一圈细高光边；
-       不叠多层光泽，不嵌套 backdrop-filter，不在带模糊元素的父级上做 opacity 动画。
+       iOS 26 Liquid Glass 底部导航（v11）
+       - 两侧与底部留出与 Apple Music 接近的间距
+       - 下滑时导航栏本身“收缩”成左侧圆形（显示当前标签图标），搜索圆钮从右侧弹出，
+         不再是两层交叉淡入淡出
+       - 不嵌套 backdrop-filter；淡入淡出只作用在带模糊的元素自身
        ========================================================================= */
     #bottomNavWrap {
-      --nav-glass-tint: rgba(24, 26, 32, 0.40);
-      --nav-glass-filter: blur(16px) saturate(180%);
+      --nav-h: 62px;
+      --nav-mini: 56px;
+      --nav-ease: cubic-bezier(0.32, 0.72, 0, 1);
+      --nav-glass-tint: rgba(30, 30, 34, 0.46);
+      --nav-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 55%);
+      --nav-glass-filter: blur(20px) saturate(190%);
       --nav-rim: linear-gradient(150deg,
-        rgba(255, 255, 255, 0.50) 0%,
-        rgba(255, 255, 255, 0.10) 28%,
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.10) 30%,
         rgba(255, 255, 255, 0.03) 62%,
-        rgba(255, 255, 255, 0.26) 100%);
+        rgba(255, 255, 255, 0.28) 100%);
       --nav-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.20),
-        0 0 0 0.5px rgba(0, 0, 0, 0.30),
-        0 10px 30px rgba(0, 0, 0, 0.36);
-      --nav-pill: rgba(255, 255, 255, 0.13);
+        inset 0 0 0 0.5px rgba(255, 255, 255, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.20),
+        inset 0 -0.5px 0 rgba(255, 255, 255, 0.08),
+        0 0 0 0.5px rgba(0, 0, 0, 0.28),
+        0 10px 30px rgba(0, 0, 0, 0.34);
+      --nav-pill: rgba(255, 255, 255, 0.14);
       --nav-pill-drag: rgba(255, 255, 255, 0.08);
-      --nav-label: rgba(235, 238, 245, 0.82);
+      --nav-label: rgba(240, 242, 247, 0.86);
+      --nav-active: #4fb3ff;
 
       position: fixed;
-      left: 14px;
-      right: 14px;
+      left: 20px;
+      right: 20px;
       margin: 0 auto;
-      bottom: max(10px, calc(env(safe-area-inset-bottom, 10px) - 14px));
+      bottom: max(14px, calc(env(safe-area-inset-bottom, 14px) - 6px));
       z-index: 50;
-      max-width: 408px;
-      height: 60px;
+      max-width: 420px;
+      height: var(--nav-h);
       pointer-events: none;
     }
     html[data-theme="light"] #bottomNavWrap {
-      --nav-glass-tint: rgba(255, 255, 255, 0.46);
+      --nav-glass-tint: rgba(255, 255, 255, 0.60);
+      --nav-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 60%);
       --nav-rim: linear-gradient(150deg,
-        rgba(255, 255, 255, 0.95) 0%,
-        rgba(255, 255, 255, 0.35) 35%,
-        rgba(255, 255, 255, 0.20) 65%,
-        rgba(255, 255, 255, 0.80) 100%);
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.40) 35%,
+        rgba(255, 255, 255, 0.25) 65%,
+        rgba(255, 255, 255, 0.85) 100%);
       --nav-shadow:
-        inset 0 0.5px 0 rgba(255, 255, 255, 0.90),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
         0 0 0 0.5px rgba(15, 23, 42, 0.08),
         0 8px 26px rgba(15, 23, 42, 0.14);
       --nav-pill: rgba(15, 23, 42, 0.07);
-      --nav-pill-drag: rgba(255, 255, 255, 0.35);
+      --nav-pill-drag: rgba(255, 255, 255, 0.40);
       --nav-label: #1e293b;
+      --nav-active: #007aff;
     }
 
     /* 共用玻璃材质 */
     #bottomNav,
     .mini-glass-orb {
-      background: var(--nav-glass-tint);
+      background: var(--nav-glass-sheen), var(--nav-glass-tint);
       -webkit-backdrop-filter: var(--nav-glass-filter);
               backdrop-filter: var(--nav-glass-filter);
       box-shadow: var(--nav-shadow);
@@ -1001,25 +1017,28 @@
       -webkit-mask-composite: xor;
               mask-composite: exclude;
       pointer-events: none;
+      z-index: 3;
     }
 
     #bottomNav {
       position: absolute;
-      inset: 0;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: auto;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      overflow: visible;
       border-radius: 999px;
       padding: 4px;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       align-items: stretch;
-      transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+      transition: width 0.46s var(--nav-ease), height 0.46s var(--nav-ease);
     }
 
-    /* 选中态：实心的柔和胶囊（Apple Music 的做法），不是空心圆环 */
+    /* 选中态：实心柔和胶囊 */
     #navSlidingLens {
       position: absolute;
       top: 4px;
@@ -1030,13 +1049,15 @@
       z-index: 1;
       pointer-events: none;
       background: var(--nav-pill);
+      box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.16);
       transform: translate3d(0, 0, 0) scale(1);
       transition:
         transform 0.34s cubic-bezier(0.28, 1.14, 0.36, 1),
         top 0.18s cubic-bezier(0.22, 1, 0.36, 1),
         bottom 0.18s cubic-bezier(0.22, 1, 0.36, 1),
         background 0.18s ease,
-        box-shadow 0.18s ease;
+        box-shadow 0.18s ease,
+        opacity 0.16s ease;
       will-change: transform;
     }
     #navSlidingLens::after {
@@ -1053,9 +1074,7 @@
       transition: opacity 0.16s ease;
       pointer-events: none;
     }
-
-    /* 拖动时：透明“水滴”略微鼓出，亮边出现。
-       注意：这里不能再加 backdrop-filter —— 父级 #bottomNav 已有模糊，嵌套后只能“看到”导航栏内部，效果出不来还容易闪。 */
+    /* 拖动时：透明水滴略微鼓出（不加 backdrop-filter，避免嵌套模糊） */
     #bottomNav.lens-dragging #navSlidingLens {
       top: -4px;
       bottom: -4px;
@@ -1077,12 +1096,14 @@
     .nav-btn {
       position: relative;
       z-index: 2;
+      min-width: 0;
+      overflow: hidden;
       border: none;
       background: transparent !important;
       box-shadow: none !important;
       color: var(--nav-label);
       border-radius: 999px;
-      padding: 5px 4px;
+      padding: 5px 2px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1093,75 +1114,214 @@
       letter-spacing: -0.01em;
       white-space: nowrap;
       cursor: pointer;
-      transition: color 0.16s ease, transform 0.16s ease;
+      transition: color 0.16s ease, transform 0.16s ease, opacity 0.16s ease;
     }
     .nav-btn svg {
       width: 22px;
       height: 22px;
       display: block;
+      flex-shrink: 0;
     }
     .nav-btn.active,
     .nav-btn.lens-hover {
-      color: #4fb3ff;
-    }
-    html[data-theme="light"] .nav-btn.active,
-    html[data-theme="light"] .nav-btn.lens-hover {
-      color: #007aff;
+      color: var(--nav-active);
     }
     .nav-btn.lens-hover {
       transform: scale(1.08);
     }
 
-    /* 下滑收起后的两个圆形按钮。
-       淡入淡出放在按钮自己身上，而不是外层容器：
-       外层容器 opacity < 1 时，里面的 backdrop-filter 在动画过程中会失效，结束时才“闪”出来。 */
+    /* 收起后显示在左侧圆形里的“当前标签”图标 */
+    #navMiniIcon {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      color: var(--nav-active);
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.18s ease, transform 0.3s var(--nav-ease);
+      pointer-events: none;
+    }
+    #navMiniIcon svg {
+      width: 23px;
+      height: 23px;
+      display: block;
+    }
+
+    /* 右侧搜索圆钮（收起时出现） */
     #bottomNavMini {
       position: absolute;
       inset: 0;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      align-items: flex-end;
+      justify-content: flex-end;
       pointer-events: none;
     }
     .mini-glass-orb {
       position: relative;
       pointer-events: none;
-      width: 52px;
-      height: 52px;
+      width: var(--nav-mini);
+      height: var(--nav-mini);
       padding: 0;
       border-radius: 999px;
       border: none;
-      color: #ffffff;
+      color: var(--nav-label);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       opacity: 0;
-      transform: scale(0.9) translate3d(0, 6px, 0);
-      transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+      transform: translate3d(-40px, 0, 0) scale(0.6);
+      transition: opacity 0.22s ease, transform 0.46s var(--nav-ease);
     }
     .mini-glass-orb svg {
       width: 22px;
       height: 22px;
       display: block;
-    }
-    html[data-theme="light"] .mini-glass-orb {
-      color: #0f172a;
+      position: relative;
+      z-index: 2;
     }
 
+    /* ===== 收起状态 ===== */
     #bottomNavWrap.minimized #bottomNav {
+      width: var(--nav-mini);
+      height: var(--nav-mini);
+      overflow: hidden;
+      cursor: pointer;
+    }
+    #bottomNavWrap.minimized .nav-btn,
+    #bottomNavWrap.minimized #navSlidingLens {
       opacity: 0;
       pointer-events: none;
-      transform: scale(0.92) translate3d(0, 8px, 0);
+      transition-duration: 0.12s;
+    }
+    #bottomNavWrap.minimized #navMiniIcon {
+      opacity: 1;
+      transform: scale(1);
+      transition-delay: 0.1s;
     }
     #bottomNavWrap.minimized .mini-glass-orb {
       opacity: 1;
       pointer-events: auto;
       transform: none;
+      transition-delay: 0.06s;
     }
-    #bottomNavWrap.minimized .mini-glass-orb:active {
+    #bottomNavWrap.minimized .mini-glass-orb:active,
+    #bottomNavWrap.minimized #bottomNav:active {
       transform: scale(0.92);
     }
+    /* 展开时：先让导航栏伸展，再淡入标签（只延迟 opacity，切换标签的颜色变化不受影响） */
+    #bottomNavWrap:not(.minimized) .nav-btn {
+      transition: color 0.16s ease, transform 0.16s ease, opacity 0.2s ease 0.14s;
+    }
+    #bottomNavWrap:not(.minimized) #navSlidingLens {
+      transition:
+        transform 0.34s cubic-bezier(0.28, 1.14, 0.36, 1),
+        top 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+        bottom 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.18s ease,
+        box-shadow 0.18s ease,
+        opacity 0.2s ease 0.14s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #bottomNav, .mini-glass-orb, #navMiniIcon, .nav-btn, #navSlidingLens { transition: none !important; }
+    }
+
+    /* 首页热播 Top 10：大号描边排名数字半藏在海报后面 */
+    .rank-card {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: flex-end;
+      scroll-snap-align: start;
+      cursor: pointer;
+      contain: layout paint;
+    }
+    .rank-num {
+      position: relative;
+      z-index: 0;
+      align-self: flex-start;
+      margin-top: 96px;
+      margin-right: -16px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      font-size: 104px;
+      font-weight: 900;
+      line-height: 0.82;
+      letter-spacing: -0.08em;
+      color: var(--bg-solid);
+      -webkit-text-stroke: 2px rgba(255, 255, 255, 0.42);
+      user-select: none;
+    }
+    html[data-theme="light"] .rank-num {
+      -webkit-text-stroke: 2px rgba(15, 23, 42, 0.28);
+    }
+    .rank-body {
+      position: relative;
+      z-index: 1;
+      width: 118px;
+    }
+    .rank-body .mixed-poster-box {
+      width: 118px;
+      height: 174px;
+      box-shadow: 6px 0 18px rgba(0, 0, 0, 0.45);
+    }
+    .rank-title {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text-primary);
+    }
+    .rank-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .top10-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #f8fafc;
+      background: linear-gradient(135deg, #e11d48, #f97316);
+      padding: 2px 6px;
+      border-radius: 5px;
+      transform: translateY(-2px);
+    }
+
+    .lang-seg { display: flex; }
+    .lang-seg button { flex: 1 1 0; padding: 7px 6px; font-size: 13px; }
+
+    /* 二级页排序切换（iOS 分段控件样式） */
+    .sort-seg {
+      display: inline-flex;
+      padding: 2px;
+      border-radius: 9px;
+      background: rgba(118, 118, 128, 0.24);
+      gap: 0;
+    }
+    .sort-seg button {
+      border: none;
+      background: transparent;
+      color: #e2e8f0;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 5px 13px;
+      border-radius: 7px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.18s ease, color 0.18s ease;
+    }
+    .sort-seg button.active {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
     /* Cross-Platform Mixed Popularity Shelves ('热播电视剧' & '热播电影') */
     .mixed-shelf-wrap {
       padding: 4px 0 12px 0;
@@ -1422,9 +1582,12 @@
       <!-- Cross-Platform Mixed Popularity Shelf 1: Hot TV Series -->
       <div class="mixed-shelf-wrap">
         <div class="mixed-shelf-header" data-openfeed="hot_shows" role="button" tabindex="0">
-          <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电视剧</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+            <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电视剧</span>
+            <span class="top10-badge">TOP 10</span>
+          </div>
           <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
-            <span>热播库</span>
+            <span>全部</span>
             <span style="font-size: 16px; line-height: 1;">›</span>
           </div>
         </div>
@@ -1434,9 +1597,12 @@
       <!-- Cross-Platform Mixed Popularity Shelf 2: Hot Movies -->
       <div class="mixed-shelf-wrap" style="margin-top: 4px; margin-bottom: 6px;">
         <div class="mixed-shelf-header" data-openfeed="hot_movies" role="button" tabindex="0">
-          <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电影</div>
+          <div style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+            <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电影</span>
+            <span class="top10-badge">TOP 10</span>
+          </div>
           <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
-            <span>热播库</span>
+            <span>全部</span>
             <span style="font-size: 16px; line-height: 1;">›</span>
           </div>
         </div>
@@ -1538,14 +1704,13 @@
         </div>
       </div>
 
-      <!-- Optional TMDB Key -->
+      <!-- 界面语言 -->
       <div class="surface-card" style="margin-bottom: 14px;">
-        <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">可选扩展海报源（TMDB）</div>
-        <div class="row-center">
-          <input id="tmdbKeyInput" type="password" class="app-input" placeholder="可选：填入 TMDB Key 或 Read Token（留空正常使用）" />
-          <button id="saveTmdbBtn" type="button" class="btn-action whitespace-nowrap" style="flex: 0 0 auto; width: auto; height: 38px; padding: 0 14px;">
-            保存
-          </button>
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">界面语言</div>
+        <div id="langSeg" class="sort-seg lang-seg" role="tablist" data-i18n-skip>
+          <button type="button" data-lang="zh-Hant">繁體中文</button>
+          <button type="button" data-lang="zh-Hans">简体中文</button>
+          <button type="button" data-lang="en">English</button>
         </div>
       </div>
 
@@ -1581,6 +1746,7 @@
   <div id="bottomNavWrap">
     <nav id="bottomNav" aria-label="主导航">
       <div id="navSlidingLens" aria-hidden="true"></div>
+      <span id="navMiniIcon" aria-hidden="true"></span>
       <button type="button" class="nav-btn active" data-nav="home" data-navidx="0">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.25 8.25a.75.75 0 0 1-1.06 1.06l-.72-.72V19.5a2.25 2.25 0 0 1-2.25 2.25h-3a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75h-3A2.25 2.25 0 0 1 4.99 19.5v-7.07l-.72.72a.75.75 0 1 1-1.06-1.06l8.26-8.25Z"/>
@@ -1609,12 +1775,7 @@
       </button>
     </nav>
 
-    <div id="bottomNavMini" aria-label="快捷收起导航">
-      <button type="button" id="minHomeBtn" class="mini-glass-orb" aria-label="展开导航栏">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.25 8.25a.75.75 0 0 1-1.06 1.06l-.72-.72V19.5a2.25 2.25 0 0 1-2.25 2.25h-3a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75h-3A2.25 2.25 0 0 1 4.99 19.5v-7.07l-.72.72a.75.75 0 1 1-1.06-1.06l8.26-8.25Z"/>
-        </svg>
-      </button>
+    <div id="bottomNavMini" aria-label="搜索">
       <button type="button" id="minSearchBtn" class="mini-glass-orb" aria-label="搜索">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7"/>
@@ -1635,20 +1796,21 @@
     </div>
     <div id="platformScroller" class="shell-scroller">
       <div id="platformHeroBanner" class="plat-hero-banner">
-        <div style="height: 40px;"></div>
-        <div class="row-center" style="gap: 12px; margin-top: 6px;">
+        <div style="height: 46px;"></div>
+        <div class="row-center" style="gap: 12px; margin-top: 4px;">
           <div id="platformHeroIcon" style="width: 44px; height: 44px; border-radius: 12px; overflow: hidden; flex-shrink: 0;"></div>
-          <div>
-            <div id="platformHeroTitle" style="font-size: 28px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1;">Netflix</div>
-            <div id="platformHeroSub" style="font-size: 12.5px; color: rgba(226,232,240,0.76); margin-top: 3px;">平台精选电视剧与电影 · 热播库</div>
-          </div>
+          <div id="platformHeroTitle" style="font-size: 28px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1;">Netflix</div>
         </div>
       </div>
 
       <div style="max-width: 760px; margin: 0 auto; padding: 12px 16px 24px 16px;">
-        <div class="row-between" style="margin-bottom: 6px;">
-          <div id="platformListHeading" style="font-size: 16.5px; font-weight: 800; color: #f8fafc;">热播库</div>
-          <div id="platformListSortHint" style="font-size: 11.5px; color: #8b9bb4;">电视剧与电影 · 按评分与年份排序</div>
+        <div class="row-between" style="margin-bottom: 8px; min-height: 32px;">
+          <div id="platformListHeading" style="font-size: 16.5px; font-weight: 800; color: #f8fafc;">片库</div>
+          <div id="platformSortSeg" class="sort-seg" role="tablist">
+            <button type="button" data-sort="curated" class="active">精选</button>
+            <button type="button" data-sort="new">最新</button>
+            <button type="button" data-sort="score">高分</button>
+          </div>
         </div>
         <div id="platformAcclaimedList"></div>
         <div id="platformLoadSentinel" style="padding: 22px 0; text-align: center; font-size: 12.5px; color: #8b9bb4;">
@@ -1749,7 +1911,216 @@
       const POSTER_CACHE_KEY = "dramov_media_enrich_v3";
       const TOKEN_KEY = "dramov_gist_token_v1";
       const GIST_ID_KEY = "dramov_gist_id_v1";
-      const TMDB_KEY = "dramov_tmdb_key_v1";
+      // =========================================================================
+      // 界面语言：繁體中文（預設）/ 简体中文 / English
+      // - 繁體：界面文字用整句詞典（台灣用語），其餘（片名、簡介等）逐字轉換
+      // - 简体：把資料裡的繁體字轉成簡體
+      // - English：界面用詞典翻譯；片名、簡介、類型、演員直接用英文資料
+      // 切換語言後重新載入頁面，不需要處理“還原”
+      // =========================================================================
+      const LANG_KEY = "dramov_lang_v1";
+      const LANG = (() => {
+        try {
+          const v = localStorage.getItem(LANG_KEY);
+          return v === "zh-Hans" || v === "en" ? v : "zh-Hant";
+        } catch (e) {
+          return "zh-Hant";
+        }
+      })();
+      const I18N_S2T_PAIRS = "万萬与與丑醜专專业業丛叢东東丝絲丢丟两兩严嚴丧喪个個丰豐临臨为為丽麗举舉么麼义義乌烏乐樂乔喬习習乡鄉书書买買乱亂争爭于於亏虧云雲亘亙亚亞产產亩畝亲親亵褻亸嚲亿億仅僅仆僕从從仑侖仓倉仪儀们們价價众眾优優伙夥会會伛傴伞傘伟偉传傳伡俥伣俔伤傷伥倀伦倫伧傖伪偽伫佇体體余餘佣傭佥僉侠俠侣侶侥僥侦偵侧側侨僑侩儈侪儕侬儂侭儘俣俁俦儔俨儼俩倆俪儷俫倈俭儉债債倾傾偬傯偻僂偾僨偿償傤儎傥儻傧儐储儲傩儺儿兒兑兌兖兗党黨兰蘭关關兴興兹茲养養兽獸冁囅内內冈岡册冊写寫军軍农農冯馮冲衝决決况況冻凍净淨凄悽准準凉涼减減凑湊凛凜几幾凤鳳凫鳧凭憑凯凱凶兇击擊凿鑿刍芻划劃刘劉则則刚剛创創删刪别別刬剗刭剄刹剎刽劊刾㓨刿劌剀剴剂劑剐剮剑劍剥剝剧劇劝勸办辦务務劢勱动動励勵劲勁劳勞势勢勋勳勚勩匀勻匦匭匮匱区區医醫华華协協单單卖賣占佔卢盧卤滷卧臥卫衛却卻卺巹厂廠厅廳历歷厉厲压壓厌厭厍厙厐龎厕廁厘釐厢廂厣厴厦廈厨廚厩廄厮廝县縣叁叄参參叆靉叇靆双雙发發变變叙敘叠疊台臺叶葉号號叹嘆叽嘰吁籲后後吓嚇吕呂吗嗎吨噸听聽启啟吴吳呐吶呒嘸呓囈呕嘔呖嚦呗唄员員呙咼呛嗆呜嗚咏詠咙嚨咛嚀咝噝咤吒咨諮咸鹹响響哑啞哒噠哓嘵哔嗶哕噦哗譁哙噲哜嚌哝噥哟喲唛嘜唝嗊唠嘮唡啢唢嗩唤喚啧嘖啬嗇啭囀啮齧啯嘓啰囉啴嘽啸嘯喷噴喽嘍喾嚳嗫囁嗳噯嘘噓嘤嚶嘱囑噜嚕嚣囂团團园園囱囪围圍囵圇国國图圖圆圓圣聖圹壙场場坏壞块塊坚堅坛壇坜壢坝壩坞塢坟墳坠墜垄壟垅壠垆壚垒壘垦墾垩堊垫墊垭埡垯墶垱壋垲塏垴堖埘塒埙壎埚堝堑塹堕墮塆壪墙牆壮壯声聲壳殼壶壺壸壼处處备備复復够夠头頭夸誇夹夾夺奪奁奩奂奐奋奮奖獎奥奧妆妝妇婦妈媽妩嫵妪嫗妫媯姗姍姹奼娄婁娅婭娆嬈娇嬌娈孌娱娛娲媧娴嫻婳嫿婴嬰婵嬋婶嬸媪媼媭嬃嫒嬡嫔嬪嫱嬙嬷嬤孙孫学學孪孿宁寧宝寶实實宠寵审審宪憲宫宮宽寬宾賓寝寢对對寻尋导導寿壽将將尔爾尘塵尝嘗尧堯尴尷尸屍尽盡层層屃屓屉屜届屆属屬屡屢屦屨屿嶼岁歲岂豈岖嶇岗崗岘峴岚嵐岛島岩巖岭嶺岳嶽岽崬岿巋峃嶨峄嶧峡峽峣嶢峤嶠峥崢峦巒崂嶗崃崍崄嶮崭嶄嵘嶸嵚嶔嵝嶁巅巔巩鞏巯巰币幣帅帥师師帏幃帐帳帘簾帜幟带帶帧幀帮幫帱幬帻幘帼幗幂冪干幹并並广廣庄莊庆慶庐廬庑廡库庫应應庙廟庞龐废廢庼廎廪廩开開异異弃棄弑弒张張弥彌弪弳弯彎弹彈强強归歸当當录錄彟彠彦彥彨彲彻徹征徵径徑徕徠忆憶忏懺忧憂忾愾怀懷态態怂慫怃憮怄慪怅悵怆愴怜憐总總怼懟怿懌恋戀恒恆恳懇恶惡恸慟恹懨恺愷恻惻恼惱恽惲悦悅悫愨悬懸悭慳悮悞悯憫惊驚惧懼惨慘惩懲惫憊惬愜惭慚惮憚惯慣愠慍愤憤愦憒愿願慑懾慭憖懑懣懒懶懔懍戆戇戋戔戏戲戗戧战戰戬戩戯戱户戶扑撲托託执執扩擴扪捫扫掃扬揚扰擾抚撫抛拋抟摶抠摳抡掄抢搶护護报報担擔拟擬拢攏拣揀拥擁拦攔拧擰拨撥择擇挂掛挚摯挛攣挜掗挝撾挞撻挟挾挠撓挡擋挢撟挣掙挤擠挥揮挦撏捝挩捞撈损損捡撿换換捣搗据據掳擄掴摑掷擲掸撣掺摻掼摜揽攬揾搵揿撳搀攙搁擱搂摟搄揯搅攪携攜摄攝摅攄摆擺摇搖摈擯摊攤撄攖撑撐撵攆撷擷撸擼撺攛擜㩵擞擻攒攢敌敵敚敓敛斂敩斆数數斋齋斓斕斗鬥斩斬断斷无無旧舊时時旷曠旸暘昙曇昵暱昼晝昽曨显顯晋晉晒曬晓曉晔曄晕暈晖暉暂暫暧曖术術朴樸机機杀殺杂雜权權杠槓条條来來杨楊杩榪杰傑极極构構枞樅枢樞枣棗枥櫪枧梘枨棖枪槍枫楓枭梟柜櫃柠檸柽檉栀梔栅柵标標栈棧栉櫛栊櫳栋棟栌櫨栎櫟栏欄树樹栖棲栗慄样樣栾欒桠椏桡橈桢楨档檔桤榿桥橋桦樺桧檜桨槳桩樁桪樳梦夢梼檮梾棶梿槤检檢棁梲棂欞椁槨椝槼椟櫝椠槧椢槶椤欏椫樿椭橢椮槮楼樓榄欖榅榲榇櫬榈櫚榉櫸榝樧槚檟槛檻槟檳槠櫧横橫樯檣樱櫻橥櫫橱櫥橹櫓橼櫞檩檁欢歡欤歟欧歐歼殲殁歿殇殤残殘殒殞殓殮殚殫殡殯殴毆毁毀毂轂毕畢毙斃毡氈毵毿氇氌气氣氢氫氩氬氲氳汇匯汉漢汤湯汹洶沄澐沟溝没沒沣灃沤漚沥瀝沦淪沧滄沨渢沩溈沪滬泞濘泪淚泶澩泷瀧泸瀘泺濼泻瀉泼潑泽澤泾涇洁潔洒灑洼窪浃浹浅淺浆漿浇澆浈湞浉溮浊濁测測浍澮济濟浏瀏浐滻浑渾浒滸浓濃浔潯浕濜涂塗涌湧涚涗涛濤涝澇涞淶涟漣涠潿涡渦涢溳涣渙涤滌润潤涧澗涨漲涩澀淀澱渊淵渌淥渍漬渎瀆渐漸渑澠渔漁渖瀋渗滲温溫游遊湾灣湿溼溁濚溃潰溅濺溆漵溇漊滗潷滚滾滞滯滟灩滠灄满滿滢瀅滤濾滥濫滦灤滨濱滩灘滪澦潆瀠潇瀟潋瀲潍濰潜潛潴瀦澛瀂澜瀾濑瀨濒瀕灏灝灭滅灯燈灵靈灾災灿燦炀煬炉爐炖燉炜煒炝熗点點炼煉炽熾烁爍烂爛烃烴烛燭烟煙烦煩烧燒烨燁烩燴烫燙烬燼热熱焕煥焖燜焘燾煴熅熏燻爱愛爷爺牍牘牦犛牵牽牺犧犊犢状狀犷獷犸獁犹猶狈狽狝獮狞獰独獨狭狹狮獅狯獪狰猙狱獄狲猻猃獫猎獵猕獼猡玀猪豬猫貓猬蝟献獻獭獺玑璣玙璵玚瑒玛瑪玮瑋环環现現玱瑲玺璽珐琺珑瓏珰璫珲琿琎璡琏璉琐瑣琼瓊瑶瑤瑷璦瑸璸璎瓔瓒瓚瓮甕瓯甌电電画畫畅暢畴疇疖癤疗療疟瘧疠癘疡瘍疬癧疭瘲疮瘡疯瘋疱皰疴痾痈癰痉痙痒癢痖瘂痨癆痪瘓痫癇瘅癉瘆瘮瘗瘞瘘瘻瘪癟瘫癱瘾癮瘿癭癞癩癣癬癫癲皑皚皱皺皲皸盏盞盐鹽监監盖蓋盗盜盘盤眍瞘眦眥眬矓睁睜睐睞睑瞼瞆瞶瞒瞞瞩矚矫矯矶磯矾礬矿礦砀碭码碼砖磚砗硨砚硯砜碸砺礪砻礱砾礫础礎硁硜硕碩硖硤硗磽硙磑硚礄确確硵磠硷礆碍礙碛磧碜磣碱鹼礼禮祃禡祎禕祢禰祯禎祷禱祸禍禀稟禄祿禅禪离離秃禿秆稈种種积積称稱秽穢秾穠稆穭税稅稣穌稳穩穑穡穞穭穷窮窃竊窍竅窎窵窑窯窜竄窝窩窥窺窦竇窭窶竖豎竞競笃篤笋筍笔筆笕筧笺箋笼籠笾籩筑築筚篳筛篩筜簹筝箏筹籌筼篔签籤筿篠简簡箓籙箦簀箧篋箨籜箩籮箪簞箫簫篑簣篓簍篮籃篯籛篱籬簖籪籁籟籴糴类類籼秈粜糶粝糲粤粵粪糞粮糧糁糝糇餱糍餈紧緊絷縶緼縕縆緪纟糹纠糾纡紆红紅纣紂纤纖纥紇约約级級纨紈纩纊纪紀纫紉纬緯纭紜纮紘纯純纰紕纱紗纲綱纳納纴紝纵縱纶綸纷紛纸紙纹紋纺紡纻紵纼紖纽紐纾紓线線绀紺绁紲绂紱练練组組绅紳细細织織终終绉縐绊絆绋紼绌絀绍紹绎繹经經绐紿绑綁绒絨结結绔絝绕繞绖絰绗絎绘繪给給绚絢绛絳络絡绝絕绞絞统統绠綆绡綃绢絹绣繡绤綌绥綏绦絛继繼绨綈绩績绪緒绫綾绬緓续續绮綺绯緋绰綽绱鞝绲緄绳繩维維绵綿绶綬绷繃绸綢绹綯绺綹绻綣综綜绽綻绾綰绿綠缀綴缁緇缂緙缃緗缄緘缅緬缆纜缇緹缈緲缉緝缊縕缋繢缌緦缍綞缎緞缏緶缐線缑緱缒縋缓緩缔締缕縷编編缗緡缘緣缙縉缚縛缛縟缜縝缝縫缞縗缟縞缠纏缡縭缢縊缣縑缤繽缥縹缦縵缧縲缨纓缩縮缪繆缫繅缬纈缭繚缮繕缯繒缰韁缱繾缲繰缳繯缴繳缵纘罂罌网網罗羅罚罰罢罷罴羆羁羈羟羥羡羨翘翹翙翽翚翬耢耮耧耬耸聳耻恥聂聶聋聾职職聍聹联聯聩聵聪聰肃肅肠腸肤膚肮骯肴餚肾腎肿腫胀脹胁脅胆膽胜勝胧朧胨腖胪臚胫脛胶膠脉脈脍膾脏髒脐臍脑腦脓膿脔臠脚腳脱脫脶腡脸臉腊臘腌醃腘膕腭顎腻膩腼靦腽膃腾騰膑臏膻羶臜臢舆輿舣艤舰艦舱艙舻艫艰艱艳豔艺藝节節芈羋芗薌芜蕪芦蘆苁蓯苇葦苈藶苋莧苌萇苍蒼苎苧苏蘇苧薴苹蘋范範茎莖茏蘢茑蔦茔塋茕煢茧繭荆荊荐薦荙薘荚莢荛蕘荜蓽荝萴荞蕎荟薈荠薺荡蕩荣榮荤葷荥滎荦犖荧熒荨蕁荩藎荪蓀荫蔭荬蕒荭葒荮葤药藥莅蒞莱萊莲蓮莳蒔莴萵莶薟获獲莸蕕莹瑩莺鶯莼蓴萚蘀萝蘿萤螢营營萦縈萧蕭萨薩葱蔥蒀蒕蒇蕆蒉蕢蒋蔣蒌蔞蒏醟蓝藍蓟薊蓠蘺蓣蕷蓥鎣蓦驀蔂虆蔷薔蔹蘞蔺藺蔼藹蕰薀蕲蘄蕴蘊薮藪藓蘚藴蘊蘖櫱虏虜虑慮虚虛虫蟲虬虯虮蟣虱蝨虽雖虾蝦虿蠆蚀蝕蚁蟻蚂螞蚃蠁蚕蠶蚝蠔蚬蜆蛊蠱蛎蠣蛏蟶蛮蠻蛰蟄蛱蛺蛲蟯蛳螄蛴蠐蜕蛻蜗蝸蜡蠟蝇蠅蝈蟈蝉蟬蝎蠍蝼螻蝾蠑螀螿螨蟎蟏蠨衅釁衔銜补補衬襯衮袞袄襖袅嫋袆褘袜襪袭襲袯襏装裝裆襠裈褌裢褳裣襝裤褲裥襉褛褸褴襤襕襴见見观觀觃覎规規觅覓视視觇覘览覽觉覺觊覬觋覡觌覿觍覥觎覦觏覯觐覲觑覷觞觴触觸觯觶訚誾詟讋誉譽誊謄讠訁计計订訂讣訃认認讥譏讦訐讧訌讨討让讓讪訕讫訖讬託训訓议議讯訊记記讱訒讲講讳諱讴謳讵詎讶訝讷訥许許讹訛论論讻訩讼訟讽諷设設访訪诀訣证證诂詁诃訶评評诅詛识識诇詗诈詐诉訴诊診诋詆诌謅词詞诎詘诏詔诐詖译譯诒詒诓誆诔誄试試诖詿诗詩诘詰诙詼诚誠诛誅诜詵话話诞誕诟詬诠詮诡詭询詢诣詣诤諍该該详詳诧詫诨諢诩詡诪譸诫誡诬誣语語诮誚误誤诰誥诱誘诲誨诳誑说說诵誦诶誒请請诸諸诹諏诺諾读讀诼諑诽誹课課诿諉谀諛谁誰谂諗调調谄諂谅諒谆諄谇誶谈談谉讅谊誼谋謀谌諶谍諜谎謊谏諫谐諧谑謔谒謁谓謂谔諤谕諭谖諼谗讒谘諮谙諳谚諺谛諦谜謎谝諞谞諝谟謨谠讜谡謖谢謝谣謠谤謗谥諡谦謙谧謐谨謹谩謾谪謫谫譾谬謬谭譚谮譖谯譙谰讕谱譜谲譎谳讞谴譴谵譫谶讖豮豶贝貝贞貞负負贠貟贡貢财財责責贤賢败敗账賬货貨质質贩販贪貪贫貧贬貶购購贮貯贯貫贰貳贱賤贲賁贳貰贴貼贵貴贶貺贷貸贸貿费費贺賀贻貽贼賊贽贄贾賈贿賄赀貲赁賃赂賂赃贓资資赅賅赆贐赇賕赈賑赉賚赊賒赋賦赌賭赍齎赎贖赏賞赐賜赑贔赒賙赓賡赔賠赕賧赖賴赗賵赘贅赙賻赚賺赛賽赜賾赝贗赞贊赟贇赠贈赡贍赢贏赣贛赪赬赵趙赶趕趋趨趱趲趸躉跃躍跄蹌跖蹠跞躒践踐跶躂跷蹺跸蹕跹躚跻躋踌躊踪蹤踬躓踯躑蹑躡蹒蹣蹰躕蹿躥躏躪躜躦躯軀輼轀车車轧軋轨軌轩軒轪軑轫軔转轉轭軛轮輪软軟轰轟轱軲轲軻轳轤轴軸轵軹轶軼轷軤轸軫轹轢轺軺轻輕轼軾载載轾輊轿轎辀輈辁輇辂輅较較辄輒辅輔辆輛辇輦辈輩辉輝辊輥辋輞辌輬辍輟辎輜辏輳辐輻辑輯辒轀输輸辔轡辕轅辖轄辗輾辘轆辙轍辚轔辞辭辟闢辩辯辫辮边邊辽遼达達迁遷过過迈邁运運还還这這进進远遠违違连連迟遲迩邇迳逕迹跡适適选選逊遜递遞逦邐逻邏遗遺遥遙邓鄧邝鄺邬鄔邮郵邹鄒邺鄴邻鄰郁鬱郏郟郐鄶郑鄭郓鄆郦酈郧鄖郸鄲酂酇酝醞酦醱酱醬酽釅酾釃酿釀醖醞采採释釋里裡鉴鑑銮鑾錾鏨钅釒钆釓钇釔针針钉釘钊釗钋釙钌釕钍釷钎釺钏釧钐釤钑鈒钒釩钓釣钔鍆钕釹钖鍚钗釵钘鈃钙鈣钚鈈钛鈦钜鉅钝鈍钞鈔钟鍾钠鈉钡鋇钢鋼钣鈑钤鈐钥鑰钦欽钧鈞钨鎢钩鉤钪鈧钫鈁钬鈥钭鈄钮鈕钯鈀钰鈺钱錢钲鉦钳鉗钴鈷钵缽钶鈳钷鉕钸鈽钹鈸钺鉞钻鑽钼鉬钽鉭钾鉀钿鈿铀鈾铁鐵铂鉑铃鈴铄鑠铅鉛铆鉚铇鉋铈鈰铉鉉铊鉈铋鉍铌鈮铍鈹铎鐸铏鉶铐銬铑銠铒鉺铓鋩铔錏铕銪铖鋮铗鋏铘鋣铙鐃铚銍铛鐺铜銅铝鋁铞銱铟銦铠鎧铡鍘铢銖铣銑铤鋌铥銩铦銛铧鏵铨銓铩鎩铪鉿铫銚铬鉻铭銘铮錚铯銫铰鉸铱銥铲鏟铳銃铴鐋铵銨银銀铷銣铸鑄铹鐒铺鋪铻鋙铼錸铽鋱链鏈铿鏗销銷锁鎖锂鋰锃鋥锄鋤锅鍋锆鋯锇鋨锈鏽锉銼锊鋝锋鋒锌鋅锍鋶锎鐦锏鐧锐銳锑銻锒鋃锓鋟锔鋦锕錒锖錆锗鍺锘鍩错錯锚錨锛錛锜錡锝鍀锞錁锟錕锠錩锡錫锢錮锣鑼锤錘锥錐锦錦锧鑕锨鍁锩錈锪鍃锫錇锬錟锭錠键鍵锯鋸锰錳锱錙锲鍥锳鍈锴鍇锵鏘锶鍶锷鍔锸鍤锹鍬锺鍾锻鍛锼鎪锽鍠锾鍰锿鎄镀鍍镁鎂镂鏤镃鎡镄鐨镅鎇镆鏌镇鎮镈鎛镉鎘镊鑷镋钂镌鐫镍鎳镎鎿镏鎦镐鎬镑鎊镒鎰镓鎵镔鑌镕鎔镖鏢镗鏜镘鏝镙鏍镚鏰镛鏞镜鏡镝鏑镞鏃镟鏇镠鏐镡鐔镢钁镣鐐镤鏷镥鑥镦鐓镧鑭镨鐠镩鑹镪鏹镫鐙镬鑊镭鐳镮鐶镯鐲镰鐮镱鐿镲鑔镳鑣镴鑞镵鑱镶鑲长長门門闩閂闪閃闫閆闬閈闭閉问問闯闖闰閏闱闈闲閒闳閎间間闵閔闶閌闷悶闸閘闹鬧闺閨闻聞闼闥闽閩闾閭闿闓阀閥阁閣阂閡阃閫阄鬮阅閱阆閬阇闍阈閾阉閹阊閶阋鬩阌閿阍閽阎閻阏閼阐闡阑闌阒闃阓闠阔闊阕闋阖闔阗闐阘闒阙闕阚闞阛闤队隊阳陽阴陰阵陣阶階际際陆陸陇隴陈陳陉陘陕陝陦隯陧隉陨隕险險随隨隐隱隶隸隽雋难難雇僱雏雛雠讎雳靂雾霧霁霽霉黴霡霢霭靄靓靚靔靝静靜靥靨鞑韃鞒鞽鞯韉鞲韝韦韋韧韌韨韍韩韓韪韙韫韞韬韜韵韻页頁顶頂顷頃顸頇项項顺順须須顼頊顽頑顾顧顿頓颀頎颁頒颂頌颃頏预預颅顱领領颇頗颈頸颉頡颊頰颋頲颌頜颍潁颎熲颏頦颐頤频頻颒頮颓頹颔頷颕頴颖穎颗顆题題颙顒颚顎颛顓颜顏额額颞顳颟顢颠顛颡顙颢顥颣纇颤顫颥顬颦顰颧顴风風飏颺飐颭飑颮飒颯飓颶飔颸飕颼飖颻飗飀飘飄飙飆飚飈飞飛飨饗餍饜饣飠饤飣饥飢饦飥饧餳饨飩饩餼饪飪饫飫饬飭饭飯饮飲饯餞饰飾饱飽饲飼饳飿饴飴饵餌饶饒饷餉饸餄饹餎饺餃饻餏饼餅饽餑饾餖饿餓馀餘馁餒馂餕馃餜馄餛馅餡馆館馇餷馈饋馉餶馊餿馋饞馌饁馍饃馎餺馏餾馐饈馑饉馒饅馓饊馔饌馕饢马馬驭馭驮馱驯馴驰馳驱驅驲馹驳駁驴驢驵駔驶駛驷駟驸駙驹駒驺騶驻駐驼駝驽駑驾駕驿驛骀駘骁驍骂罵骃駰骄驕骅驊骆駱骇駭骈駢骉驫骊驪骋騁验驗骍騂骎駸骏駿骐騏骑騎骒騍骓騅骔騌骕驌骖驂骗騙骘騭骙騤骚騷骛騖骜驁骝騮骞騫骟騸骠驃骡騾骢驄骣驏骤驟骥驥骦驦骧驤髅髏髋髖髌髕鬓鬢鬶鬹魇魘魉魎鱼魚鱽魛鱾魢鱿魷鲀魨鲁魯鲂魴鲃䰾鲄魺鲅鮁鲆鮃鲇鯰鲈鱸鲉鮋鲊鮓鲋鮒鲌鮊鲍鮑鲎鱟鲏鮍鲐鮐鲑鮭鲒鮚鲓鮳鲔鮪鲕鮞鲖鮦鲗鰂鲘鮜鲙鱠鲚鱭鲛鮫鲜鮮鲝鮺鲞鯗鲟鱘鲠鯁鲡鱺鲢鰱鲣鰹鲤鯉鲥鰣鲦鰷鲧鯀鲨鯊鲩鯇鲪鮶鲫鯽鲬鯒鲭鯖鲮鯪鲯鯕鲰鯫鲱鯡鲲鯤鲳鯧鲴鯝鲵鯢鲶鯰鲷鯛鲸鯨鲹鰺鲺鯴鲻鯔鲼鱝鲽鰈鲾鰏鲿鱨鳀鯷鳁鰮鳂鰃鳃鰓鳄鱷鳅鰍鳆鰒鳇鰉鳈鰁鳉鱂鳊鯿鳋鰠鳌鰲鳍鰭鳎鰨鳏鰥鳐鰩鳑鰟鳒鰜鳓鰳鳔鰾鳕鱈鳖鱉鳗鰻鳘鰵鳙鱅鳚䲁鳛鰼鳜鱖鳝鱔鳞鱗鳟鱒鳠鱯鳡鱤鳢鱧鳣鱣鳤䲘鸟鳥鸠鳩鸡雞鸢鳶鸣鳴鸤鳲鸥鷗鸦鴉鸧鶬鸨鴇鸩鴆鸪鴣鸫鶇鸬鸕鸭鴨鸮鴞鸯鴦鸰鴒鸱鴟鸲鴝鸳鴛鸴鷽鸵鴕鸶鷥鸷鷙鸸鴯鸹鴰鸺鵂鸻鴴鸼鵃鸽鴿鸾鸞鸿鴻鹀鵐鹁鵓鹂鸝鹃鵑鹄鵠鹅鵝鹆鵒鹇鷳鹈鵜鹉鵡鹊鵲鹋鶓鹌鵪鹍鵾鹎鵯鹏鵬鹐鵮鹑鶉鹒鶊鹓鵷鹔鷫鹕鶘鹖鶡鹗鶚鹘鶻鹙鶖鹚鷀鹛鶥鹜鶩鹝鷊鹞鷂鹟鶲鹠鶹鹡鶺鹢鷁鹣鶼鹤鶴鹥鷖鹦鸚鹧鷓鹨鷚鹩鷯鹪鷦鹫鷲鹬鷸鹭鷺鹮䴉鹯鸇鹰鷹鹱鸌鹲鸏鹳鸛鹴鸘鹾鹺麦麥麸麩麹麴麺麵麽麼黄黃黉黌黡黶黩黷黪黲黾黽鼋黿鼌鼂鼍鼉鼹鼴齐齊齑齏齿齒龀齔龁齕龂齗龃齟龄齡龅齙龆齠龇齜龈齦龉齬龊齪龋齲龌齷龙龍龚龔龛龕龟龜鿎䃮鿏䥑鿒鿓鿔鎶";
+      const I18N_T2S_PAIRS = "㑯㑔㑳㑇㑶㐹㓨刾㘚㘎㜄㚯㜏㛣㠏㟆㥮㤘㩜㨫㩳㧐㩵擜䁻䀥䃮鿎䊷䌶䋙䌺䋚䌻䋹䌿䋻䌾䍦䍠䎱䎬䙡䙌䜀䜧䝼䞍䥇䦂䥑鿏䥱䥾䦛䦶䦟䦷䯀䯅䰾鲃䱷䲣䱽䲝䲁鳚䲘鳤䴉鹮丟丢並并乾干亂乱亙亘亞亚佇伫佈布佔占併并來来侖仑侶侣侷局俁俣係系俔伣俠侠俥伡俬私倀伥倆俩倈俫倉仓個个們们倖幸倫伦倲㑈偉伟偑㐽側侧偵侦偽伪傌㐷傑杰傖伧傘伞備备傢家傭佣傯偬傳传傴伛債债傷伤傾倾僂偻僅仅僉佥僑侨僕仆僞伪僥侥僨偾僱雇價价儀仪儁俊儂侬億亿儈侩儉俭儎傤儐傧儔俦儕侪儘尽償偿優优儲储儷俪儸㑩儺傩儻傥儼俨兇凶兌兑兒儿兗兖內内兩两冊册冑胄冪幂凈净凍冻凜凛凱凯別别刪删剄刭則则剋克剎刹剗刬剛刚剝剥剮剐剴剀創创剷铲劃划劇剧劉刘劊刽劌刿劍剑劏㓥劑剂劚㔉勁劲動动務务勛勋勝胜勞劳勢势勩勚勱劢勳勋勵励勸劝勻匀匭匦匯汇匱匮區区協协卹恤卻却卽即厙厍厠厕厤历厭厌厲厉厴厣參参叄叁叢丛吒咤吳吴吶呐呂吕咼呙員员唄呗唸念問问啓启啞哑啟启啢唡喎㖞喚唤喪丧喫吃喬乔單单喲哟嗆呛嗇啬嗊唝嗎吗嗚呜嗩唢嗶哔嘆叹嘍喽嘓啯嘔呕嘖啧嘗尝嘜唛嘩哗嘮唠嘯啸嘰叽嘵哓嘸呒嘽啴噁恶噓嘘噚㖊噝咝噠哒噥哝噦哕噯嗳噲哙噴喷噸吨噹当嚀咛嚇吓嚌哜嚐尝嚕噜嚙啮嚥咽嚦呖嚨咙嚮向嚲亸嚳喾嚴严嚶嘤囀啭囁嗫囂嚣囅冁囈呓囉啰囌苏囑嘱囪囱圇囵國国圍围園园圓圆圖图團团垻坝埡垭埰采執执堅坚堊垩堖垴堝埚堯尧報报場场塊块塋茔塏垲塒埘塗涂塚冢塢坞塤埙塵尘塹堑墊垫墜坠墮堕墰坛墳坟墶垯墻墙墾垦壇坛壋垱壎埙壓压壘垒壙圹壚垆壜坛壞坏壟垄壠垅壢坜壩坝壪塆壯壮壺壶壼壸壽寿夠够夢梦夥伙夾夹奐奂奧奥奩奁奪夺奬奖奮奋奼姹妝妆姍姗姦奸娛娱婁娄婦妇婭娅媧娲媯妫媰㛀媼媪媽妈嫋袅嫗妪嫵妩嫺娴嫻娴嫿婳嬀妫嬃媭嬈娆嬋婵嬌娇嬙嫱嬡嫒嬤嬷嬪嫔嬰婴嬸婶孃娘孋㛤孌娈孫孙學学孿孪宮宫寀采寢寝實实寧宁審审寫写寬宽寵宠寶宝將将專专尋寻對对導导尷尴屆届屍尸屓屃屜屉屢屡層层屨屦屬属岡冈峯峰峴岘島岛峽峡崍崃崑昆崗岗崙仑崢峥崬岽嵐岚嵗岁嵾㟥嶁嵝嶄崭嶇岖嶔嵚嶗崂嶠峤嶢峣嶧峄嶨峃嶮崄嶸嵘嶺岭嶼屿嶽岳巋岿巒峦巔巅巖岩巰巯巹卺帥帅師师帳帐帶带幀帧幃帏幓㡎幗帼幘帻幟帜幣币幫帮幬帱幹干幾几庫库廁厕廂厢廄厩廈厦廎庼廕荫廚厨廝厮廟庙廠厂廡庑廢废廣广廩廪廬庐廳厅弒弑弔吊弳弪張张強强彆别彈弹彌弥彎弯彔录彙汇彠彟彥彦彫雕彲彨彿佛後后徑径從从徠徕復复徵征徹彻恆恒恥耻悅悦悞悮悵怅悶闷悽凄惡恶惱恼惲恽惻恻愛爱愜惬愨悫愴怆愷恺愾忾慄栗態态慍愠慘惨慚惭慟恸慣惯慤悫慪怄慫怂慮虑慳悭慶庆慺㥪慼戚慾欲憂忧憊惫憐怜憑凭憒愦憖慭憚惮憤愤憫悯憮怃憲宪憶忆懇恳應应懌怿懍懔懞蒙懟怼懣懑懤㤽懨恹懲惩懶懒懷怀懸悬懺忏懼惧懾慑戀恋戇戆戔戋戧戗戩戬戰战戱戯戲戏戶户拋抛挩捝挱挲挾挟捨舍捫扪捱挨捲卷掃扫掄抡掆㧏掗挜掙挣掛挂採采揀拣揚扬換换揮挥揯搄損损搖摇搗捣搵揾搶抢摑掴摜掼摟搂摯挚摳抠摶抟摺折摻掺撈捞撏挦撐撑撓挠撝㧑撟挢撣掸撥拨撫抚撲扑撳揿撻挞撾挝撿捡擁拥擄掳擇择擊击擋挡擓㧟擔担據据擠挤擣捣擬拟擯摈擰拧擱搁擲掷擴扩擷撷擺摆擻擞擼撸擽㧰擾扰攄摅攆撵攏拢攔拦攖撄攙搀攛撺攜携攝摄攢攒攣挛攤摊攪搅攬揽敎教敓敚敗败敘叙敵敌數数斂敛斃毙斆敩斕斓斬斩斷断於于旂旗旣既昇升時时晉晋晝昼暈晕暉晖暘旸暢畅暫暂曄晔曆历曇昙曉晓曏向曖暧曠旷曨昽曬晒書书會会朧胧朮术東东枴拐柵栅柺拐査查桿杆梔栀梘枧條条梟枭梲棁棄弃棊棋棖枨棗枣棟栋棡㭎棧栈棲栖棶梾椏桠椲㭏楊杨楓枫楨桢業业極极榘矩榦干榪杩榮荣榲榅榿桤構构槍枪槓杠槤梿槧椠槨椁槮椮槳桨槶椢槼椝樁桩樂乐樅枞樑梁樓楼標标樞枢樢㭤樣样樧榝樫㭴樳桪樸朴樹树樺桦樿椫橈桡橋桥機机橢椭橫横檁檩檉柽檔档檜桧檟槚檢检檣樯檮梼檯台檳槟檸柠檻槛櫃柜櫓橹櫚榈櫛栉櫝椟櫞橼櫟栎櫥橱櫧槠櫨栌櫪枥櫫橥櫬榇櫱蘖櫳栊櫸榉櫻樱欄栏欅榉權权欏椤欒栾欖榄欞棂欽钦歎叹歐欧歟欤歡欢歲岁歷历歸归歿殁殘残殞殒殤殇殨㱮殫殚殭僵殮殓殯殡殰㱩殲歼殺杀殻壳殼壳毀毁毆殴毿毵氂牦氈毡氌氇氣气氫氢氬氩氳氲氾泛汎泛汙污決决沒没沖冲況况泝溯洩泄洶汹浹浃涇泾涗涚涼凉淒凄淚泪淥渌淨净淩凌淪沦淵渊淶涞淺浅渙涣減减渢沨渦涡測测渾浑湊凑湞浈湧涌湯汤溈沩準准溝沟溫温溮浉溳涢溼湿滄沧滅灭滌涤滎荥滙汇滬沪滯滞滲渗滷卤滸浒滻浐滾滚滿满漁渔漊溇漚沤漢汉漣涟漬渍漲涨漵溆漸渐漿浆潁颍潑泼潔洁潙沩潚㴋潛潜潤润潯浔潰溃潷滗潿涠澀涩澆浇澇涝澐沄澗涧澠渑澤泽澦滪澩泶澮浍澱淀澾㳠濁浊濃浓濄㳡濕湿濘泞濚溁濛蒙濜浕濟济濤涛濧㳔濫滥濰潍濱滨濺溅濼泺濾滤瀂澛瀅滢瀆渎瀇㲿瀉泻瀋沈瀏浏瀕濒瀘泸瀝沥瀟潇瀠潆瀦潴瀧泷瀨濑瀰弥瀲潋瀾澜灃沣灄滠灑洒灕漓灘滩灝灏灡㳕灣湾灤滦灧滟灩滟災灾為为烏乌烴烃無无煉炼煒炜煙烟煢茕煥焕煩烦煬炀煱㶽熅煴熒荧熗炝熱热熲颎熾炽燁烨燈灯燉炖燒烧燙烫燜焖營营燦灿燬毁燭烛燴烩燶㶶燻熏燼烬燾焘爍烁爐炉爛烂爭争爲为爺爷爾尔牀床牆墙牘牍牽牵犖荦犛牦犢犊犧牺狀状狹狭狽狈猙狰猶犹猻狲獁犸獃呆獄狱獅狮獎奖獨独獪狯獫猃獮狝獰狞獱㺍獲获獵猎獷犷獸兽獺獭獻献獼猕玀猡現现琱雕琺珐琿珲瑋玮瑒玚瑣琐瑤瑶瑩莹瑪玛瑲玱璉琏璡琎璣玑璦瑷璫珰璯㻅環环璵玙璸瑸璽玺璿璇瓊琼瓏珑瓔璎瓚瓒甌瓯甕瓮產产産产甦苏甯宁畝亩畢毕畫画異异畵画當当疇畴疊叠痙痉痠酸痾疴瘂痖瘋疯瘍疡瘓痪瘞瘗瘡疮瘧疟瘮瘆瘲疭瘺瘘瘻瘘療疗癆痨癇痫癉瘅癒愈癘疠癟瘪癡痴癢痒癤疖癥症癧疬癩癞癬癣癭瘿癮瘾癰痈癱瘫癲癫發发皁皂皚皑皰疱皸皲皺皱盃杯盜盗盞盏盡尽監监盤盘盧卢盪荡眞真眥眦眾众睏困睜睁睞睐瞘眍瞜䁖瞞瞒瞶瞆瞼睑矇蒙矓眬矚瞩矯矫硃朱硜硁硤硖硨砗硯砚碕埼碩硕碭砀碸砜確确碼码碽䂵磑硙磚砖磠硵磣碜磧碛磯矶磽硗磾䃅礄硚礆硷礎础礙碍礦矿礪砺礫砾礬矾礱砻祕秘祿禄禍祸禎祯禕祎禡祃禦御禪禅禮礼禰祢禱祷禿秃秈籼稅税稈秆稏䅉稜棱稟禀種种稱称穀谷穇䅟穌稣積积穎颖穠秾穡穑穢秽穩稳穫获穭穞窩窝窪洼窮穷窯窑窵窎窶窭窺窥竄窜竅窍竇窦竈灶竊窃竪竖競竞筆笔筍笋筧笕筴䇲箇个箋笺箏筝節节範范築筑篋箧篔筼篠筿篤笃篩筛篳筚簀箦簍篓簑蓑簞箪簡简簣篑簫箫簹筜簽签簾帘籃篮籌筹籔䉤籙箓籛篯籜箨籟籁籠笼籤签籩笾籪簖籬篱籮箩籲吁粵粤糉粽糝糁糞粪糧粮糰团糲粝糴籴糶粜糹纟糾纠紀纪紂纣約约紅红紆纡紇纥紈纨紉纫紋纹納纳紐纽紓纾純纯紕纰紖纼紗纱紘纮紙纸級级紛纷紜纭紝纴紡纺紬䌷紮扎細细紱绂紲绁紳绅紵纻紹绍紺绀紼绋紿绐絀绌終终絃弦組组絅䌹絆绊絎绗結结絕绝絛绦絝绔絞绞絡络絢绚給给絨绒絰绖統统絲丝絳绛絶绝絹绢綁绑綃绡綆绠綈绨綉绣綌绤綏绥綐䌼綑捆經经綜综綞缍綠绿綢绸綣绻綫线綬绶維维綯绹綰绾綱纲網网綳绷綴缀綵彩綸纶綹绺綺绮綻绽綽绰綾绫綿绵緄绲緇缁緊紧緋绯緑绿緒绪緓绬緔绱緗缃緘缄緙缂線线緝缉緞缎締缔緡缗緣缘緦缌編编緩缓緬缅緯纬緱缑緲缈練练緶缏緹缇緻致緼缊縈萦縉缙縊缢縋缒縐绉縑缣縕缊縗缞縛缚縝缜縞缟縟缛縣县縧绦縫缝縭缡縮缩縱纵縲缧縳䌸縴纤縵缦縶絷縷缕縹缥總总績绩繃绷繅缫繆缪繒缯織织繕缮繚缭繞绕繡绣繢缋繩绳繪绘繫系繭茧繮缰繯缳繰缲繳缴繸䍁繹绎繼继繽缤繾缱繿䍀纇颣纈缬纊纩續续纍累纏缠纓缨纔才纖纤纘缵纜缆缽钵罃䓨罈坛罌罂罎坛罰罚罵骂罷罢羅罗羆罴羈羁羋芈羣群羥羟羨羡義义羶膻習习翫玩翬翚翹翘翽翙耬耧耮耢聖圣聞闻聯联聰聪聲声聳耸聵聩聶聂職职聹聍聽听聾聋肅肃脅胁脈脉脛胫脣唇脩修脫脱脹胀腎肾腖胨腡脶腦脑腫肿腳脚腸肠膃腽膕腘膚肤膞䏝膠胶膩腻膽胆膾脍膿脓臉脸臍脐臏膑臘腊臚胪臟脏臠脔臢臜臥卧臨临臺台與与興兴舉举舊旧舘馆艙舱艤舣艦舰艫舻艱艰艷艳芻刍苧苎茲兹荊荆莊庄莖茎莢荚莧苋華华菴庵菸烟萇苌萊莱萬万萴荝萵莴葉叶葒荭葤荮葦苇葯药葷荤蒐搜蒓莼蒔莳蒕蒀蒞莅蒼苍蓀荪蓆席蓋盖蓮莲蓯苁蓴莼蓽荜蔔卜蔘参蔞蒌蔣蒋蔥葱蔦茑蔭荫蕁荨蕆蒇蕎荞蕒荬蕓芸蕕莸蕘荛蕢蒉蕩荡蕪芜蕭萧蕷蓣薀蕰薈荟薊蓟薌芗薑姜薔蔷薘荙薟莶薦荐薩萨薳䓕薴苧薵䓓薹苔薺荠藍蓝藎荩藝艺藥药藪薮藭䓖藴蕴藶苈藹蔼藺蔺蘀萚蘄蕲蘆芦蘇苏蘊蕴蘋苹蘚藓蘞蔹蘢茏蘭兰蘺蓠蘿萝虆蔂處处虛虚虜虏號号虧亏虯虬蛺蛱蛻蜕蜆蚬蝕蚀蝟猬蝦虾蝨虱蝸蜗螄蛳螞蚂螢萤螮䗖螻蝼螿螀蟄蛰蟈蝈蟎螨蟣虮蟬蝉蟯蛲蟲虫蟶蛏蟻蚁蠁蚃蠅蝇蠆虿蠍蝎蠐蛴蠑蝾蠔蚝蠟蜡蠣蛎蠨蟏蠱蛊蠶蚕蠻蛮衆众衊蔑術术衕同衚胡衛卫衝冲袞衮裊袅裏里補补裝装裡里製制複复褌裈褘袆褲裤褳裢褸褛褻亵襇裥襉裥襏袯襖袄襝裣襠裆襤褴襪袜襬摆襯衬襲袭襴襕覈核見见覎觃規规覓觅視视覘觇覡觋覥觍覦觎親亲覬觊覯觏覲觐覷觑覺觉覽览覿觌觀观觴觞觶觯觸触訁讠訂订訃讣計计訊讯訌讧討讨訐讦訒讱訓训訕讪訖讫託托記记訛讹訝讶訟讼訢䜣訣诀訥讷訩讻訪访設设許许訴诉訶诃診诊註注証证詁诂詆诋詎讵詐诈詒诒詔诏評评詖诐詗诇詘诎詛诅詞词詠咏詡诩詢询詣诣試试詩诗詫诧詬诟詭诡詮诠詰诘話话該该詳详詵诜詼诙詿诖誄诔誅诛誆诓誇夸誌志認认誑诳誒诶誕诞誘诱誚诮語语誠诚誡诫誣诬誤误誥诰誦诵誨诲說说説说誰谁課课誶谇誹诽誼谊誾訚調调諂谄諄谆談谈諉诿請请諍诤諏诹諑诼諒谅論论諗谂諛谀諜谍諝谞諞谝諡谥諢诨諤谔諦谛諧谐諫谏諭谕諮咨諱讳諳谙諶谌諷讽諸诸諺谚諼谖諾诺謀谋謁谒謂谓謄誊謅诌謊谎謎谜謐谧謔谑謖谡謗谤謙谦謚谥講讲謝谢謠谣謡谣謨谟謫谪謬谬謭谫謳讴謹谨謾谩譁哗證证譎谲譏讥譖谮識识譙谯譚谭譜谱譟噪譫谵譭毁譯译議议譴谴護护譸诪譽誉譾谫讀读讅谉變变讋詟讌䜩讎雠讒谗讓让讕谰讖谶讚赞讜谠讞谳豈岂豎竖豐丰豔艳豬猪豶豮貓猫貙䝙貝贝貞贞貟贠負负財财貢贡貧贫貨货販贩貪贪貫贯責责貯贮貰贳貲赀貳贰貴贵貶贬買买貸贷貺贶費费貼贴貽贻貿贸賀贺賁贲賂赂賃赁賄贿賅赅資资賈贾賊贼賑赈賒赊賓宾賕赇賙赒賚赉賜赐賞赏賠赔賡赓賢贤賣卖賤贱賦赋賧赕質质賫赍賬账賭赌賰䞐賴赖賵赗賺赚賻赙購购賽赛賾赜贄贽贅赘贇赟贈赠贊赞贋赝贍赡贏赢贐赆贓赃贔赑贖赎贗赝贛赣贜赃赬赪趕赶趙赵趨趋趲趱跡迹踐践踰逾踴踊蹌跄蹕跸蹟迹蹠跖蹣蹒蹤踪蹺跷躂跶躉趸躊踌躋跻躍跃躎䟢躑踯躒跞躓踬躕蹰躚跹躡蹑躥蹿躦躜躪躏軀躯車车軋轧軌轨軍军軑轪軒轩軔轫軛轭軟软軤轷軫轸軲轱軸轴軹轵軺轺軻轲軼轶軾轼較较輅辂輇辁輈辀載载輊轾輒辄輓挽輔辅輕轻輛辆輜辎輝辉輞辋輟辍輥辊輦辇輩辈輪轮輬辌輯辑輳辏輸输輻辐輼辒輾辗輿舆轀辒轂毂轄辖轅辕轆辘轉转轍辙轎轿轔辚轟轰轡辔轢轹轤轳辦办辭辞辮辫辯辩農农迴回逕迳這这連连週周進进遊游運运過过達达違违遙遥遜逊遞递遠远遡溯適适遲迟遷迁選选遺遗遼辽邁迈還还邇迩邊边邏逻邐逦郟郏郵邮鄆郓鄉乡鄒邹鄔邬鄖郧鄧邓鄭郑鄰邻鄲郸鄴邺鄶郐鄺邝酇酂酈郦醃腌醖酝醜丑醞酝醟蒏醣糖醫医醬酱醱酦釀酿釁衅釃酾釅酽釋释釐厘釒钅釓钆釔钇釕钌釗钊釘钉釙钋針针釣钓釤钐釦扣釧钏釩钒釵钗釷钍釹钕釺钎釾䥺鈀钯鈁钫鈃钘鈄钭鈅钥鈈钚鈉钠鈍钝鈎钩鈐钤鈑钣鈒钑鈔钞鈕钮鈞钧鈡钟鈣钙鈥钬鈦钛鈧钪鈮铌鈰铈鈳钶鈴铃鈷钴鈸钹鈹铍鈺钰鈽钸鈾铀鈿钿鉀钾鉅巨鉆钻鉈铊鉉铉鉋铇鉍铋鉑铂鉕钷鉗钳鉚铆鉛铅鉞钺鉢钵鉤钩鉦钲鉬钼鉭钽鉳锫鉶铏鉸铰鉺铒鉻铬鉿铪銀银銃铳銅铜銍铚銑铣銓铨銖铢銘铭銚铫銛铦銜衔銠铑銣铷銥铱銦铟銨铵銩铥銪铕銫铯銬铐銱铞銳锐銷销銹锈銻锑銼锉鋁铝鋃锒鋅锌鋇钡鋌铤鋏铗鋒锋鋙铻鋝锊鋟锓鋣铘鋤锄鋥锃鋦锔鋨锇鋩铓鋪铺鋭锐鋮铖鋯锆鋰锂鋱铽鋶锍鋸锯鋼钢錁锞錄录錆锖錇锫錈锩錏铔錐锥錒锕錕锟錘锤錙锱錚铮錛锛錟锬錠锭錡锜錢钱錦锦錨锚錩锠錫锡錮锢錯错録录錳锰錶表錸铼錼镎鍀锝鍁锨鍃锪鍅钫鍆钔鍇锴鍈锳鍊炼鍋锅鍍镀鍔锷鍘铡鍚钖鍛锻鍠锽鍤锸鍥锲鍩锘鍬锹鍰锾鍵键鍶锶鍺锗鍼针鍾钟鎂镁鎄锿鎇镅鎊镑鎌镰鎔镕鎖锁鎘镉鎚锤鎛镈鎡镃鎢钨鎣蓥鎦镏鎧铠鎩铩鎪锼鎬镐鎭镇鎮镇鎰镒鎲镋鎳镍鎵镓鎶鿔鎸镌鎿镎鏃镞鏇旋鏈链鏌镆鏍镙鏐镠鏑镝鏗铿鏘锵鏜镗鏝镘鏞镛鏟铲鏡镜鏢镖鏤镂鏨錾鏰镚鏵铧鏷镤鏹镪鏺䥽鏽锈鐃铙鐋铴鐐镣鐒铹鐓镦鐔镡鐘钟鐙镫鐝镢鐠镨鐥䦅鐦锎鐧锏鐨镄鐫镌鐮镰鐯䦃鐲镯鐳镭鐵铁鐶镮鐸铎鐺铛鐿镱鑄铸鑊镬鑌镔鑑鉴鑒鉴鑔镲鑕锧鑞镴鑠铄鑣镳鑥镥鑭镧鑰钥鑱镵鑲镶鑷镊鑹镩鑼锣鑽钻鑾銮鑿凿钁镢钂镋長长門门閂闩閃闪閆闫閈闬閉闭開开閌闶閎闳閏闰閑闲閒闲間间閔闵閘闸閡阂閣阁閤合閥阀閨闺閩闽閫阃閬阆閭闾閱阅閲阅閶阊閹阉閻阎閼阏閽阍閾阈閿阌闃阒闆板闇暗闈闱闊阔闋阕闌阑闍阇闐阗闒阘闓闿闔阖闕阙闖闯關关闞阚闠阓闡阐闢辟闤阛闥闼陘陉陝陕陞升陣阵陰阴陳陈陸陆陽阳隉陧隊队階阶隕陨際际隨随險险隯陦隱隐隴陇隸隶隻只雋隽雖虽雙双雛雏雜杂雞鸡離离難难雲云電电霑沾霢霡霧雾霽霁靂雳靄霭靆叇靈灵靉叆靚靓靜静靝靔靦腼靨靥鞏巩鞝绱鞦秋鞽鞒韁缰韃鞑韆千韉鞯韋韦韌韧韍韨韓韩韙韪韜韬韝鞲韞韫韻韵響响頁页頂顶頃顷項项順顺頇顸須须頊顼頌颂頎颀頏颃預预頑顽頒颁頓顿頗颇領领頜颌頡颉頤颐頦颏頭头頮颒頰颊頲颋頴颕頷颔頸颈頹颓頻频頽颓顆颗題题額额顎颚顏颜顒颙顓颛顔颜願愿顙颡顛颠類类顢颟顥颢顧顾顫颤顬颥顯显顰颦顱颅顳颞顴颧風风颭飐颮飑颯飒颱台颳刮颶飓颸飔颺飏颻飖颼飕飀飗飄飘飆飙飈飚飛飞飠饣飢饥飣饤飥饦飩饨飪饪飫饫飭饬飯饭飱飧飲饮飴饴飼饲飽饱飾饰飿饳餃饺餄饸餅饼餈糍餉饷養养餌饵餎饹餏饻餑饽餒馁餓饿餕馂餖饾餘余餚肴餛馄餜馃餞饯餡馅館馆餬糊餱糇餳饧餵喂餶馉餷馇餺馎餼饩餾馏餿馊饁馌饃馍饅馒饈馐饉馑饊馓饋馈饌馔饑饥饒饶饗飨饜餍饞馋饢馕馬马馭驭馮冯馱驮馳驰馴驯馹驲駁驳駐驻駑驽駒驹駔驵駕驾駘骀駙驸駛驶駝驼駟驷駡骂駢骈駭骇駰骃駱骆駸骎駿骏騁骋騂骍騅骓騌骔騍骒騎骑騏骐騖骛騙骗騤骙騧䯄騫骞騭骘騮骝騰腾騶驺騷骚騸骟騾骡驀蓦驁骜驂骖驃骠驄骢驅驱驊骅驌骕驍骁驏骣驕骄驗验驚惊驛驿驟骤驢驴驤骧驥骥驦骦驪骊驫骉骯肮髏髅髒脏體体髕髌髖髋髮发鬆松鬍胡鬚须鬢鬓鬥斗鬧闹鬨哄鬩阋鬮阄鬱郁鬹鬶魎魉魘魇魚鱼魛鱽魢鱾魨鲀魯鲁魴鲂魷鱿魺鲄鮁鲅鮃鲆鮊鲌鮋鲉鮍鲏鮎鲇鮐鲐鮑鲍鮒鲋鮓鲊鮚鲒鮜鲘鮝鲞鮞鲕鮣䲟鮦鲖鮪鲔鮫鲛鮭鲑鮮鲜鮳鲓鮶鲪鮺鲝鯀鲧鯁鲠鯇鲩鯉鲤鯊鲨鯒鲬鯔鲻鯕鲯鯖鲭鯗鲞鯛鲷鯝鲴鯡鲱鯢鲵鯤鲲鯧鲳鯨鲸鯪鲮鯫鲰鯰鲶鯴鲺鯷鳀鯽鲫鯿鳊鰁鳈鰂鲗鰃鳂鰆䲠鰈鲽鰉鳇鰌䲡鰍鳅鰏鲾鰐鳄鰒鳆鰓鳃鰛鳁鰜鳒鰟鳑鰠鳋鰣鲥鰥鳏鰧䲢鰨鳎鰩鳐鰭鳍鰮鳁鰱鲢鰲鳌鰳鳓鰵鳘鰷鲦鰹鲣鰺鲹鰻鳗鰼鳛鰾鳔鱂鳉鱅鳙鱈鳕鱉鳖鱒鳟鱔鳝鱖鳜鱗鳞鱘鲟鱝鲼鱟鲎鱠鲙鱣鳣鱤鳡鱧鳢鱨鲿鱭鲚鱯鳠鱷鳄鱸鲈鱺鲡鳥鸟鳧凫鳩鸠鳬凫鳲鸤鳳凤鳴鸣鳶鸢鳾䴓鴆鸩鴇鸨鴉鸦鴒鸰鴕鸵鴛鸳鴝鸲鴞鸮鴟鸱鴣鸪鴦鸯鴨鸭鴯鸸鴰鸹鴴鸻鴷䴕鴻鸿鴿鸽鵁䴔鵂鸺鵃鸼鵐鹀鵑鹃鵒鹆鵓鹁鵜鹈鵝鹅鵠鹄鵡鹉鵪鹌鵬鹏鵮鹐鵯鹎鵰雕鵲鹊鵷鹓鵾鹍鶄䴖鶇鸫鶉鹑鶊鹒鶓鹋鶖鹙鶘鹕鶚鹗鶡鹖鶥鹛鶩鹜鶪䴗鶬鸧鶯莺鶲鹟鶴鹤鶹鹠鶺鹡鶻鹘鶼鹣鶿鹚鷀鹚鷁鹢鷂鹞鷄鸡鷉䴘鷊鹝鷓鹧鷖鹥鷗鸥鷙鸷鷚鹨鷥鸶鷦鹪鷫鹔鷯鹩鷲鹫鷳鹇鷴鹇鷸鹬鷹鹰鷺鹭鷽鸴鸂㶉鸇鹯鸊䴙鸌鹱鸏鹲鸕鸬鸘鹴鸚鹦鸛鹳鸝鹂鸞鸾鹵卤鹹咸鹺鹾鹼碱鹽盐麗丽麥麦麩麸麪面麫面麯曲麴曲麵面麼么麽么黃黄黌黉點点黨党黲黪黴霉黶黡黷黩黽黾黿鼋鼂鼌鼉鼍鼕冬鼴鼹齊齐齋斋齎赍齏齑齒齿齔龀齕龁齗龂齙龅齜龇齟龃齠龆齡龄齣出齦龈齧啮齪龊齬龉齲龋齶腭齷龌龍龙龎厐龐庞龑䶮龔龚龕龛龜龟鿁䜤鿓鿒";
+      const I18N_HANT = {"上传合并至云端": "上傳合併至雲端", "深色沉浸外观（默认开启）": "深色沉浸外觀（預設開啟）", "保存密钥": "儲存金鑰", "》播放链接": "》播放連結", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "流媒體熱播佳作，點選下方對應流媒體圖示即可直達官方正版播放頁。", "导入恢复 .json": "匯入恢復 .json", "保存": "儲存", "查看详情": "查看詳情", "至少保留 1 个显示平台": "至少保留 1 個顯示平台", "正在加载…": "正在載入…", "界面语言": "介面語言", "正在连接 GitHub 私密": "正在連線 GitHub 私密", "正在加载": "正在載入", "上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "上下調換首頁各平台 Top 10 榜單排列順序，關閉開關即可隱藏該平台（首頁頂部全網 8 部新劇巨幅海報也會自動從你開啟的平台中選出）。", "设置": "設定", "网络不太好，稍后再试": "網路不太好，稍後再試", "六大流媒体热度榜运行中": "六大流媒體熱度榜運行中", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 權限）", "治愈": "治癒", "从云端拉取合并": "從雲端拉取合併", "导出备份 .json": "匯出備份 .json", "导入恢复": "匯入恢復", "恢复默认": "恢復預設", "已复制《": "已複製《", "（需 gist 权限）": "（需 gist 權限）", "导出备份": "匯出備份", "搜索片库": "搜尋片庫", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "流媒體熱門影視佳作，點選查看詳情、演員陣容與正版播放源。", "网络异常": "網路異常", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "未在當前快取榜單找到匹配項，請點「全網搜尋」實時查詢", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "已加载": "已載入", "搜索": "搜尋", "已刷新流媒体榜单": "已刷新流媒體榜單", "正在加载更多热门电视剧与电影": "正在載入更多熱門電視劇與電影", "独立读写专属文件": "獨立讀寫專屬檔案", "同步密钥已保存": "同步金鑰已儲存", "每日首次打开「待看剧集」提醒弹窗": "每日首次開啟「待看劇集」提醒彈窗", "流媒体实时热度数据": "流媒體實時熱度資料", "已导出备份": "已匯出備份", "全网搜索": "全網搜尋", "跨设备无损云同步（GitHub 私密 Gist）": "跨裝置無損雲同步（GitHub 私密 Gist）", "云同步失败，请检查密钥": "雲同步失敗，請檢查金鑰", "，同步你的片单进度与首页平台顺序。": "，同步你的片單進度與首頁平台順序。", "分享链接": "分享連結", "正在加载更多热门电视剧与电影…": "正在載入更多熱門電視劇與電影…", "立即刷新热榜": "立即刷新熱榜", "默认开启深邃影院沉浸底色": "預設開啟深邃影院沉浸底色", "分钟": "分鐘"};
+      const I18N_EN = {"上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "Reorder the platforms' Top 10 charts on Home, or switch one off to hide it. The new-show posters at the top of Home only come from platforms you keep on.", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "A popular streaming title. Tap a service icon below to open its official page.", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "A popular streaming title. Tap for details, cast and where to watch.", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "Nothing in the loaded charts matches. Tap “Search online” to look it up.", "跨设备无损云同步（GitHub 私密 Gist）": "Cross-device sync (private GitHub Gist)", "搜电影 / 剧集 / 英文名 / 演员...": "Search movies, shows or cast…", "在追剧集有未看集数时，每天提醒一次": "Once a day when a show you're watching has new episodes", "，同步你的片单进度与首页平台顺序。": ", syncing your list, progress and Home platform order.", "独立读写专属文件": "Uses its own file", "每日首次打开「待看剧集」提醒弹窗": "Daily “Up next” reminder", "已同步六大流媒体最新热度榜单": "Charts updated", "正在加载更多热门电视剧与电影…": "Loading more…", "正在加载更多热门电视剧与电影": "Loading more", "正在拉取六大流媒体最新热度榜...": "Fetching the latest charts…", "正在拉取六大流媒体最新热度榜": "Fetching the latest charts", "本地 JSON 备份与恢复": "Local JSON backup & restore", "六大流媒体实时热度已同步": "Live charts synced", "六大流媒体实时热度已就绪": "Live charts ready", "六大流媒体热度榜运行中": "Live charts running", "深色沉浸外观（默认开启）": "Dark appearance (on by default)", "默认开启深邃影院沉浸底色": "Cinema-dark background, on by default", "首页流媒体平台排序与隐藏": "Home platforms: order & visibility", "实时热榜与显示偏好": "Live charts & display", "流媒体实时热度数据": "Live streaming charts", "立即刷新热榜": "Refresh now", "点选集数记录观看进度（绿=已看 · 蓝=已播 · 虚线=未播）": "Tap episodes to track progress (green = watched · blue = aired · dashed = upcoming)", "点进任意影视海报，轻触右下角 ♡ 或 🍿 即可加入你的片单": "Open any title and tap ♡ or 🍿 at the bottom right to add it to your list", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx (needs gist scope)", "尚未执行云端同步": "Not synced yet", "上传合并至云端": "Upload & merge", "从云端拉取合并": "Download & merge", "保存密钥": "Save token", "导出备份 .json": "Export .json", "导入恢复 .json": "Import .json", "恢复默认": "Reset", "已恢复默认六大平台顺序": "Platform order reset", "至少保留 1 个显示平台": "Keep at least one platform visible", "今天的流媒体榜单": "Today's streaming charts", "热播电视剧": "Trending shows", "热播电影": "Trending movies", "热播库": "Library", "片库": "Library", "按实时热度排序": "By live popularity", "精选": "Picks", "最新": "New", "高分": "Top rated", "全部": "All", "全部平台": "All services", "全网搜索": "Search online", "搜索片库": "Search", "我的片单": "My List", "想看 / 在追": "Watching / Want", "已看过 🍿": "Watched 🍿", "已看过": "Watched", "设置": "Settings", "首页": "Home", "搜索": "Search", "片单": "My List", "主导航": "Main navigation", "返回": "Back", "查看详情": "Details", "播放平台": "Where to watch", "演职员": "Cast", "主创团队": "Creators", "剧照与预告片": "Stills & trailer", "剧照": "Still", "观看官方预告片 ↗": "Watch trailer ↗", "观看官方预告片": "Watch trailer", "剧集播放进度": "Episode progress", "一键追平已播集": "Mark all aired as watched", "标记已看过": "Mark as watched", "加入片单": "Add to My List", "分享链接": "Share link", "IMDb 权威评分": "IMDb rating", "烂番茄影评新鲜度": "Rotten Tomatoes score", "爆米花观众好评度": "Audience score", "观影打卡达成": "Watched!", "电影观影打卡达成": "Movie watched!", "剧集追完打卡达成": "Series finished!", "太棒了": "Nice", "云端同步完成": "Cloud sync complete", "云同步失败，请检查密钥": "Sync failed. Check your token.", "同步密钥已保存": "Token saved", "备份已无损恢复": "Backup restored", "已导出备份": "Backup exported", "JSON 格式错误": "Invalid JSON", "请输入想找的电影或剧名": "Type a movie or show name", "正在检索流媒体片库...": "Searching…", "正在检索流媒体片库": "Searching", "已完成检索": "Search finished", "已刷新流媒体榜单": "Charts refreshed", "网络不太好，稍后再试": "Connection problem. Try again later.", "暂无内容": "Nothing here", "正在加载…": "Loading…", "正在加载": "Loading", "已在首页隐藏": "Hidden on Home", "同步出错：": "Sync error: ", "网络异常": "Network error", "请先填入": "Please enter ", "鉴权失败": "Authorization failed", "正在连接 GitHub 私密": "Connecting to private GitHub", "界面语言": "Language", "繁體中文": "繁體中文", "简体中文": "简体中文", "奈飞 Netflix": "Netflix", "迪士尼 Disney+": "Disney+", "派拉蒙 Paramount+": "Paramount+", "电视剧": "Series", "电影": "Movie", "剧集": "Series", "新剧": "New series", "热门": "Popular", "已播": "aired", "已看": "Watched", "未播": "upcoming", "动作": "Action", "冒险": "Adventure", "动作冒险": "Action & Adventure", "动画": "Animation", "儿童": "Kids", "家庭": "Family", "喜剧": "Comedy", "犯罪": "Crime", "纪录片": "Documentary", "剧情": "Drama", "谍战": "Spy", "奇幻": "Fantasy", "历史": "History", "恐怖": "Horror", "法律": "Legal", "医疗": "Medical", "音乐": "Music", "歌舞": "Musical", "悬疑": "Mystery", "爱情": "Romance", "浪漫": "Romantic", "科幻": "Sci-Fi", "科幻奇幻": "Sci-Fi & Fantasy", "体育": "Sports", "运动": "Sports", "超自然": "Supernatural", "惊悚": "Thriller", "战争": "War", "战争政治": "War & Politics", "政治": "Political", "西部": "Western", "真人秀": "Reality", "脱口秀": "Talk", "新闻": "News", "肥皂剧": "Soap", "独立电影": "Indie", "节日": "Holiday", "心理": "Psychological", "赛博朋克": "Cyberpunk", "史诗": "Epic", "黑帮": "Gangster", "英剧": "British", "年代剧": "Period", "职场": "Workplace", "传记": "Biography", "文艺": "Arthouse", "治愈": "Feel-good", "温暖": "Warm", "黑色幽默": "Dark comedy", "讽刺": "Satire", "宫廷": "Court", "权谋": "Intrigue", "末日": "Apocalyptic", "生存": "Survival", "太空": "Space", "平行宇宙": "Multiverse", "硬核": "Hard", "法庭": "Courtroom", "跨国": "International", "豪门": "Family saga", "暗黑": "Dark", "写实": "Realist", "高能": "Intense", "英伦": "British", "影视幕后": "Showbiz", "星际": "Space", "罪案": "Crime", "绿": "green", "蓝": "blue", "虚线": "dashed"};
+      // 一字多繁的常用詞（先按詞轉，再逐字轉），用 OpenCC 台灣詞庫生成
+      const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果"};
+      const I18N_HANT_PHRASE_KEYS = Object.keys(I18N_HANT_PHRASES).sort((a, b) => b.length - a.length);
+      const GENRE_CODE_EN = { act: "Action", drm: "Drama", cmy: "Comedy", scf: "Sci-Fi", trl: "Thriller", crm: "Crime", fnt: "Fantasy", hrr: "Horror", rma: "Romance", ani: "Animation", doc: "Documentary", hst: "History", war: "War", mys: "Mystery", fml: "Family", fmly: "Family", wsn: "Western", msc: "Music", spt: "Sports", rly: "Reality", eur: "European" };
+      const I18N_EN_RULES = [
+        [/已将《(.+?)》加入我的片单/, "Added “$1” to My List"],
+        [/已从片单移出《(.+?)》/, "Removed “$1” from My List"],
+        [/已取消《(.+?)》看过标记/, "Unmarked “$1”"],
+        [/已复制《(.+?)》播放链接/, "Copied link for “$1”"],
+        [/第\s*(\d+)\s*集尚未播出，暂不可标记/, "Episode $1 hasn't aired yet"],
+        [/已记录追平至第\s*(\d+)\s*集/, "Caught up to episode $1"],
+        [/已找到\s*(\d+)\s*部相关影视/, "Found $1 titles"],
+        [/已同步完成（(.+?)）/, "Synced ($1)"],
+        [/同步出错：(.*)/, "Sync error: $1"],
+        [/展开导航栏（当前：(.+?)）/, "Expand tab bar (current: $1)"],
+        [/分集进度（已看\s*(\d+)\s*\/\s*已播\s*(\d+)\s*\/\s*共\s*(\d+)\s*集）/, "Episodes (watched $1 / aired $2 / total $3)"],
+        [/共\s*(\d+)\s*集（已播\s*(\d+)\s*集）/, "$1 eps ($2 aired)"],
+        [/更至\s*(\d+)\s*\/\s*(\d+)\s*集/, "Ep $1 of $2"],
+        [/全\s*(\d+)\s*集/, "$1 eps"],
+        [/第\s*(\d+)\s*季/, "Season $1"],
+        [/第\s*(\d+)\s*部/, "Item $1"],
+        [/(\d+)\s*分钟/, "$1 min"],
+        [/已加载\s*(\d+)\s*部/, "$1 titles"],
+        [/在追\/想看\s*(\d+)\s*·\s*已看\s*(\d+)/, "Watching $1 · Watched $2"],
+        [/首页顺位\s*#(\d+)/, "Home #$1"]
+      ];
+      const I18N_PUNCT_EN = { "，": ", ", "。": ". ", "（": " (", "）": ")", "：": ": ", "「": "“", "」": "”", "《": "“", "》": "”", "、": ", ", "；": "; ", "！": "! ", "？": "? " };
+      const CJK_RE = /[㐀-鿿]/;
+      let i18nS2T = null;
+      let i18nT2S = null;
+      let i18nEnKeys = null;
+
+      function pairsToMap(str) {
+        const m = new Map();
+        for (let i = 0; i + 1 < str.length; i += 2) m.set(str[i], str[i + 1]);
+        return m;
+      }
+      function convertChars(str, map) {
+        let out = "";
+        for (const ch of str) out += map.get(ch) || ch;
+        return out;
+      }
+      function toHant(str) {
+        if (I18N_HANT[str]) return I18N_HANT[str];
+        if (!i18nS2T) {
+          i18nS2T = pairsToMap(I18N_S2T_PAIRS);
+          i18nS2T.set("征", "征"); // 征途、征服更常見；特徵、象徵走詞表
+          i18nS2T.set("台", "台");
+        }
+        let out = "";
+        let i = 0;
+        while (i < str.length) {
+          const key = CJK_RE.test(str[i]) ? I18N_HANT_PHRASE_KEYS.find((k) => str.startsWith(k, i)) : null;
+          if (key) {
+            out += I18N_HANT_PHRASES[key];
+            i += key.length;
+          } else {
+            out += i18nS2T.get(str[i]) || str[i];
+            i++;
+          }
+        }
+        return out;
+      }
+      function toHans(str) {
+        if (!i18nT2S) i18nT2S = pairsToMap(I18N_T2S_PAIRS);
+        return convertChars(str, i18nT2S);
+      }
+      // English: 整句匹配 → 規則替換 → 按詞典最長匹配逐段翻譯；有認不出的中文就保留原文（避免把簡介翻成中英夾雜）
+      function toEn(str) {
+        const trimmed = str.trim();
+        if (I18N_EN[trimmed] !== undefined) return str.replace(trimmed, I18N_EN[trimmed]);
+        let s = str;
+        let ruled = false;
+        for (const [re, rep] of I18N_EN_RULES) {
+          if (re.test(s)) {
+            s = s.replace(re, rep);
+            ruled = true;
+          }
+        }
+        if (!CJK_RE.test(s)) return s;
+        if (!i18nEnKeys) i18nEnKeys = Object.keys(I18N_EN).filter((k) => CJK_RE.test(k)).sort((a, b) => b.length - a.length);
+        let out = "";
+        let i = 0;
+        let ok = true;
+        while (i < s.length) {
+          const ch = s[i];
+          if (I18N_PUNCT_EN[ch]) {
+            out += I18N_PUNCT_EN[ch];
+            i++;
+            continue;
+          }
+          if (!CJK_RE.test(ch)) {
+            out += ch;
+            i++;
+            continue;
+          }
+          const key = i18nEnKeys.find((k) => s.startsWith(k, i));
+          if (!key) {
+            ok = false;
+            break;
+          }
+          const val = I18N_EN[key];
+          if (/[A-Za-z]$/.test(out) && /^[A-Za-z]/.test(val)) out += " ";
+          out += val;
+          i += key.length;
+        }
+        if (ok) return out.replace(/\s{2,}/g, " ");
+        return ruled ? s : str;
+      }
+      function translateText(str) {
+        if (!str || !CJK_RE.test(str)) return str;
+        if (LANG === "zh-Hant") return toHant(str);
+        if (LANG === "zh-Hans") return toHans(str);
+        return toEn(str);
+      }
+
+      const i18nDone = new WeakMap();
+      const I18N_ATTRS = ["placeholder", "aria-label", "title", "alt"];
+      function i18nSkip(el) {
+        return !el || el.closest("script, style, [data-i18n-skip]");
+      }
+      function translateTextNode(n) {
+        const v = n.nodeValue;
+        if (!v || !CJK_RE.test(v)) return;
+        if (i18nDone.get(n) === v) return;
+        if (i18nSkip(n.parentElement)) return;
+        const out = translateText(v);
+        i18nDone.set(n, out);
+        if (out !== v) n.nodeValue = out;
+      }
+      function translateAttrs(el) {
+        if (i18nSkip(el)) return;
+        I18N_ATTRS.forEach((a) => {
+          const v = el.getAttribute(a);
+          if (v && CJK_RE.test(v)) {
+            const out = translateText(v);
+            if (out !== v) el.setAttribute(a, out);
+          }
+        });
+      }
+      function applyLocale(root) {
+        if (!root) return;
+        if (root.nodeType === 3) {
+          translateTextNode(root);
+          return;
+        }
+        if (root.nodeType !== 1) return;
+        translateAttrs(root);
+        root.querySelectorAll("[placeholder],[aria-label],[title],[alt]").forEach(translateAttrs);
+        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let n;
+        while ((n = w.nextNode())) translateTextNode(n);
+      }
+      function startLocaleObserver() {
+        document.documentElement.lang = LANG === "en" ? "en" : LANG === "zh-Hans" ? "zh-CN" : "zh-TW";
+        applyLocale(document.body);
+        const mo = new MutationObserver((records) => {
+          for (const r of records) {
+            if (r.type === "characterData") translateTextNode(r.target);
+            else if (r.type === "attributes") translateAttrs(r.target);
+            else r.addedNodes.forEach((n) => applyLocale(n));
+          }
+          mo.takeRecords();
+        });
+        mo.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
+      }
+      // 資料層：英文介面直接換成英文片名 / 簡介 / 類型 / 演員名
+      function localizeItem(merged, raw) {
+        if (LANG === "en") {
+          merged.titleZh = raw.titleZh || raw.title;
+          if (raw.enTitle) merged.title = raw.enTitle;
+          if (raw.synopsisEn) merged.synopsis = raw.synopsisEn;
+          if (Array.isArray(raw.genreCodes) && raw.genreCodes.length) {
+            const g = raw.genreCodes.map((c) => GENRE_CODE_EN[c]).filter(Boolean);
+            if (g.length) merged.genres = g;
+          }
+          if (Array.isArray(merged.cast)) merged.cast = merged.cast.map((c) => Object.assign({}, c, { name: c.enName || c.name }));
+        } else if (raw.titleZh) {
+          merged.title = raw.titleZh;
+        }
+        return merged;
+      }
+      function setLanguage(next) {
+        if (next === LANG) return;
+        try {
+          localStorage.setItem(LANG_KEY, next);
+        } catch (e) {}
+        location.reload();
+      }
+
 
       const EXTRA_ACCLAIMED_ITEMS = [{"id": "cat_nfx_3", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "双城之战", "enTitle": "Arcane", "year": 2024, "releaseDate": "2024-11-09", "imdb": 9.0, "tomatoPct": 100, "popcornPct": 95, "seasonNumber": 2, "totalEpisodes": 9, "airedEpisodes": 9, "ageRating": "TV-14", "genres": ["动画", "科幻", "动作"], "synopsis": "上城皮尔特沃夫与底城祖安冲突彻底爆发，蔚与金克丝在海克斯科技与命运撕裂中走向终局。"}, {"id": "cat_nfx_4", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "蓝眼武士", "enTitle": "Blue Eye Samurai", "year": 2026, "releaseDate": "2026-08-20", "imdb": 8.8, "tomatoPct": 98, "popcornPct": 94, "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-MA", "genres": ["动画", "动作", "剧情"], "synopsis": "江户锁国时代混血剑客阿水远渡重洋踏入伦敦雾夜，继续追索身世复仇之刃。"}, {"id": "cat_nfx_5", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "王冠", "enTitle": "The Crown", "year": 2023, "releaseDate": "2023-12-14", "imdb": 8.6, "tomatoPct": 86, "popcornPct": 89, "seasonNumber": 6, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["历史", "剧情"], "synopsis": "横跨半个世纪的英国王室史诗画卷，细腻描摹权力职责与个人情感之间的漫长博弈。"}, {"id": "cat_nfx_7", "platformId": "netflix", "providers": ["netflix"], "mediaType": "movie", "title": "西线无战事", "enTitle": "All Quiet on the Western Front", "year": 2022, "releaseDate": "2022-10-28", "imdb": 7.8, "tomatoPct": 90, "popcornPct": 89, "runtime": 148, "ageRating": "R", "genres": ["战争", "历史", "剧情"], "synopsis": "年轻德国士兵保罗怀揣热血奔赴一战西线战壕，却在泥泞与炮火中直面战争残酷本质。"}, {"id": "cat_dnp_1", "platformId": "disney", "providers": ["disney"], "mediaType": "show", "title": "布鲁伊", "enTitle": "Bluey", "year": 2026, "releaseDate": "2026-04-12", "imdb": 9.4, "tomatoPct": 100, "popcornPct": 97, "seasonNumber": 4, "totalEpisodes": 28, "airedEpisodes": 28, "ageRating": "TV-Y", "genres": ["动画", "家庭", "喜剧"], "synopsis": "澳洲牧牛犬布鲁伊一家用无尽想象力把日常生活变成温暖治愈的游戏冒险。"}, {"id": "cat_dnp_3", "platformId": "disney", "providers": ["disney"], "mediaType": "show", "title": "幕府将军", "enTitle": "Shogun", "year": 2026, "releaseDate": "2026-05-18", "imdb": 8.7, "tomatoPct": 99, "popcornPct": 93, "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["历史", "战争", "剧情"], "synopsis": "战国风云再起，吉井虎永在天下初定后的暗流与外邦航路博弈中巩固幕府霸权。"}, {"id": "cat_dnp_4", "platformId": "disney", "providers": ["disney"], "mediaType": "show", "title": "安多", "enTitle": "Andor", "year": 2025, "releaseDate": "2025-04-22", "imdb": 8.6, "tomatoPct": 96, "popcornPct": 92, "seasonNumber": 2, "totalEpisodes": 12, "airedEpisodes": 12, "ageRating": "TV-14", "genres": ["科幻", "惊悚", "剧情"], "synopsis": "帝国铁幕愈发森严，卡西安·安多在谍报暗线与牺牲抉择中一步步走向义军黎明。"}, {"id": "cat_dnp_5", "platformId": "disney", "providers": ["disney"], "mediaType": "show", "title": "大熊餐厅", "enTitle": "The Bear", "year": 2025, "releaseDate": "2025-06-25", "imdb": 8.5, "tomatoPct": 96, "popcornPct": 90, "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["剧情", "喜剧"], "synopsis": "卡米与后厨团队在摘星重压与财务危机下争分夺秒，只为守住芝加哥厨房的灵魂。"}, {"id": "cat_hbo_1", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "兄弟连", "enTitle": "Band of Brothers", "year": 2001, "releaseDate": "2001-09-09", "imdb": 9.4, "tomatoPct": 97, "popcornPct": 97, "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["战争", "历史", "剧情"], "synopsis": "美军101空降师E连从诺曼底空降、巴斯托涅严冬一路浴血奋战至鹰巢的二战真实群像。"}, {"id": "cat_hbo_2", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "切尔诺贝利", "enTitle": "Chernobyl", "year": 2019, "releaseDate": "2019-05-06", "imdb": 9.3, "tomatoPct": 95, "popcornPct": 97, "seasonNumber": 1, "totalEpisodes": 5, "airedEpisodes": 5, "ageRating": "TV-MA", "genres": ["历史", "惊悚", "剧情"], "synopsis": "震撼还原1986年切尔诺贝利核电站爆炸后科学家、消防员与矿工以血肉之躯阻止浩劫的真相。"}, {"id": "cat_hbo_3", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "火线", "enTitle": "The Wire", "year": 2008, "releaseDate": "2008-03-09", "imdb": 9.3, "tomatoPct": 94, "popcornPct": 96, "seasonNumber": 5, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["犯罪", "剧情"], "synopsis": "以手术刀般冷峻笔触剖析巴尔的摩警局、码头、市政厅、学区与报社的社会生态。"}, {"id": "cat_hbo_4", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "继承之战", "enTitle": "Succession", "year": 2023, "releaseDate": "2023-05-28", "imdb": 8.9, "tomatoPct": 95, "popcornPct": 92, "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["剧情", "商战"], "synopsis": "传媒帝国掌门人洛根·罗伊家族内部围绕千亿商业版图展开冷酷无情的继承权厮杀。"}, {"id": "cat_hbo_5", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "匹兹堡医护前线", "enTitle": "The Pitt", "year": 2026, "releaseDate": "2026-01-15", "imdb": 8.9, "tomatoPct": 94, "popcornPct": 93, "seasonNumber": 2, "totalEpisodes": 15, "airedEpisodes": 15, "ageRating": "TV-MA", "genres": ["剧情", "医疗"], "synopsis": "一班十五小时实时推进，聚焦匹兹堡创伤急诊中心医护人员在高强度抢救与资源紧缺下的生死博弈。"}, {"id": "cat_hbo_6", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "最后生还者", "enTitle": "The Last of Us", "year": 2025, "releaseDate": "2025-04-13", "imdb": 8.7, "tomatoPct": 96, "popcornPct": 91, "seasonNumber": 2, "totalEpisodes": 7, "airedEpisodes": 7, "ageRating": "TV-MA", "genres": ["剧情", "科幻", "惊悚"], "synopsis": "真菌浩劫后的废土世界，乔尔与艾莉在怀俄明定居点五年后再度卷入残酷因果漩涡。"}, {"id": "cat_hbo_7", "platformId": "hbo", "providers": ["hbo"], "mediaType": "movie", "title": "沙丘2", "enTitle": "Dune: Part Two", "year": 2024, "releaseDate": "2024-03-01", "imdb": 8.5, "tomatoPct": 92, "popcornPct": 95, "runtime": 166, "ageRating": "PG-13", "genres": ["科幻", "冒险", "动作"], "synopsis": "保罗·厄崔迪融入弗雷曼人深入厄拉科斯大漠，在复仇命运与宇宙圣战预言之间崛起。"}, {"id": "cat_prv_2", "platformId": "prime", "providers": ["prime"], "mediaType": "show", "title": "无敌少侠", "enTitle": "Invincible", "year": 2026, "releaseDate": "2026-03-19", "imdb": 8.7, "tomatoPct": 99, "popcornPct": 93, "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-MA", "genres": ["动画", "科幻", "动作"], "synopsis": "马克·格雷森直面维尔图姆帝国大军压境，在守护地球与血脉宿命间经受惨烈考验。"}, {"id": "cat_prv_3", "platformId": "prime", "providers": ["prime"], "mediaType": "show", "title": "黑袍纠察队", "enTitle": "The Boys", "year": 2026, "releaseDate": "2026-06-11", "imdb": 8.7, "tomatoPct": 93, "popcornPct": 90, "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-MA", "genres": ["动作", "科幻", "犯罪"], "synopsis": "祖国人全面掌控权力核心，比利·布彻尔率领黑袍小队发起孤注一掷的终局反击。"}, {"id": "cat_prv_4", "platformId": "prime", "providers": ["prime"], "mediaType": "show", "title": "辐射", "enTitle": "Fallout", "year": 2026, "releaseDate": "2026-02-12", "imdb": 8.4, "tomatoPct": 94, "popcornPct": 90, "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-MA", "genres": ["科幻", "冒险", "动作"], "synopsis": "露西与尸鬼踏入新维加斯霓虹废墟，揭开避难所科技公司在核战前埋藏的终极秘密。"}, {"id": "cat_pmp_1", "platformId": "paramount", "providers": ["paramount"], "mediaType": "show", "title": "1883", "enTitle": "1883", "year": 2022, "releaseDate": "2022-02-27", "imdb": 8.7, "tomatoPct": 89, "popcornPct": 92, "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["西部", "历史", "剧情"], "synopsis": "达顿家族先辈穿越危机四伏的北美大平原北上蒙大拿，用生命开辟黄石牧场起源之路。"}, {"id": "cat_pmp_2", "platformId": "paramount", "providers": ["paramount"], "mediaType": "show", "title": "黄石", "enTitle": "Yellowstone", "year": 2024, "releaseDate": "2024-11-10", "imdb": 8.6, "tomatoPct": 84, "popcornPct": 89, "seasonNumber": 5, "totalEpisodes": 14, "airedEpisodes": 14, "ageRating": "TV-MA", "genres": ["西部", "剧情"], "synopsis": "美国最大连片牧场主达顿家族在资本吞并、政坛博弈与原住民保留地冲突间捍卫土地。"}, {"id": "cat_pmp_3", "platformId": "paramount", "providers": ["paramount"], "mediaType": "show", "title": "德克斯特：复活", "enTitle": "Dexter: Resurrection", "year": 2025, "releaseDate": "2025-07-11", "imdb": 8.6, "tomatoPct": 88, "popcornPct": 91, "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["犯罪", "惊悚", "剧情"], "synopsis": "死里逃生的德克斯特·摩根现身纽约寒冬，在追寻儿子哈里森的同时再度面对黑暗本能。"}, {"id": "cat_pmp_4", "platformId": "paramount", "providers": ["paramount"], "mediaType": "movie", "title": "壮志凌云2：独行侠", "enTitle": "Top Gun: Maverick", "year": 2022, "releaseDate": "2022-05-27", "imdb": 8.2, "tomatoPct": 96, "popcornPct": 99, "runtime": 130, "ageRating": "PG-13", "genres": ["动作", "剧情"], "synopsis": "服役三十余年的传奇试飞员独行侠重返精英学院，率领年轻飞行员执行近乎不可能的超低空突防任务。"}, {"id": "cat_atp_1", "platformId": "apple", "providers": ["apple"], "mediaType": "show", "title": "人生切割术", "enTitle": "Severance", "year": 2025, "releaseDate": "2025-01-17", "imdb": 8.7, "tomatoPct": 97, "popcornPct": 93, "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["科幻", "悬疑", "惊悚"], "synopsis": "卢蒙公司将员工工作记忆与生活记忆彻底手术剥离，马克团队在纯白迷宫走廊下逼近骇人真相。"}, {"id": "cat_atp_2", "platformId": "apple", "providers": ["apple"], "mediaType": "show", "title": "足球教练", "enTitle": "Ted Lasso", "year": 2026, "releaseDate": "2026-08-14", "imdb": 8.8, "tomatoPct": 90, "popcornPct": 92, "seasonNumber": 4, "totalEpisodes": 12, "airedEpisodes": 12, "ageRating": "TV-MA", "genres": ["喜剧", "体育", "剧情"], "synopsis": "乐观真诚的美式橄榄球教练泰德·拉索再度重返英伦绿茵场，用善意与幽默凝聚整支球队。"}, {"id": "cat_atp_4", "platformId": "apple", "providers": ["apple"], "mediaType": "show", "title": "末日地堡", "enTitle": "Silo", "year": 2025, "releaseDate": "2025-01-17", "imdb": 8.1, "tomatoPct": 92, "popcornPct": 89, "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "ageRating": "TV-MA", "genres": ["科幻", "悬疑", "剧情"], "synopsis": "幸存人类世代居住在深达百层的地下巨型地堡中，工程师朱丽叶走出气闸门后发现了不止一座地堡。"}, {"id": "cat_atp_6", "platformId": "apple", "providers": ["apple"], "mediaType": "movie", "title": "健听女孩", "enTitle": "CODA", "year": 2021, "releaseDate": "2021-08-13", "imdb": 8.0, "tomatoPct": 94, "popcornPct": 91, "runtime": 111, "ageRating": "PG-13", "genres": ["剧情", "音乐", "家庭"], "synopsis": "聋人渔民家庭中唯一听觉正常的少女露比，在守护家人与追寻歌唱天赋梦想之间勇敢成长。"}, {"id": "cat8_nfx_1", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "绝命毒师", "enTitle": "Breaking Bad", "year": 2013, "releaseDate": "2013-09-29", "imdb": 9.5, "tomatoPct": 96, "popcornPct": 97, "seasonNumber": 5, "totalEpisodes": 16, "airedEpisodes": 16, "ageRating": "TV-MA", "genres": ["犯罪", "剧情", "惊悚"], "synopsis": "高中化学老师沃尔特·怀特在绝症确诊后踏入制毒深渊，一步步蜕变为令整个西南地下世界震颤的海森堡。"}, {"id": "cat8_nfx_2", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "风骚律师", "enTitle": "Better Call Saul", "year": 2022, "releaseDate": "2022-08-15", "imdb": 9.0, "tomatoPct": 98, "popcornPct": 96, "seasonNumber": 6, "totalEpisodes": 13, "airedEpisodes": 13, "ageRating": "TV-MA", "genres": ["犯罪", "剧情"], "synopsis": "落魄小律师吉米·麦吉尔在道德挣扎与亲情裂痕中，逐渐化身巧舌如簧的犯罪律师索尔·古德曼。"}, {"id": "cat8_nfx_3", "platformId": "netflix", "providers": ["netflix"], "mediaType": "show", "title": "怪奇物语", "enTitle": "Stranger Things", "year": 2025, "releaseDate": "2025-11-26", "imdb": 8.7, "tomatoPct": 92, "popcornPct": 90, "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-14", "genres": ["科幻", "奇幻", "惊悚"], "synopsis": "霍金斯小镇与颠倒世界裂隙全面开启，小十一与伙伴们集结迎战威克那的终极决战。"}, {"id": "cat8_nfx_4", "platformId": "netflix", "providers": ["netflix"], "mediaType": "movie", "title": "爱尔兰人", "enTitle": "The Irishman", "year": 2019, "releaseDate": "2019-11-27", "imdb": 7.8, "tomatoPct": 95, "popcornPct": 86, "runtime": 209, "ageRating": "R", "genres": ["犯罪", "历史", "剧情"], "synopsis": "马丁·斯科塞斯执导，二战老兵弗兰克·希兰回望自己为布法利诺犯罪家族效命数十年的黑帮岁月。"}, {"id": "cat8_dnp_1", "platformId": "disney", "providers": ["disney"], "mediaType": "show", "title": "曼达洛人", "enTitle": "The Mandalorian", "year": 2023, "releaseDate": "2023-03-01", "imdb": 8.6, "tomatoPct": 90, "popcornPct": 91, "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "ageRating": "TV-14", "genres": ["科幻", "动作", "冒险"], "synopsis": "孤胆赏金猎人丁·贾林带着古古穿梭银河系外环，重返曼达洛母星追寻部族救赎。"}, {"id": "cat8_dnp_2", "platformId": "disney", "providers": ["disney"], "mediaType": "movie", "title": "头脑特工队2", "enTitle": "Inside Out 2", "year": 2024, "releaseDate": "2024-06-14", "imdb": 7.6, "tomatoPct": 91, "popcornPct": 95, "runtime": 96, "ageRating": "PG", "genres": ["动画", "喜剧", "家庭"], "synopsis": "步入青春期的莱莉大脑总部迎来焦焦、慕慕与丧丧等全新情绪，乐乐带领老搭档踏上找回自我之旅。"}, {"id": "cat8_dnp_3", "platformId": "disney", "providers": ["disney"], "mediaType": "movie", "title": "可怜的东西", "enTitle": "Poor Things", "year": 2023, "releaseDate": "2023-12-08", "imdb": 7.8, "tomatoPct": 92, "popcornPct": 80, "runtime": 141, "ageRating": "R", "genres": ["奇幻", "喜剧", "剧情"], "synopsis": "被古怪科学家赋予新生的贝拉怀揣孩童般的好奇心游历各大洲，挣脱偏见寻找自由与平等。"}, {"id": "cat8_hbo_1", "platformId": "hbo", "providers": ["hbo"], "mediaType": "show", "title": "黑道家族", "enTitle": "The Sopranos", "year": 2007, "releaseDate": "2007-06-10", "imdb": 9.2, "tomatoPct": 92, "popcornPct": 96, "seasonNumber": 6, "totalEpisodes": 21, "airedEpisodes": 21, "ageRating": "TV-MA", "genres": ["犯罪", "剧情"], "synopsis": "新泽西黑帮教父托尼·索普拉诺在家族火并、联邦调查与惊恐发作心理治疗之间艰难求存。"}, {"id": "cat8_hbo_2", "platformId": "hbo", "providers": ["hbo"], "mediaType": "movie", "title": "蝙蝠侠：黑暗骑士", "enTitle": "The Dark Knight", "year": 2008, "releaseDate": "2008-07-18", "imdb": 9.0, "tomatoPct": 94, "popcornPct": 94, "runtime": 152, "ageRating": "PG-13", "genres": ["动作", "犯罪", "惊悚"], "synopsis": "小丑在哥谭市掀起无序混乱风暴，布鲁斯·韦恩必须在英雄信条与黑暗代价之间作出抉择。"}, {"id": "cat8_prv_1", "platformId": "prime", "providers": ["prime"], "mediaType": "show", "title": "伦敦生活", "enTitle": "Fleabag", "year": 2019, "releaseDate": "2019-04-08", "imdb": 8.7, "tomatoPct": 100, "popcornPct": 94, "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 6, "ageRating": "TV-MA", "genres": ["喜剧", "剧情"], "synopsis": "毒舌犀利又满身伤痕的伦敦独身女子打破第四面墙，直面丧友之痛、荒诞家庭与禁忌心动。"}, {"id": "cat8_prv_2", "platformId": "prime", "providers": ["prime"], "mediaType": "movie", "title": "奥本海默", "enTitle": "Oppenheimer", "year": 2023, "releaseDate": "2023-07-21", "imdb": 8.3, "tomatoPct": 93, "popcornPct": 91, "runtime": 180, "ageRating": "R", "genres": ["历史", "传记", "剧情"], "synopsis": "理论物理学家罗伯特·奥本海默率领曼哈顿计划造出原子弹，也从此背负重塑人类命运的道德审判。"}, {"id": "cat8_pmp_1", "platformId": "paramount", "providers": ["paramount"], "mediaType": "movie", "title": "教父", "enTitle": "The Godfather", "year": 1972, "releaseDate": "1972-03-24", "imdb": 9.2, "tomatoPct": 97, "popcornPct": 98, "runtime": 175, "ageRating": "R", "genres": ["犯罪", "剧情"], "synopsis": "柯里昂黑手党家族面临时代剧变与五大家族暗算，小儿子迈克尔从局外军官一步步接掌教父权杖。"}, {"id": "cat8_pmp_2", "platformId": "paramount", "providers": ["paramount"], "mediaType": "movie", "title": "星际穿越", "enTitle": "Interstellar", "year": 2014, "releaseDate": "2014-11-07", "imdb": 8.7, "tomatoPct": 73, "popcornPct": 86, "runtime": 169, "ageRating": "PG-13", "genres": ["科幻", "冒险", "剧情"], "synopsis": "地球枯萎危机迫近，前宇航员库珀穿越土星虫洞远赴未知星系，跨越时空引力只为兑现归家诺言。"}, {"id": "cat8_atp_1", "platformId": "apple", "providers": ["apple"], "mediaType": "show", "title": "诊疗中", "enTitle": "Shrinking", "year": 2026, "releaseDate": "2026-10-16", "imdb": 8.1, "tomatoPct": 94, "popcornPct": 91, "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 6, "ageRating": "TV-MA", "genres": ["喜剧", "剧情"], "synopsis": "痛失爱妻的心理治疗师吉米打破职业常规对来访者直言不讳，在与导师保罗的碰撞中彼此治愈。"}, {"id": "cat8_atp_2", "platformId": "apple", "providers": ["apple"], "mediaType": "movie", "title": "花月杀手", "enTitle": "Killers of the Flower Moon", "year": 2023, "releaseDate": "2023-10-20", "imdb": 7.6, "tomatoPct": 93, "popcornPct": 84, "runtime": 206, "ageRating": "R", "genres": ["犯罪", "历史", "剧情"], "synopsis": "二十年代俄克拉荷马州奥塞奇族因石油暴富，随之而来的连环贪婪谋杀引来联邦调查局成立首桩大案。"}];
       const PLATFORM_MAP = {};
@@ -1893,6 +2264,9 @@
 
       function saveEnrichCache() {
         try {
+          // 最多保留 300 条补图记录，避免越存越大
+          const keys = Object.keys(enrichCache);
+          if (keys.length > 300) keys.slice(0, keys.length - 300).forEach((k) => delete enrichCache[k]);
           localStorage.setItem(POSTER_CACHE_KEY, JSON.stringify(enrichCache));
         } catch (e) {}
       }
@@ -2099,7 +2473,7 @@
         if (cached.totalEpisodes > 0 && !merged.totalEpisodes) merged.totalEpisodes = cached.totalEpisodes;
         if (cached.airedEpisodes > 0 && !merged.airedEpisodes) merged.airedEpisodes = cached.airedEpisodes;
         if (cached.trailerUrl && !merged.trailerUrl) merged.trailerUrl = cached.trailerUrl;
-        return merged;
+        return localizeItem(merged, raw);
       }
 
       function getPosterUrl(item, highRes, showSvgText = true) {
@@ -2363,9 +2737,11 @@
           getPlatformItems(pid).forEach((it) => {
             if (it.mediaType === targetType) extras.push(it);
           });
-          SEED_ITEMS.forEach((s) => {
-            if (s.platformId === pid && s.mediaType === targetType) extras.push(s);
-          });
+          if (!liveSource.length) {
+            SEED_ITEMS.forEach((s) => {
+              if (s.platformId === pid && s.mediaType === targetType) extras.push(s);
+            });
+          }
         });
         extras.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
         extras.forEach(pushItem);
@@ -2378,25 +2754,25 @@
           const el = document.getElementById(trackId);
           if (!el) return;
           el.innerHTML = items
-            .map((it) => {
+            .slice(0, 10)
+            .map((it, idx) => {
               const k = itemKey(it);
               const posterSrc = getPosterUrl(it, false, true);
               const fallbackSrc = makeEditorialPosterSvg(it, true, true);
               return `
-                <div class="mixed-poster-card" data-openkey="${escapeHtml(k)}">
-                  <div class="mixed-poster-box">
-                    <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
-                      loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                      onerror="this.onerror=null;this.src='${fallbackSrc}';" />
-                    <div class="mixed-plat-corner">
-                      ${renderBrandIconHtml(it.platformId, "brand-icon-full")}
+                <div class="rank-card" data-openkey="${escapeHtml(k)}">
+                  <span class="rank-num" aria-hidden="true">${idx + 1}</span>
+                  <div class="rank-body">
+                    <div class="mixed-poster-box">
+                      <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
+                        loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                        onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                      <div class="mixed-plat-corner">
+                        ${renderBrandIconHtml(it.platformId, "brand-icon-full")}
+                      </div>
                     </div>
-                  </div>
-                  <div style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">
-                    ${escapeHtml(it.title)}
-                  </div>
-                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${escapeHtml((PLATFORM_MAP[it.platformId] || PLATFORMS[0]).name)} · ${escapeHtml(String(it.year || 2026))}
+                    <div class="rank-title">${escapeHtml(it.title)}</div>
+                    <div class="rank-meta">${escapeHtml((PLATFORM_MAP[it.platformId] || PLATFORMS[0]).name)} · ${escapeHtml(String(it.year || ""))}</div>
                   </div>
                 </div>
               `;
@@ -2490,6 +2866,17 @@
         liveGlobalTop.forEach((it) => {
           const k = itemKey(it);
           if (!m.has(k)) m.set(k, getEnrichedItem(it));
+        });
+        // 首页横排、二级页加载过的条目也要能点开（之前漏了，导致部分条目点不进去）
+        [...liveHeroNewShows, ...liveHotShowsTop, ...liveHotMoviesTop].forEach((it) => {
+          const k = itemKey(it);
+          if (!m.has(k)) m.set(k, getEnrichedItem(it));
+        });
+        Object.values(platformCatalogPools).forEach((pool) => {
+          (pool.allLoaded || []).forEach((it) => {
+            const k = itemKey(it);
+            if (!m.has(k)) m.set(k, getEnrichedItem(it));
+          });
         });
         extraSearchItems.forEach((it) => m.set(itemKey(it), getEnrichedItem(it)));
         Object.entries(appState.userRecords || {}).forEach(([k, rec]) => {
@@ -2608,9 +2995,7 @@
         const tokIn = document.getElementById("gistTokenInput");
         if (savedToken && !tokIn.value) tokIn.value = savedToken;
 
-        const savedTmdb = localStorage.getItem(TMDB_KEY) || "";
-        const tmdbIn = document.getElementById("tmdbKeyInput");
-        if (savedTmdb && !tmdbIn.value) tmdbIn.value = savedTmdb;
+        document.querySelectorAll("#langSeg [data-lang]").forEach((b) => b.classList.toggle("active", b.getAttribute("data-lang") === LANG));
       }
 
       function renderActiveView() {
@@ -2712,55 +3097,34 @@
         `;
       }
 
-      function ensureSecondaryPool(feedKey) {
-        if (!platformCatalogPools[feedKey]) {
-          const isHotShows = feedKey === "hot_shows";
-          const isHotMovies = feedKey === "hot_movies";
-          const isMixedPopular = isHotShows || isHotMovies;
+      // 二级页排序：精选（热门且高分，新片加分）/ 最新 / 高分
+      let platformSort = "curated";
+      function isMixedFeed(feedKey) {
+        return feedKey === "hot_shows" || feedKey === "hot_movies";
+      }
+      function poolKeyFor(feedKey) {
+        return isMixedFeed(feedKey) ? feedKey : `${feedKey}|${platformSort}`;
+      }
 
+      function ensureSecondaryPool(feedKey) {
+        const pk = poolKeyFor(feedKey);
+        if (!platformCatalogPools[pk]) {
+          const isMixedPopular = isMixedFeed(feedKey);
           const seenKeys = new Set();
           const initialBuffer = [];
-
           if (isMixedPopular) {
-            const targetMedia = isHotShows ? "show" : "movie";
-            const baseList = getMixedPopularItems(targetMedia);
-            // Add remaining matching seed & acclaimed items ordered purely by heat!
-            const restPool = [
-              ...Object.values(liveChartsByPlatform).flat(),
-              ...SEED_ITEMS,
-              ...EXTRA_ACCLAIMED_ITEMS
-            ]
-              .filter((x) => x.mediaType === targetMedia && !(x.genres || []).includes("纪录片"))
-              .sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
-
-            [...baseList, ...restPool].forEach((raw) => {
+            // 首屏先放首页已拿到的实时热度榜，后面由接口按热度继续加载
+            getMixedPopularItems(feedKey === "hot_shows" ? "show" : "movie").forEach((raw) => {
               const k = itemKey(raw);
               if (k && !seenKeys.has(k)) {
                 seenKeys.add(k);
                 initialBuffer.push(getEnrichedItem(raw));
               }
             });
-          } else {
-            // Single-platform '热播库': Exclude Homepage Top 10 so there is zero repetition!
-            const top10 = getPlatformItems(feedKey);
-            top10.forEach((t) => seenKeys.add(itemKey(t)));
-
-            const seedCandidates = [
-              ...EXTRA_ACCLAIMED_ITEMS.filter((x) => x.platformId === feedKey || (x.providers && x.providers.includes(feedKey))),
-              ...SEED_ITEMS.filter((x) => x.platformId === feedKey || (x.providers && x.providers.includes(feedKey)))
-            ].filter((x) => x.mediaType === "show" || x.mediaType === "movie");
-
-            seedCandidates.forEach((sc) => {
-              const k = itemKey(sc);
-              if (k && !seenKeys.has(k)) {
-                seenKeys.add(k);
-                initialBuffer.push(getEnrichedItem(sc));
-              }
-            });
-            initialBuffer.sort(compareAcclaimedScoreThenYear);
           }
-
-          platformCatalogPools[feedKey] = {
+          platformCatalogPools[pk] = {
+            feedKey,
+            sort: isMixedPopular ? "popular" : platformSort,
             isMixedPopular,
             seenKeys,
             renderedCount: 0,
@@ -2770,156 +3134,94 @@
             cursor: "",
             mode: "auto",
             hasMoreRemote: true,
-            tvmazePage: 0,
-            tvmazeFailed: false,
+            usedFallback: false,
             fetching: false
           };
         }
-        return platformCatalogPools[feedKey];
+        return platformCatalogPools[pk];
+      }
+
+      // 只有接口完全拿不到数据时，才用内置的示例片单兜底
+      function secondaryFallbackItems(st) {
+        const pool = [...SEED_ITEMS, ...EXTRA_ACCLAIMED_ITEMS].filter((x) => x.mediaType === "show" || x.mediaType === "movie");
+        if (st.isMixedPopular) {
+          const mt = st.feedKey === "hot_shows" ? "show" : "movie";
+          return pool.filter((x) => x.mediaType === mt).sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
+        }
+        return pool
+          .filter((x) => x.platformId === st.feedKey || (x.providers && x.providers.includes(st.feedKey)))
+          .sort(compareAcclaimedScoreThenYear);
       }
 
       async function fetchMoreSecondaryCatalog(feedKey) {
         const st = ensureSecondaryPool(feedKey);
-        if (st.fetching) return;
-        st.fetching = true;
         const sentinel = document.getElementById("platformLoadSentinel");
-        if (sentinel && activePlatformPageId === feedKey) {
-          sentinel.textContent = "正在加载更多热门剧集与电影…";
+        if (st.fetching) return;
+        if (!st.hasMoreRemote) {
+          if (sentinel && activePlatformPageId === feedKey) sentinel.textContent = `已加载 ${st.renderedCount} 部`;
+          return;
         }
+        st.fetching = true;
+        if (sentinel && activePlatformPageId === feedKey) sentinel.textContent = "正在加载…";
 
         let newlyAdded = 0;
+        let failed = false;
+        const pushItems = (list) => {
+          list.forEach((raw) => {
+            if (raw.mediaType !== "show" && raw.mediaType !== "movie") return;
+            if (Array.isArray(raw.genres) && raw.genres.includes("纪录片")) return;
+            const k = itemKey(raw);
+            if (k && !st.seenKeys.has(k)) {
+              st.seenKeys.add(k);
+              const enr = getEnrichedItem(raw);
+              st.buffer.push(enr);
+              st.allLoaded.push(enr);
+              newlyAdded++;
+            }
+          });
+        };
 
-        // 1. Live Vercel /api/catalog endpoint
-        if (st.hasMoreRemote && (location.protocol === "http:" || location.protocol === "https:")) {
+        if (location.protocol === "http:" || location.protocol === "https:") {
           try {
             const qs = st.isMixedPopular
               ? `?feedType=${encodeURIComponent(feedKey)}&cursor=${encodeURIComponent(st.cursor)}`
-              : `?feedType=platform&platform=${encodeURIComponent(feedKey)}&band=${st.band}&cursor=${encodeURIComponent(st.cursor)}&mode=${encodeURIComponent(st.mode)}`;
+              : `?feedType=platform&platform=${encodeURIComponent(feedKey)}&sort=${encodeURIComponent(st.sort)}&band=${st.band}&cursor=${encodeURIComponent(st.cursor)}&mode=${encodeURIComponent(st.mode)}`;
             const res = await fetch(`./api/catalog${qs}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.ok && Array.isArray(data.items)) {
-                st.mode = data.mode || st.mode;
-                st.band = typeof data.nextBand === "number" ? data.nextBand : st.band;
-                st.cursor = data.nextCursor || "";
-                st.hasMoreRemote = Boolean(data.hasMore);
-
-                const freshBatch = [];
-                data.items.forEach((raw) => {
-                  if (raw.mediaType !== "show" && raw.mediaType !== "movie") return;
-                  if (Array.isArray(raw.genres) && raw.genres.includes("纪录片")) return;
-                  const k = itemKey(raw);
-                  if (k && !st.seenKeys.has(k)) {
-                    st.seenKeys.add(k);
-                    const enr = getEnrichedItem(raw);
-                    freshBatch.push(enr);
-                    st.allLoaded.push(enr);
-                    newlyAdded++;
-                  }
-                });
-                // For single platform: sort by Score Desc -> Year Desc. For hot_shows/hot_movies: keep pure popularity order!
-                if (!st.isMixedPopular) {
-                  freshBatch.sort(compareAcclaimedScoreThenYear);
-                }
-                st.buffer.push(...freshBatch);
-              } else {
-                st.hasMoreRemote = false;
-              }
+            const data = res.ok ? await res.json() : null;
+            if (data && data.ok && Array.isArray(data.items)) {
+              st.mode = data.mode === "banded" || data.mode === "deep" ? data.mode : st.mode;
+              st.band = typeof data.nextBand === "number" ? data.nextBand : st.band;
+              st.cursor = data.nextCursor || "";
+              st.hasMoreRemote = Boolean(data.hasMore);
+              const batch = data.items.slice();
+              // 高分模式按评分排；精选/最新/热度保持接口给出的顺序
+              if (st.sort === "score") batch.sort(compareAcclaimedScoreThenYear);
+              pushItems(batch);
             } else {
-              st.hasMoreRemote = false;
+              failed = true;
             }
           } catch (e) {
-            st.hasMoreRemote = false;
+            failed = true;
           }
+        } else {
+          failed = true;
         }
 
-        // 2. Supplemental TVmaze public show stream (for shows & platform feeds when buffer runs low)
-        if (feedKey !== "hot_movies" && st.buffer.length - st.renderedCount < 16 && st.tvmazePage < 30 && !st.tvmazeFailed) {
-          try {
-            const pageToFetch = st.tvmazePage++;
-            const tvRes = await fetch(`https://api.tvmaze.com/shows?page=${pageToFetch}`);
-            if (tvRes.ok) {
-              const shows = await tvRes.json();
-              const webMatchMap = {
-                netflix: ["netflix"],
-                disney: ["disney", "hulu", "fx", "abc"],
-                hbo: ["hbo", "max", "warner"],
-                prime: ["amazon", "prime"],
-                paramount: ["paramount", "cbs", "showtime"],
-                apple: ["apple"]
-              };
-              const extraBatch = [];
-
-              shows.forEach((s) => {
-                if (s.type === "Documentary" || (Array.isArray(s.genres) && s.genres.some((g) => g.toLowerCase().includes("documentary")))) return;
-                const score = Number(s.rating?.average) || 0;
-                const weight = Number(s.weight) || 50;
-                if (!st.isMixedPopular && score < 7.3) return;
-                if (st.isMixedPopular && weight < 85 && score < 7.5) return;
-
-                const chName = String(s.webChannel?.name || s.network?.name || "").toLowerCase();
-                let resolvedPid = st.isMixedPopular ? "netflix" : feedKey;
-                for (const [candPid, kws] of Object.entries(webMatchMap)) {
-                  if (kws.some((kw) => chName.includes(kw))) {
-                    resolvedPid = candPid;
-                    break;
-                  }
-                }
-                if (!st.isMixedPopular) {
-                  const kws = webMatchMap[feedKey] || [];
-                  const isMatch = kws.some((kw) => chName.includes(kw));
-                  if (!isMatch && score < 8.4) return;
-                  if (!isMatch && (s.id % 6) !== PLATFORMS.findIndex((p) => p.id === feedKey)) return;
-                }
-
-                const yr = s.premiered ? Number(String(s.premiered).slice(0, 4)) : 2024;
-                const itemObj = {
-                  id: "tvm_cat_" + s.id,
-                  title: s.name,
-                  enTitle: s.name,
-                  mediaType: "show",
-                  hasEpisodes: true,
-                  platformId: resolvedPid,
-                  providers: [resolvedPid],
-                  heat: weight * 8 + score * 10,
-                  imdb: Number((score || 7.6).toFixed(1)),
-                  year: yr,
-                  releaseDate: s.premiered || `${yr}-01-01`,
-                  genres: (s.genres || ["剧情"]).slice(0, 2),
-                  synopsis: String(s.summary || "").replace(/<[^>]+>/g, "").trim(),
-                  posterHd: String(s.image?.original || "").replace(/^http:/, "https:"),
-                  posterThumb: String(s.image?.medium || "").replace(/^http:/, "https:")
-                };
-                const k = itemKey(itemObj);
-                if (k && !st.seenKeys.has(k)) {
-                  st.seenKeys.add(k);
-                  extraBatch.push(itemObj);
-                  st.allLoaded.push(itemObj);
-                  newlyAdded++;
-                }
-              });
-
-              if (st.isMixedPopular) {
-                extraBatch.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
-              } else {
-                extraBatch.sort(compareAcclaimedScoreThenYear);
-              }
-              st.buffer.push(...extraBatch);
-            } else {
-              st.tvmazeFailed = true;
-            }
-          } catch (e) {
-            st.tvmazeFailed = true;
+        if (failed) {
+          st.hasMoreRemote = false;
+          if (!st.allLoaded.length && !st.usedFallback) {
+            st.usedFallback = true;
+            pushItems(secondaryFallbackItems(st));
           }
         }
 
         st.fetching = false;
-        if (activePlatformPageId === feedKey) {
-          if (newlyAdded > 0) {
-            appendNextSecondaryChunk(feedKey, 20);
-          } else if (sentinel) {
-            sentinel.textContent = `已展示 ${st.renderedCount} 部热播片单`;
-          }
+        // 期间用户切换了排序或离开页面，就不再渲染这批结果
+        if (activePlatformPageId !== feedKey || ensureSecondaryPool(feedKey) !== st) return;
+        if (newlyAdded > 0) {
+          appendNextSecondaryChunk(feedKey, 20);
+        } else if (sentinel) {
+          sentinel.textContent = failed && !st.renderedCount ? "网络不太好，稍后再试" : `已加载 ${st.renderedCount} 部`;
         }
       }
 
@@ -2934,15 +3236,39 @@
           const fragHtml = slice.map((it) => buildSecondaryCatalogCardHtml(it, st.isMixedPopular)).join("");
           listEl.insertAdjacentHTML("beforeend", fragHtml);
           st.renderedCount += slice.length;
-          // Immediately enrich posters for newly rendered rows so real artwork pops in fast!
-          Promise.allSettled(slice.slice(0, 10).map((it) => enrichSingleItemMedia(it)));
+          // 只为缺海报的条目补图（接口数据一般自带海报）
+          Promise.allSettled(slice.filter((it) => !it.posterHd).slice(0, 6).map((it) => enrichSingleItemMedia(it)));
         }
 
-        if (st.buffer.length - st.renderedCount < 14 && (st.hasMoreRemote || (feedKey !== "hot_movies" && st.tvmazePage < 30 && !st.tvmazeFailed))) {
+        if (st.buffer.length - st.renderedCount < 14 && st.hasMoreRemote) {
           fetchMoreSecondaryCatalog(feedKey);
         } else if (!st.hasMoreRemote && st.renderedCount >= st.buffer.length && sentinel) {
-          sentinel.textContent = `已加载 ${st.renderedCount} 部热播影视`;
+          sentinel.textContent = st.renderedCount ? `已加载 ${st.renderedCount} 部` : "暂无内容";
         }
+      }
+
+      function renderPlatformSortSeg(feedKey) {
+        const seg = document.getElementById("platformSortSeg");
+        if (!seg) return;
+        if (isMixedFeed(feedKey)) {
+          seg.style.display = "none";
+          return;
+        }
+        seg.style.display = "";
+        seg.querySelectorAll("[data-sort]").forEach((b) => b.classList.toggle("active", b.getAttribute("data-sort") === platformSort));
+      }
+
+      function switchPlatformSort(nextSort) {
+        if (!activePlatformPageId || isMixedFeed(activePlatformPageId) || nextSort === platformSort) return;
+        platformSort = nextSort;
+        const feedKey = activePlatformPageId;
+        const st = ensureSecondaryPool(feedKey);
+        st.renderedCount = 0;
+        renderPlatformSortSeg(feedKey);
+        document.getElementById("platformAcclaimedList").innerHTML = "";
+        appendNextSecondaryChunk(feedKey, 20);
+        if (!st.buffer.length) fetchMoreSecondaryCatalog(feedKey);
+        if (typeof applyLocale === "function") applyLocale(document.getElementById("platformShell"));
       }
 
       function syncOverlayBodyLock() {
@@ -2981,25 +3307,17 @@
           const titleTxt = isHotShows ? "热播电视剧" : "热播电影";
           document.getElementById("platformHeroTitle").textContent = titleTxt;
           document.getElementById("platformStickyTitle").textContent = titleTxt;
-          document.getElementById("platformHeroSub").textContent = "六大流媒体混排 · 按全网观看热度实时排序";
-          document.getElementById("platformListHeading").textContent = "全网热播榜";
-          document.getElementById("platformListSortHint").textContent = "谁火排前面 · 实时热度无限流";
+          document.getElementById("platformListHeading").textContent = "按实时热度排序";
         } else {
           iconEl.style.display = "block";
           iconEl.innerHTML = renderBrandIconHtml(feedKey, "provider-icon-lg").replace('class="provider-icon-lg"', 'style="width:44px;height:44px;display:block;border-radius:12px;overflow:hidden;"');
-          document.getElementById("platformHeroTitle").textContent = `${pm.name} · 热播库`;
-          document.getElementById("platformStickyTitle").textContent = `${pm.name} · 热播库`;
-          document.getElementById("platformHeroSub").textContent = "平台精选电视剧与电影 · 不含今日前十重复项";
-          document.getElementById("platformListHeading").textContent = "热播库";
-          document.getElementById("platformListSortHint").textContent = "按评分由高到低 · 同分新片优先";
+          document.getElementById("platformHeroTitle").textContent = pm.name;
+          document.getElementById("platformStickyTitle").textContent = pm.name;
+          document.getElementById("platformListHeading").textContent = "片库";
         }
+        renderPlatformSortSeg(feedKey);
 
         const st = ensureSecondaryPool(feedKey);
-        if (!isMixed) {
-          const freshTopKeys = new Set(getPlatformItems(feedKey).map(itemKey));
-          st.buffer = st.buffer.filter((it) => !freshTopKeys.has(itemKey(it)));
-          freshTopKeys.forEach((k) => st.seenKeys.add(k));
-        }
         st.renderedCount = 0;
 
         document.getElementById("platformAcclaimedList").innerHTML = "";
@@ -3008,7 +3326,7 @@
         const shell = document.getElementById("platformShell");
         const scroller = document.getElementById("platformScroller");
         const scrim = document.getElementById("platformScrim");
-        document.getElementById("platformTopbar").classList.remove("scrolled");
+        document.getElementById("platformTopbar").classList.remove("scrolled", "show-title");
         scroller.scrollTop = 0;
 
         syncOverlayBodyLock();
@@ -3464,9 +3782,60 @@
           }
         });
 
-        for (let i = 0; i < unique.length; i += 5) {
-          await Promise.allSettled(unique.slice(i, i + 5).map((it) => enrichSingleItemMedia(it)));
+        // 只补首屏附近最多 12 部缺海报的，打开 App 时做一次，不在后台循环
+        const batch = unique.slice(0, 12);
+        for (let i = 0; i < batch.length; i += 4) {
+          await Promise.allSettled(batch.slice(i, i + 4).map((it) => enrichSingleItemMedia(it)));
         }
+      }
+
+      // 上次成功拿到的榜单存在本机：下次打开先直接显示（海报、演员表都在里面），再静默换成最新数据。
+      // 不在后台定时刷新，只在打开 App 和手动刷新时请求一次。
+      const LIVE_CACHE_KEY = "dramov_live_charts_v1";
+      function applyLiveChartsData(data) {
+        liveChartsByPlatform = data.chartsByPlatform || {};
+        liveHeroNewShows = Array.isArray(data.heroNewShows) ? data.heroNewShows : [];
+        liveHotShowsTop = Array.isArray(data.hotShowsTop) ? data.hotShowsTop : [];
+        liveHotMoviesTop = Array.isArray(data.hotMoviesTop) ? data.hotMoviesTop : [];
+        liveGlobalTop = data.globalTop || [];
+        if (data.providerIcons) liveProviderIcons = data.providerIcons;
+      }
+      function loadCachedLiveCharts() {
+        try {
+          const raw = localStorage.getItem(LIVE_CACHE_KEY);
+          if (!raw) return false;
+          const c = JSON.parse(raw);
+          if (!c || !c.data || !c.data.chartsByPlatform) return false;
+          if (Date.now() - (c.t || 0) > 7 * 86400000) return false; // 超过一周的旧榜单不用
+          applyLiveChartsData(c.data);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      function saveCachedLiveCharts(data) {
+        try {
+          localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+        } catch (e) {
+          // 存储空间不够时清掉补图缓存再试一次
+          try {
+            enrichCache = {};
+            localStorage.removeItem(POSTER_CACHE_KEY);
+            localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+          } catch (e2) {}
+        }
+      }
+      // 预先解码首屏海报（只有首屏十几张，不做全量预载）
+      function preloadFirstScreenPosters() {
+        const list = [...liveHeroNewShows.slice(0, 3), ...liveHotShowsTop.slice(0, 4), ...liveHotMoviesTop.slice(0, 4)];
+        list.forEach((it) => {
+          const src = it.posterThumb || it.posterHd;
+          if (src) {
+            const im = new Image();
+            im.decoding = "async";
+            im.src = src;
+          }
+        });
       }
 
       async function refreshLiveStreamingCharts(silent) {
@@ -3476,16 +3845,12 @@
         let gotServerCharts = false;
         if (location.protocol === "http:" || location.protocol === "https:") {
           try {
-            const res = await fetch("./api/charts", { cache: "no-store" });
+            const res = await fetch("./api/charts", { cache: "no-cache" });
             if (res.ok) {
               const data = await res.json();
               if (data && data.ok && data.chartsByPlatform) {
-                liveChartsByPlatform = data.chartsByPlatform;
-                liveHeroNewShows = Array.isArray(data.heroNewShows) ? data.heroNewShows : [];
-                liveHotShowsTop = Array.isArray(data.hotShowsTop) ? data.hotShowsTop : [];
-                liveHotMoviesTop = Array.isArray(data.hotMoviesTop) ? data.hotMoviesTop : [];
-                liveGlobalTop = data.globalTop || [];
-                if (data.providerIcons) liveProviderIcons = data.providerIcons;
+                applyLiveChartsData(data);
+                saveCachedLiveCharts(data);
                 gotServerCharts = true;
               }
             }
@@ -3708,14 +4073,16 @@
           isNavMinimized = minState;
           const wrap = document.getElementById("bottomNavWrap");
           if (minState) {
-            // 收起后左侧圆按钮显示“当前所在标签”的图标（Apple Music 行为）
+            // 收起后左侧圆形里显示“当前所在标签”的图标（Apple Music 行为）
             const activeBtn = document.querySelector(`#bottomNav .nav-btn[data-nav="${activeNav}"]`);
-            const orb = document.getElementById("minHomeBtn");
+            const mini = document.getElementById("navMiniIcon");
             const svg = activeBtn && activeBtn.querySelector("svg");
-            if (orb && svg) {
-              orb.innerHTML = svg.outerHTML;
-              orb.setAttribute("aria-label", `展开导航栏（当前：${activeBtn.textContent.trim()}）`);
-            }
+            if (mini && svg) mini.innerHTML = svg.outerHTML;
+            const nav = document.getElementById("bottomNav");
+            if (nav && activeBtn) nav.setAttribute("aria-label", `展开导航栏（当前：${activeBtn.textContent.trim()}）`);
+          } else {
+            const nav = document.getElementById("bottomNav");
+            if (nav) nav.setAttribute("aria-label", "主导航");
           }
           if (wrap) wrap.classList.toggle("minimized", minState);
         }
@@ -3849,9 +4216,9 @@
         });
 
         // Minimized Split Bar Buttons: Left = Expand & Home, Right = Expand & Search!
-        document.getElementById("minHomeBtn").addEventListener("click", () => {
-          // 只展开导航栏，留在当前页面
-          setNavMinimized(false);
+        // 收起时点左侧圆形：展开导航栏，留在当前页面
+        navEl.addEventListener("click", () => {
+          if (isNavMinimized) setNavMinimized(false);
         });
         document.getElementById("minSearchBtn").addEventListener("click", () => {
           setNavMinimized(false);
@@ -3924,6 +4291,11 @@
           heroTrack.scrollTo({ left: offsetSlot * heroTrack.clientWidth, behavior: "smooth" });
         });
 
+        document.getElementById("platformSortSeg").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-sort]");
+          if (b) switchPlatformSort(b.getAttribute("data-sort"));
+        });
+
         // Global Delegation for Opening Detail or Quick Fav
         document.body.addEventListener("click", (e) => {
           const qFav = e.target.closest("[data-quickfav]");
@@ -3971,7 +4343,9 @@
 
         platScrollerEl.addEventListener("scroll", () => {
           if (isPlatformOpen) {
-            document.getElementById("platformTopbar").classList.toggle("scrolled", platScrollerEl.scrollTop > 130);
+            // 内容一滚到返回按钮下面就给顶栏加磨砂背景，避免按钮压在图标上
+            document.getElementById("platformTopbar").classList.toggle("scrolled", platScrollerEl.scrollTop > 12);
+            document.getElementById("platformTopbar").classList.toggle("show-title", platScrollerEl.scrollTop > 70);
             // Infinite scroll trigger when within 650px of bottom
             if (platScrollerEl.scrollTop + platScrollerEl.clientHeight >= platScrollerEl.scrollHeight - 650) {
               if (activePlatformPageId) appendNextSecondaryChunk(activePlatformPageId, 20);
@@ -4184,11 +4558,9 @@
           saveLocalState();
           renderSettingsView();
         });
-        document.getElementById("saveTmdbBtn").addEventListener("click", () => {
-          localStorage.setItem(TMDB_KEY, document.getElementById("tmdbKeyInput").value.trim());
-          enrichCache = {};
-          saveEnrichCache();
-          refreshLiveStreamingCharts(false);
+        document.getElementById("langSeg").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-lang]");
+          if (b) setLanguage(b.getAttribute("data-lang"));
         });
         document.getElementById("saveTokenBtn").addEventListener("click", () => {
           localStorage.setItem(TOKEN_KEY, document.getElementById("gistTokenInput").value.trim());
@@ -4255,7 +4627,9 @@
 
       // Boot strictly in Dark mode by default unless user explicitly saved Light
       applyTheme(localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark");
+      startLocaleObserver();
       bindEvents();
+      if (loadCachedLiveCharts()) preloadFirstScreenPosters();
       renderActiveView();
       refreshLiveStreamingCharts(true);
 

@@ -257,6 +257,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     ageRating: en.ageCertification || (isShow ? "TV-MA" : "PG-13"),
     genres: genres.length ? genres : [isShow ? "剧情" : "电影"],
     synopsis: zh.shortDescription || en.shortDescription || "",
+    synopsisEn: en.shortDescription || "",
+    genreCodes: rawGenres.map((g) => g.shortName).filter(Boolean).slice(0, 3),
     posterHd: formatImageUrl(rawPoster, "s718"),
     posterThumb: formatImageUrl(rawPoster, "s332"),
     backdrops,
@@ -281,7 +283,7 @@ function sortScoreThenYearDesc(items) {
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=7200");
+  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
 
   try {
     const q = req.query || {};
@@ -330,6 +332,44 @@ module.exports = async (req, res) => {
     const bandIdx = Math.max(0, Math.min(SCORE_BANDS.length - 1, Number(q.band) || 0));
     const mode = q.mode ? String(q.mode) : "auto";
     const packages = codeMap[platformId] || PLATFORM_DEFS.netflix.fallbackCodes;
+    const sort = ["curated", "new", "score"].includes(String(q.sort)) ? String(q.sort) : "score";
+
+    // 精选：平台上正热门、且 IMDb ≥ 7.0 的片子，页内按“评分 + 新片加分”排序
+    // 最新：近两年上线的新片新剧（剧集按首播年份），页内按上线日期从新到旧
+    if (sort === "curated" || sort === "new") {
+      const curYear = new Date().getUTCFullYear();
+      const filter = { packages, objectTypes: ["SHOW", "MOVIE"] };
+      if (sort === "curated") filter.imdbScore = { min: 7.0 };
+      else filter.releaseYear = { min: curYear - 1 };
+      const rSort = await queryUpstream(CATALOG_PAGE_QUERY, { country, first: 40, after: cursor, filter }).catch(() => null);
+      const sConn = rSort?.data?.popularTitles;
+      if (sConn && Array.isArray(sConn.edges)) {
+        const nowMs = Date.now();
+        const recencyBonus = (it) => {
+          const days = (nowMs - (Date.parse(it.releaseDate || "") || 0)) / 86400000;
+          return days <= 365 ? 0.8 : days <= 730 ? 0.4 : 0;
+        };
+        const items = sConn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title);
+        if (sort === "curated") {
+          items.sort((a, b) => (Number(b.imdb) + recencyBonus(b)) - (Number(a.imdb) + recencyBonus(a)));
+        } else {
+          items.sort((a, b) => (Date.parse(b.releaseDate || "") || 0) - (Date.parse(a.releaseDate || "") || 0) || (Number(b.year) || 0) - (Number(a.year) || 0));
+        }
+        const more = Boolean(sConn.pageInfo?.hasNextPage && sConn.pageInfo?.endCursor);
+        return res.status(200).json({
+          ok: true,
+          feedType: "platform",
+          mode: sort,
+          platform: platformId,
+          band: 0,
+          nextBand: 0,
+          nextCursor: more ? sConn.pageInfo.endCursor : "",
+          hasMore: more,
+          items
+        });
+      }
+      // 上游失败时落到下面的按评分分段逻辑
+    }
 
     if (mode !== "deep") {
       const band = SCORE_BANDS[bandIdx];
