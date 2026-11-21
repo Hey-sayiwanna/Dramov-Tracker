@@ -98,7 +98,8 @@
 
     body {
       min-height: 100vh;
-      padding-bottom: calc(84px + env(safe-area-inset-bottom, 16px));
+      /* 滑到底时内容刚好停在底部两个圆钮上方 */
+      padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
     }
 
     /* =========================================================================
@@ -542,6 +543,14 @@
       overscroll-behavior-y: contain;
       scrollbar-width: none;
       padding-bottom: calc(96px + env(safe-area-inset-bottom, 16px));
+    }
+    /* 二级页没有底栏，只留一点点底边 */
+    #platformScroller {
+      padding-bottom: 12px;
+    }
+    /* 详情页只给右下角收藏按钮留位置 */
+    #detailOverlay {
+      padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px));
     }
     .shell-scroller::-webkit-scrollbar {
       display: none;
@@ -1737,6 +1746,30 @@
         </div>
       </div>
 
+      <!-- 擂台赛程时区 -->
+      <div class="surface-card" style="margin-bottom: 14px;">
+        <div class="row-between" style="gap: 12px;">
+          <div style="min-width: 0;">
+            <div style="font-size: 15px; font-weight: 700;">赛程时区</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">擂台的比赛时间按这里换算，默认跟随本机</div>
+          </div>
+          <select id="ringTzSelect" class="app-input" style="width: auto; max-width: 52%; flex-shrink: 0;">
+            <option value="">本机时区（默认）</option>
+            <option value="Asia/Shanghai">北京时间</option>
+            <option value="Asia/Hong_Kong">香港时间</option>
+            <option value="Asia/Taipei">台北时间</option>
+            <option value="Asia/Tokyo">东京时间</option>
+            <option value="Asia/Seoul">首尔时间</option>
+            <option value="Asia/Singapore">新加坡时间</option>
+            <option value="Europe/London">伦敦时间</option>
+            <option value="America/New_York">美东时间</option>
+            <option value="America/Chicago">美中时间</option>
+            <option value="America/Los_Angeles">美西时间</option>
+            <option value="Australia/Sydney">悉尼时间</option>
+          </select>
+        </div>
+      </div>
+
       <!-- 界面语言 -->
       <div class="surface-card" style="margin-bottom: 14px;">
         <div style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">界面语言</div>
@@ -1836,7 +1869,7 @@
         </div>
       </div>
 
-      <div style="max-width: 760px; margin: 0 auto; padding: 12px 16px 24px 16px;">
+      <div style="max-width: 760px; margin: 0 auto; padding: 12px 16px 0 16px;">
         <div class="row-between" style="margin-bottom: 8px; min-height: 32px;">
           <div id="platformListHeading" style="font-size: 16.5px; font-weight: 800; color: #f8fafc;">片库</div>
           <div id="platformSortSeg" class="sort-seg" role="tablist">
@@ -1845,8 +1878,9 @@
             <button type="button" data-sort="score">高分</button>
           </div>
         </div>
+        <div id="platformListNote" style="display: none; font-size: 12px; color: #8b9bb4; margin: -2px 0 4px;"></div>
         <div id="platformAcclaimedList"></div>
-        <div id="platformLoadSentinel" style="padding: 22px 0; text-align: center; font-size: 12.5px; color: #8b9bb4;">
+        <div id="platformLoadSentinel" style="padding: 14px 0 4px; text-align: center; font-size: 12.5px; color: #8b9bb4;">
           正在加载更多热门电视剧与电影…
         </div>
       </div>
@@ -1979,6 +2013,8 @@
       const I18N_EN = {"上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "Reorder the platforms' Top 10 charts on Home, or switch one off to hide it. The new-show posters at the top of Home only come from platforms you keep on.", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "A popular streaming title. Tap a service icon below to open its official page.", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "A popular streaming title. Tap for details, cast and where to watch.", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "Nothing in the loaded charts matches. Tap “Search online” to look it up.", "跨设备无损云同步（GitHub 私密 Gist）": "Cross-device sync (private GitHub Gist)", "搜电影 / 剧集 / 英文名 / 演员...": "Search movies, shows or cast…", "在追剧集有未看集数时，每天提醒一次": "Once a day when a show you're watching has new episodes", "，同步你的片单进度与首页平台顺序。": ", syncing your list, progress and Home platform order.", "独立读写专属文件": "Uses its own file", "每日首次打开「待看剧集」提醒弹窗": "Daily “Up next” reminder", "已同步六大流媒体最新热度榜单": "Charts updated", "正在加载更多热门电视剧与电影…": "Loading more…", "正在加载更多热门电视剧与电影": "Loading more", "正在拉取六大流媒体最新热度榜...": "Fetching the latest charts…", "正在拉取六大流媒体最新热度榜": "Fetching the latest charts", "本地 JSON 备份与恢复": "Local JSON backup & restore", "六大流媒体实时热度已同步": "Live charts synced", "六大流媒体实时热度已就绪": "Live charts ready", "六大流媒体热度榜运行中": "Live charts running", "深色沉浸外观（默认开启）": "Dark appearance (on by default)", "默认开启深邃影院沉浸底色": "Cinema-dark background, on by default", "首页流媒体平台排序与隐藏": "Home platforms: order & visibility", "实时热榜与显示偏好": "Live charts & display", "流媒体实时热度数据": "Live streaming charts", "立即刷新热榜": "Refresh now", "点选集数记录观看进度（绿=已看 · 蓝=已播 · 虚线=未播）": "Tap episodes to track progress (green = watched · blue = aired · dashed = upcoming)", "点进任意影视海报，轻触右下角 ♡ 或 🍿 即可加入你的片单": "Open any title and tap ♡ or 🍿 at the bottom right to add it to your list", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx (needs gist scope)", "尚未执行云端同步": "Not synced yet", "上传合并至云端": "Upload & merge", "从云端拉取合并": "Download & merge", "保存密钥": "Save token", "导出备份 .json": "Export .json", "导入恢复 .json": "Import .json", "恢复默认": "Reset", "已恢复默认六大平台顺序": "Platform order reset", "至少保留 1 个显示平台": "Keep at least one platform visible", "今天的流媒体榜单": "Today's streaming charts", "热播电视剧": "Trending shows", "热播电影": "Trending movies", "热播库": "Library", "片库": "Library", "按实时热度排序": "By live popularity", "精选": "Picks", "最新": "New", "高分": "Top rated", "全部": "All", "全部平台": "All services", "全网搜索": "Search online", "搜索片库": "Search", "我的片单": "My List", "想看 / 在追": "Watching / Want", "已看过 🍿": "Watched 🍿", "已看过": "Watched", "设置": "Settings", "首页": "Home", "搜索": "Search", "片单": "My List", "主导航": "Main navigation", "返回": "Back", "查看详情": "Details", "播放平台": "Where to watch", "演职员": "Cast", "主创团队": "Creators", "剧照与预告片": "Stills & trailer", "剧照": "Still", "观看官方预告片 ↗": "Watch trailer ↗", "观看官方预告片": "Watch trailer", "剧集播放进度": "Episode progress", "一键追平已播集": "Mark all aired as watched", "标记已看过": "Mark as watched", "加入片单": "Add to My List", "分享链接": "Share link", "IMDb 权威评分": "IMDb rating", "烂番茄影评新鲜度": "Rotten Tomatoes score", "爆米花观众好评度": "Audience score", "观影打卡达成": "Watched!", "电影观影打卡达成": "Movie watched!", "剧集追完打卡达成": "Series finished!", "太棒了": "Nice", "云端同步完成": "Cloud sync complete", "云同步失败，请检查密钥": "Sync failed. Check your token.", "同步密钥已保存": "Token saved", "备份已无损恢复": "Backup restored", "已导出备份": "Backup exported", "JSON 格式错误": "Invalid JSON", "请输入想找的电影或剧名": "Type a movie or show name", "正在检索流媒体片库...": "Searching…", "正在检索流媒体片库": "Searching", "已完成检索": "Search finished", "已刷新流媒体榜单": "Charts refreshed", "网络不太好，稍后再试": "Connection problem. Try again later.", "暂无内容": "Nothing here", "正在加载…": "Loading…", "正在加载": "Loading", "已在首页隐藏": "Hidden on Home", "同步出错：": "Sync error: ", "网络异常": "Network error", "请先填入": "Please enter ", "鉴权失败": "Authorization failed", "正在连接 GitHub 私密": "Connecting to private GitHub", "界面语言": "Language", "繁體中文": "繁體中文", "简体中文": "简体中文", "奈飞 Netflix": "Netflix", "迪士尼 Disney+": "Disney+", "派拉蒙 Paramount+": "Paramount+", "电视剧": "Series", "电影": "Movie", "剧集": "Series", "新剧": "New series", "热门": "Popular", "已播": "aired", "已看": "Watched", "未播": "upcoming", "动作": "Action", "冒险": "Adventure", "动作冒险": "Action & Adventure", "动画": "Animation", "儿童": "Kids", "家庭": "Family", "喜剧": "Comedy", "犯罪": "Crime", "纪录片": "Documentary", "剧情": "Drama", "谍战": "Spy", "奇幻": "Fantasy", "历史": "History", "恐怖": "Horror", "法律": "Legal", "医疗": "Medical", "音乐": "Music", "歌舞": "Musical", "悬疑": "Mystery", "爱情": "Romance", "浪漫": "Romantic", "科幻": "Sci-Fi", "科幻奇幻": "Sci-Fi & Fantasy", "体育": "Sports", "运动": "Sports", "超自然": "Supernatural", "惊悚": "Thriller", "战争": "War", "战争政治": "War & Politics", "政治": "Political", "西部": "Western", "真人秀": "Reality", "脱口秀": "Talk", "新闻": "News", "肥皂剧": "Soap", "独立电影": "Indie", "节日": "Holiday", "心理": "Psychological", "赛博朋克": "Cyberpunk", "史诗": "Epic", "黑帮": "Gangster", "英剧": "British", "年代剧": "Period", "职场": "Workplace", "传记": "Biography", "文艺": "Arthouse", "治愈": "Feel-good", "温暖": "Warm", "黑色幽默": "Dark comedy", "讽刺": "Satire", "宫廷": "Court", "权谋": "Intrigue", "末日": "Apocalyptic", "生存": "Survival", "太空": "Space", "平行宇宙": "Multiverse", "硬核": "Hard", "法庭": "Courtroom", "跨国": "International", "豪门": "Family saga", "暗黑": "Dark", "写实": "Realist", "高能": "Intense", "英伦": "British", "影视幕后": "Showbiz", "星际": "Space", "罪案": "Crime", "绿": "green", "蓝": "blue", "虚线": "dashed"};
       // 一字多繁的常用詞（先按詞轉，再逐字轉），用 OpenCC 台灣詞庫生成
       const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果"};
+      Object.assign(I18N_EN, {"赛程时区": "Schedule time zone", "擂台的比赛时间按这里换算，默认跟随本机": "Fight times use this time zone; defaults to your device", "本机时区（默认）": "Device time zone (default)", "北京时间": "Beijing", "香港时间": "Hong Kong", "台北时间": "Taipei", "东京时间": "Tokyo", "首尔时间": "Seoul", "新加坡时间": "Singapore", "伦敦时间": "London", "美东时间": "US Eastern", "美中时间": "US Central", "美西时间": "US Pacific", "悉尼时间": "Sydney", "赛程时区已更新": "Time zone updated", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "Times follow Settings › Schedule time zone · Schedules may change"});
+      Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
       Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
       Object.assign(I18N_HANT, {"日韩": "日韓", "完整赛程": "完整賽程", "未来六周赛程": "未來六週賽程", "时间待定": "時間待定", "大赛": "大賽", "榜单暂时没拿到，稍后下拉刷新": "榜單暫時沒拿到，稍後下拉刷新", "时间已换算为本机时区；节目安排以官方为准": "時間已換算為本機時區；節目安排以官方為準", "ESPN（美国）· Netflix（美国以外）": "ESPN（美國）· Netflix（美國以外）", "港澳台 · 华语出品": "港澳台 · 華語出品", "日韩 · 日剧韩剧动画": "日韓 · 日劇韓劇動畫", "擂台 · WWE / AEW / UFC 赛程": "擂台 · WWE / AEW / UFC 賽程", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏"});
       // 按首字建索引，逐字转换时只比对以该字开头的词
@@ -3022,10 +3058,72 @@
         return new Date(t);
       }
 
+      // 自动更新：服务器每 6 小时从 TheSportsDB 取一次最新赛事，手机打开 App 时顺带拿一次（本机缓存 6 小时）
+      const RING_REMOTE_KEY = "dramov_ring_remote_v1";
+      const RING_TZ_KEY = "dramov_ring_tz_v1";
+      const RING_DEFAULT_WATCH = { WWE: "ESPN（美国）· Netflix（美国以外）", AEW: "PPV · HBO Max", UFC: "Paramount+" };
+      let ringRemote = (() => {
+        try {
+          const c = JSON.parse(localStorage.getItem(RING_REMOTE_KEY) || "null");
+          return c && c.data ? c : null;
+        } catch (e) {
+          return null;
+        }
+      })();
+      let ringRemoteFetching = false;
+      function ringDisplayTz() {
+        try {
+          return localStorage.getItem(RING_TZ_KEY) || "";
+        } catch (e) {
+          return "";
+        }
+      }
+      async function refreshRingRemote(force) {
+        if (ringRemoteFetching) return;
+        if (!force && ringRemote && Date.now() - (ringRemote.t || 0) < 6 * 3600000) return;
+        if (!(location.protocol === "http:" || location.protocol === "https:")) return;
+        ringRemoteFetching = true;
+        try {
+          const res = await fetch("./api/ring", { cache: "no-cache" });
+          const data = res.ok ? await res.json() : null;
+          if (data && data.ok && Array.isArray(data.events)) {
+            ringRemote = { t: Date.now(), data };
+            try {
+              localStorage.setItem(RING_REMOTE_KEY, JSON.stringify(ringRemote));
+            } catch (e) {}
+            ringCache = { at: 0, list: [] };
+            if (activeNav === "home" && document.getElementById("col-ring")) renderStreamingCharts();
+            if (isPlatformOpen && activePlatformPageId === "ring") {
+              document.getElementById("platformAcclaimedList").innerHTML = renderRingPageHtml();
+            }
+          }
+        } catch (e) {}
+        ringRemoteFetching = false;
+      }
+      // 内置赛事 + 自动获取的赛事合并（同一组织同一天视为同一场：内置的时间/平台优先，场馆用新数据补齐）
+      function mergedRingEvents() {
+        const list = RING_EVENTS.map((e) => Object.assign({}, e));
+        const remote = (ringRemote && ringRemote.data && ringRemote.data.events) || [];
+        remote.forEach((r) => {
+          const same = list.find((e) => e.org === r.org && e.date === r.date);
+          if (same) {
+            if (!same.venue && r.venue) same.venue = r.venue;
+            if (!same.city && r.city) same.city = r.city;
+            if (!same.time && !same.utc && r.utc) same.utc = r.utc;
+            // 内置名称只是“UFC Fight Night”这种笼统写法时，换成带对阵的完整名称
+            if (r.name && r.name.length > same.name.length && r.name.toLowerCase().startsWith(same.name.toLowerCase())) same.name = r.name;
+          } else {
+            list.push({ org: r.org, name: r.name, date: r.date, utc: r.utc || null, venue: r.venue || "", city: r.city || "", watch: RING_DEFAULT_WATCH[r.org] || "" });
+          }
+        });
+        return list;
+      }
+
       let ringCache = { at: 0, list: [] };
       function buildRingSchedule(days = 42) {
         const now = Date.now();
         if (now - ringCache.at < 60000 && ringCache.list.length) return ringCache.list;
+        const remoteVenues = (ringRemote && ringRemote.data && ringRemote.data.venues) || {};
         const out = [];
         const dowMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
         const seenDays = new Set();
@@ -3037,18 +3135,19 @@
           const dow = dowMap[ringEtParts(probe).weekday];
           RING_WEEKLY.filter((w) => w.dow === dow).forEach((w) => {
             const start = ringEtToDate(ds, w.et);
-            const v = RING_VENUES[`${ds}|${w.id}`] || {};
+            const v = RING_VENUES[`${ds}|${w.id}`] || remoteVenues[`${ds}|${w.id}`] || {};
             out.push({ kind: "weekly", org: w.org, name: v.note ? `${w.name} · ${v.note}` : w.name, start, end: new Date(start.getTime() + w.dur * 60000), watch: w.watch, venue: v.venue || "", city: v.city || "", tbd: false });
           });
         }
-        RING_EVENTS.forEach((e) => {
-          const start = ringEtToDate(e.date, e.time || "12:00");
+        mergedRingEvents().forEach((e) => {
+          const start = e.utc ? new Date(e.utc) : ringEtToDate(e.date, e.time || "12:00");
+          const hasTime = Boolean(e.time || e.utc);
           const [ey, em, ed] = e.date.split("-").map(Number);
           out.push({
             kind: "event", org: e.org, name: e.name, start, end: new Date(start.getTime() + (e.dur || 240) * 60000),
-            watch: e.watch || "", venue: e.venue || "", city: e.city || "", tbd: !e.time,
+            watch: e.watch || "", venue: e.venue || "", city: e.city || "", tbd: !hasTime,
             // 没公布时间的赛事按美国当地日期显示，避免换算时区后跳到第二天
-            display: e.time ? null : new Date(ey, em - 1, ed, 12)
+            display: hasTime ? null : new Date(Date.UTC(ey, em - 1, ed, 12))
           });
         });
         const list = out
@@ -3061,12 +3160,19 @@
       function ringLocale() {
         return LANG === "en" ? "en-US" : LANG === "zh-Hans" ? "zh-CN" : "zh-TW";
       }
+      // 时间待定的赛事按 UTC 正午显示原始日期；其余按“设置 › 赛程时区”（默认本机时区）
+      function ringTzOpt(ev) {
+        if (ev.display) return { timeZone: "UTC" };
+        const tz = ringDisplayTz();
+        return tz ? { timeZone: tz } : {};
+      }
       function ringRowHtml(ev) {
         const loc = ringLocale();
         const shown = ev.display || ev.start;
-        const dayTxt = new Intl.DateTimeFormat(loc, { month: "numeric", day: "numeric" }).format(shown);
-        const wkTxt = new Intl.DateTimeFormat(loc, { weekday: "short" }).format(shown);
-        const timeTxt = ev.tbd ? "时间待定" : new Intl.DateTimeFormat(loc, { hour: "2-digit", minute: "2-digit", hour12: false }).format(ev.start);
+        const tzo = ringTzOpt(ev);
+        const dayTxt = new Intl.DateTimeFormat(loc, Object.assign({ month: "numeric", day: "numeric" }, tzo)).format(shown);
+        const wkTxt = new Intl.DateTimeFormat(loc, Object.assign({ weekday: "short" }, tzo)).format(shown);
+        const timeTxt = ev.tbd ? "时间待定" : new Intl.DateTimeFormat(loc, Object.assign({ hour: "2-digit", minute: "2-digit", hour12: false }, tzo)).format(ev.start);
         const live = !ev.tbd && ev.start.getTime() <= Date.now() && ev.end.getTime() >= Date.now();
         const place = [ev.venue, ev.city].filter(Boolean).join(" · ");
         return `
@@ -3088,13 +3194,14 @@
         `;
       }
       function renderRingColumnRows() {
+        refreshRingRemote(false);
         return buildRingSchedule(21).slice(0, 10).map(ringRowHtml).join("");
       }
       function renderRingPageHtml() {
         const loc = ringLocale();
         const groups = [];
         buildRingSchedule(42).forEach((ev) => {
-          const key = new Intl.DateTimeFormat(loc, { month: "long", day: "numeric", weekday: "long" }).format(ev.display || ev.start);
+          const key = new Intl.DateTimeFormat(loc, Object.assign({ month: "long", day: "numeric", weekday: "long" }, ringTzOpt(ev))).format(ev.display || ev.start);
           const g = groups[groups.length - 1];
           if (g && g.key === key) g.items.push(ev);
           else groups.push({ key, items: [ev] });
@@ -3240,6 +3347,8 @@
         if (savedToken && !tokIn.value) tokIn.value = savedToken;
 
         document.querySelectorAll("#langSeg [data-lang]").forEach((b) => b.classList.toggle("active", b.getAttribute("data-lang") === LANG));
+        const tzSel = document.getElementById("ringTzSelect");
+        if (tzSel) tzSel.value = ringDisplayTz();
       }
 
       function renderActiveView() {
@@ -3568,13 +3677,18 @@
           document.getElementById("platformListHeading").textContent = "片库";
         }
         renderPlatformSortSeg(feedKey);
+        document.getElementById("platformListNote").style.display = "none";
+        document.getElementById("platformLoadSentinel").style.display = "";
 
         if (pm && pm.kind === "schedule") {
           // 擂台：直接显示未来六周赛程，不走片库接口
           document.getElementById("platformListHeading").textContent = "未来六周赛程";
           document.getElementById("platformSortSeg").style.display = "none";
+          document.getElementById("platformListNote").textContent = "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准";
+          document.getElementById("platformListNote").style.display = "block";
           document.getElementById("platformAcclaimedList").innerHTML = renderRingPageHtml();
-          document.getElementById("platformLoadSentinel").textContent = "时间已换算为本机时区；节目安排以官方为准";
+          document.getElementById("platformLoadSentinel").style.display = "none";
+          refreshRingRemote(false);
         } else {
         const st = ensureSecondaryPool(feedKey);
         st.renderedCount = 0;
@@ -4834,6 +4948,14 @@
           appState.settings.updatedAt = Date.now();
           saveLocalState();
           renderSettingsView();
+        });
+        document.getElementById("ringTzSelect").addEventListener("change", (e) => {
+          try {
+            if (e.target.value) localStorage.setItem(RING_TZ_KEY, e.target.value);
+            else localStorage.removeItem(RING_TZ_KEY);
+          } catch (err) {}
+          ringCache = { at: 0, list: [] };
+          showToast("赛程时区已更新");
         });
         document.getElementById("langSeg").addEventListener("click", (e) => {
           const b = e.target.closest("[data-lang]");
