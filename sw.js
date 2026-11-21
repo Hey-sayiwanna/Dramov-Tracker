@@ -1,12 +1,12 @@
-const CACHE_NAME = "dramov-pwa-v1";
+const CACHE_NAME = "dramov-pwa-v7";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./apple-touch-icon.png?v=1",
-  "./icon-192.png?v=1",
-  "./icon-512.png?v=1",
-  "./icon-maskable-512.png?v=1"
+  "./apple-touch-icon.png?v=7",
+  "./icon-192.png?v=7",
+  "./icon-512.png?v=7",
+  "./icon-maskable-512.png?v=7"
 ];
 
 self.addEventListener("install", (event) => {
@@ -32,8 +32,10 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/api/") ||
     url.hostname.includes("github.com") ||
+    url.hostname.includes("justwatch.com") ||
     url.hostname.includes("tvmaze.com") ||
     url.hostname.includes("itunes.apple.com") ||
+    url.hostname.includes("mzstatic.com") ||
     url.hostname.includes("themoviedb.org")
   ) {
     return;
