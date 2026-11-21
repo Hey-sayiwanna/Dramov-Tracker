@@ -934,17 +934,72 @@
       }
     }
 
-    /* Immersive Cinema Layout */
-    /* True iOS 26 Optical Liquid Glass Bottom Bar (Fresnel Rim + Protruding Hollow Meniscus Lens) */
+    /* =========================================================================
+       iOS 26 Liquid Glass 底部导航（Dramov 优化版）
+       原则：通透的底色 + 适度模糊 + 提饱和 + 一圈细高光边；
+       不叠多层光泽，不嵌套 backdrop-filter，不在带模糊元素的父级上做 opacity 动画。
+       ========================================================================= */
     #bottomNavWrap {
+      --nav-glass-tint: rgba(24, 26, 32, 0.40);
+      --nav-glass-filter: blur(16px) saturate(180%);
+      --nav-rim: linear-gradient(150deg,
+        rgba(255, 255, 255, 0.50) 0%,
+        rgba(255, 255, 255, 0.10) 28%,
+        rgba(255, 255, 255, 0.03) 62%,
+        rgba(255, 255, 255, 0.26) 100%);
+      --nav-shadow:
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.20),
+        0 0 0 0.5px rgba(0, 0, 0, 0.30),
+        0 10px 30px rgba(0, 0, 0, 0.36);
+      --nav-pill: rgba(255, 255, 255, 0.13);
+      --nav-pill-drag: rgba(255, 255, 255, 0.08);
+      --nav-label: rgba(235, 238, 245, 0.82);
+
       position: fixed;
-      left: 50%;
-      transform: translate3d(-50%, 0, 0);
+      left: 14px;
+      right: 14px;
+      margin: 0 auto;
       bottom: max(10px, calc(env(safe-area-inset-bottom, 10px) - 14px));
       z-index: 50;
-      width: calc(100% - 28px);
       max-width: 408px;
-      height: 58px;
+      height: 60px;
+      pointer-events: none;
+    }
+    html[data-theme="light"] #bottomNavWrap {
+      --nav-glass-tint: rgba(255, 255, 255, 0.46);
+      --nav-rim: linear-gradient(150deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(255, 255, 255, 0.35) 35%,
+        rgba(255, 255, 255, 0.20) 65%,
+        rgba(255, 255, 255, 0.80) 100%);
+      --nav-shadow:
+        inset 0 0.5px 0 rgba(255, 255, 255, 0.90),
+        0 0 0 0.5px rgba(15, 23, 42, 0.08),
+        0 8px 26px rgba(15, 23, 42, 0.14);
+      --nav-pill: rgba(15, 23, 42, 0.07);
+      --nav-pill-drag: rgba(255, 255, 255, 0.35);
+      --nav-label: #1e293b;
+    }
+
+    /* 共用玻璃材质 */
+    #bottomNav,
+    .mini-glass-orb {
+      background: var(--nav-glass-tint);
+      -webkit-backdrop-filter: var(--nav-glass-filter);
+              backdrop-filter: var(--nav-glass-filter);
+      box-shadow: var(--nav-shadow);
+    }
+    #bottomNav::before,
+    .mini-glass-orb::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: var(--nav-rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
       pointer-events: none;
     }
 
@@ -956,55 +1011,15 @@
       user-select: none;
       -webkit-user-select: none;
       overflow: visible;
-      /* Clear dark-tinted optical glass — never milky opaque gray! */
-      background:
-        radial-gradient(120% 180% at 50% 0%, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.01) 55%),
-        rgba(18, 22, 32, 0.34);
-      backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
-      -webkit-backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
       border-radius: 999px;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.32),
-        inset 0 -0.5px 0 rgba(255, 255, 255, 0.12),
-        0 12px 32px rgba(0, 0, 0, 0.42);
       padding: 4px;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       align-items: stretch;
       transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
     }
-    html[data-theme="light"] #bottomNav {
-      background:
-        radial-gradient(120% 180% at 50% 0%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.32) 60%),
-        rgba(248, 250, 252, 0.52);
-      box-shadow:
-        inset 0 1.5px 0.5px rgba(255, 255, 255, 0.96),
-        inset 0 -1px 0.5px rgba(15, 23, 42, 0.06),
-        0 10px 28px rgba(15, 23, 42, 0.14);
-    }
 
-    /* Directional 1px Fresnel Specular Glass Rim (bright top-left & bottom-right curves, subtle sides) */
-    #bottomNav::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      padding: 1px;
-      background: linear-gradient(
-        152deg,
-        rgba(255, 255, 255, 0.68) 0%,
-        rgba(255, 255, 255, 0.12) 34%,
-        rgba(255, 255, 255, 0.06) 66%,
-        rgba(255, 255, 255, 0.44) 100%
-      );
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-
-    /* Hollow Meniscus Crystal Droplet Lens:
-       Transparent center + luminous curved outer meniscus + chromatic dispersion edge! */
+    /* 选中态：实心的柔和胶囊（Apple Music 的做法），不是空心圆环 */
     #navSlidingLens {
       position: absolute;
       top: 4px;
@@ -1014,17 +1029,7 @@
       border-radius: 999px;
       z-index: 1;
       pointer-events: none;
-      background: radial-gradient(
-        ellipse at 50% 50%,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.06) 54%,
-        rgba(255, 255, 255, 0.17) 86%,
-        rgba(255, 255, 255, 0.30) 100%
-      );
-      box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, 0.52),
-        inset 0 -1px 1px rgba(255, 255, 255, 0.18),
-        0 4px 12px rgba(0, 0, 0, 0.22);
+      background: var(--nav-pill);
       transform: translate3d(0, 0, 0) scale(1);
       transition:
         transform 0.34s cubic-bezier(0.28, 1.14, 0.36, 1),
@@ -1038,67 +1043,35 @@
       content: "";
       position: absolute;
       inset: 0;
-      border-radius: 999px;
+      border-radius: inherit;
       padding: 1px;
-      background: linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.78) 0%,
-        rgba(125, 211, 252, 0.26) 32%,
-        rgba(196, 181, 253, 0.22) 68%,
-        rgba(255, 255, 255, 0.56) 100%
-      );
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.15) 45%, rgba(255, 255, 255, 0.55));
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
-      mask-composite: exclude;
+              mask-composite: exclude;
+      opacity: 0;
+      transition: opacity 0.16s ease;
       pointer-events: none;
     }
-    html[data-theme="light"] #navSlidingLens {
-      background: radial-gradient(
-        ellipse at 50% 50%,
-        rgba(15, 23, 42, 0.02) 0%,
-        rgba(15, 23, 42, 0.03) 56%,
-        rgba(255, 255, 255, 0.65) 88%,
-        rgba(255, 255, 255, 0.92) 100%
-      );
-      box-shadow:
-        inset 0 1.5px 1px rgba(255, 255, 255, 0.98),
-        0 4px 14px rgba(15, 23, 42, 0.10);
-    }
 
-    /* Protruding 3D Magnifying Water-Droplet When Touching/Sliding (Matches Apple Music Screenshot 4!) */
+    /* 拖动时：透明“水滴”略微鼓出，亮边出现。
+       注意：这里不能再加 backdrop-filter —— 父级 #bottomNav 已有模糊，嵌套后只能“看到”导航栏内部，效果出不来还容易闪。 */
     #bottomNav.lens-dragging #navSlidingLens {
-      top: -7px;
-      bottom: -7px;
+      top: -4px;
+      bottom: -4px;
+      background: var(--nav-pill-drag);
+      box-shadow:
+        inset 0 1px 1.5px rgba(255, 255, 255, 0.55),
+        inset 0 -1px 1.5px rgba(255, 255, 255, 0.18),
+        0 6px 18px rgba(0, 0, 0, 0.22);
       transition:
         top 0.14s cubic-bezier(0.22, 1, 0.36, 1),
         bottom 0.14s cubic-bezier(0.22, 1, 0.36, 1),
         background 0.12s ease,
         box-shadow 0.12s ease !important;
-      background: radial-gradient(
-        ellipse at 50% 48%,
-        rgba(255, 255, 255, 0.01) 0%,
-        rgba(255, 255, 255, 0.03) 56%,
-        rgba(255, 255, 255, 0.22) 84%,
-        rgba(255, 255, 255, 0.46) 100%
-      );
-      backdrop-filter: blur(4px) saturate(230%) brightness(1.10);
-      -webkit-backdrop-filter: blur(4px) saturate(230%) brightness(1.10);
-      box-shadow:
-        inset 0 2px 2.5px rgba(255, 255, 255, 0.88),
-        inset 0 -1.5px 2.5px rgba(56, 189, 248, 0.34),
-        0 12px 28px rgba(0, 0, 0, 0.38);
     }
     #bottomNav.lens-dragging #navSlidingLens::after {
-      padding: 1.4px;
-      background: conic-gradient(
-        from 140deg at 50% 50%,
-        rgba(255, 255, 255, 0.92) 0deg,
-        rgba(56, 189, 248, 0.55) 75deg,
-        rgba(255, 255, 255, 0.20) 140deg,
-        rgba(251, 191, 36, 0.38) 215deg,
-        rgba(167, 139, 250, 0.52) 290deg,
-        rgba(255, 255, 255, 0.92) 360deg
-      );
+      opacity: 1;
     }
 
     .nav-btn {
@@ -1107,7 +1080,7 @@
       border: none;
       background: transparent !important;
       box-shadow: none !important;
-      color: rgba(226, 232, 240, 0.78);
+      color: var(--nav-label);
       border-radius: 999px;
       padding: 5px 4px;
       display: flex;
@@ -1123,16 +1096,13 @@
       transition: color 0.16s ease, transform 0.16s ease;
     }
     .nav-btn svg {
-      width: 21px;
-      height: 21px;
+      width: 22px;
+      height: 22px;
       display: block;
-    }
-    html[data-theme="light"] .nav-btn {
-      color: #1e293b;
     }
     .nav-btn.active,
     .nav-btn.lens-hover {
-      color: #38bdf8;
+      color: #4fb3ff;
     }
     html[data-theme="light"] .nav-btn.active,
     html[data-theme="light"] .nav-btn.lens-hover {
@@ -1142,7 +1112,9 @@
       transform: scale(1.08);
     }
 
-    /* Scroll-Down Minimized Split Mode: Pure Icon-Only Crystal Orbs (Left Home Icon + Right Search Icon!) */
+    /* 下滑收起后的两个圆形按钮。
+       淡入淡出放在按钮自己身上，而不是外层容器：
+       外层容器 opacity < 1 时，里面的 backdrop-filter 在动画过程中会失效，结束时才“闪”出来。 */
     #bottomNavMini {
       position: absolute;
       inset: 0;
@@ -1150,50 +1122,23 @@
       align-items: center;
       justify-content: space-between;
       pointer-events: none;
-      opacity: 0;
-      transform: scale(0.92) translate3d(0, 6px, 0);
-      transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
     }
     .mini-glass-orb {
       position: relative;
       pointer-events: none;
-      width: 50px;
-      height: 50px;
+      width: 52px;
+      height: 52px;
       padding: 0;
       border-radius: 999px;
       border: none;
-      background:
-        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.14) 85%, rgba(255, 255, 255, 0.28) 100%),
-        rgba(18, 22, 32, 0.34);
-      backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
-      -webkit-backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
-      box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, 0.55),
-        inset 0 -0.5px 1px rgba(255, 255, 255, 0.16),
-        0 10px 26px rgba(0, 0, 0, 0.38);
       color: #ffffff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: transform 0.15s ease;
-    }
-    .mini-glass-orb::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
-      padding: 1px;
-      background: linear-gradient(
-        150deg,
-        rgba(255, 255, 255, 0.75) 0%,
-        rgba(255, 255, 255, 0.10) 45%,
-        rgba(255, 255, 255, 0.48) 100%
-      );
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.9) translate3d(0, 6px, 0);
+      transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
     }
     .mini-glass-orb svg {
       width: 22px;
@@ -1201,13 +1146,7 @@
       display: block;
     }
     html[data-theme="light"] .mini-glass-orb {
-      background:
-        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.30) 0%, rgba(255, 255, 255, 0.85) 100%),
-        rgba(248, 250, 252, 0.56);
       color: #0f172a;
-    }
-    .mini-glass-orb:active {
-      transform: scale(0.92);
     }
 
     #bottomNavWrap.minimized #bottomNav {
@@ -1215,14 +1154,14 @@
       pointer-events: none;
       transform: scale(0.92) translate3d(0, 8px, 0);
     }
-    #bottomNavWrap.minimized #bottomNavMini {
-      opacity: 1;
-      transform: scale(1) translate3d(0, 0, 0);
-    }
     #bottomNavWrap.minimized .mini-glass-orb {
+      opacity: 1;
       pointer-events: auto;
+      transform: none;
     }
-
+    #bottomNavWrap.minimized .mini-glass-orb:active {
+      transform: scale(0.92);
+    }
     /* Cross-Platform Mixed Popularity Shelves ('热播电视剧' & '热播电影') */
     .mixed-shelf-wrap {
       padding: 4px 0 12px 0;
@@ -1240,6 +1179,7 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scroll-snap-type: x proximity;
+      scroll-padding-left: 16px;
       padding: 0 16px 6px 16px;
       scrollbar-width: none;
     }
@@ -1801,7 +1741,7 @@
       "use strict";
 
       const PLATFORMS = [{"id": "netflix", "name": "Netflix", "cnName": "奈飞 Netflix", "shortCode": "nfx", "badgeText": "N", "color": "#e50914", "bgGrad": ["#991b1b", "#090d16"], "homeUrl": "https://www.netflix.com/", "searchUrl": "https://www.netflix.com/search?q="}, {"id": "disney", "name": "Disney+", "cnName": "迪士尼 Disney+", "shortCode": "dnp", "badgeText": "D+", "color": "#0ea5e9", "bgGrad": ["#0c4a6e", "#090d16"], "homeUrl": "https://www.disneyplus.com/", "searchUrl": "https://www.disneyplus.com/"}, {"id": "hbo", "name": "HBO Max", "cnName": "HBO Max", "shortCode": "mxx", "badgeText": "MAX", "color": "#7c3aed", "bgGrad": ["#3b0764", "#090d16"], "homeUrl": "https://www.max.com/", "searchUrl": "https://www.max.com/"}, {"id": "prime", "name": "Prime Video", "cnName": "Prime Video", "shortCode": "amp", "badgeText": "PV", "color": "#00a8e1", "bgGrad": ["#0369a1", "#090d16"], "homeUrl": "https://www.primevideo.com/", "searchUrl": "https://www.primevideo.com/search/ref=atv_nb_sr?phrase="}, {"id": "paramount", "name": "Paramount+", "cnName": "派拉蒙 Paramount+", "shortCode": "pmp", "badgeText": "P+", "color": "#2563eb", "bgGrad": ["#1e3a8a", "#090d16"], "homeUrl": "https://www.paramountplus.com/", "searchUrl": "https://www.paramountplus.com/"}, {"id": "apple", "name": "Apple TV+", "cnName": "Apple TV+", "shortCode": "atp", "badgeText": "tv+", "color": "#475569", "bgGrad": ["#1e293b", "#090d16"], "homeUrl": "https://tv.apple.com/", "searchUrl": "https://tv.apple.com/us/search?term="}];
-      const SEED_ITEMS = [{"id": "dnp_visionquest", "title": "幻视征途", "enTitle": "VisionQuest", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 985, "imdb": 7.8, "recommendPct": 82, "year": 2026, "releaseDate": "2026-10-13", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["Sci-Fi & Fantasy", "剧情"], "ageRating": "TV-14", "synopsis": "重启后的幻视隐居避世，试图摆脱将他武器化的人，并通过与体内的多个 AI 人格（包括奥创）交流寻找存在意义。然而高额悬赏打破了平静，他被迫与神秘少年托马斯一同逃亡。", "cast": [{"name": "保罗·贝坦尼", "enName": "Paul Bettany", "role": "Vision"}, {"name": "詹姆斯·斯派德", "enName": "James Spader", "role": "Ultron"}, {"name": "Ruaridh Mollica", "enName": "Ruaridh Mollica", "role": "Thomas"}, {"name": "Todd Stashwick", "enName": "Todd Stashwick", "role": "Paladin"}]}, {"id": "dnp_percy_jackson", "title": "波西·杰克逊", "enTitle": "Percy Jackson and the Olympians", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 912, "imdb": 7.4, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-04", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻", "动作冒险"], "ageRating": "TV-PG", "synopsis": "半神少年波西·杰克逊重返混血营，为拯救好友格罗弗与守护营地结界，踏上深入魔兽之海寻找金羊毛的全新征途。", "cast": [{"name": "沃克·斯科贝尔", "enName": "Walker Scobell", "role": "Percy Jackson"}, {"name": "莉亚·杰弗里斯", "enName": "Leah Sava Jeffries", "role": "Annabeth"}, {"name": "阿利安·西姆哈德里", "enName": "Aryan Simhadri", "role": "Grover"}]}, {"id": "dnp_mandalorian_grogu", "title": "曼达洛人与古古", "enTitle": "The Mandalorian and Grogu", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 890, "imdb": 7.9, "recommendPct": 88, "year": 2026, "releaseDate": "2026-10-28", "runtime": 124, "genres": ["科幻", "太空冒险"], "ageRating": "PG-13", "synopsis": "新共和国崛起之际，丁·贾林与古古受命踏上跨越星际的秘密行动，在帝国残党阴影下守护银河边缘的秩序。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Din Djarin"}, {"name": "西格妮·韦弗", "enName": "Sigourney Weaver", "role": "Colonel Ward"}]}, {"id": "dnp_remarried_empress", "title": "再婚皇后", "enTitle": "The Remarried Empress", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 858, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-11-03", "seasonNumber": 1, "totalEpisodes": 12, "airedEpisodes": 6, "genres": ["宫廷奇幻", "爱情"], "ageRating": "TV-14", "synopsis": "东大帝国完美皇后娜菲尔在皇帝执意迎娶逃奴并要求离婚之际，当庭宣布改嫁西王国王子海因里，掀起两国宫廷风暴。", "cast": [{"name": "申敏儿", "enName": "Shin Min-a", "role": "Navier"}, {"name": "李钟硕", "enName": "Lee Jong-suk", "role": "Heinrey"}]}, {"id": "dnp_toystory5", "title": "玩具总动员5", "enTitle": "Toy Story 5", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 842, "imdb": 7.7, "recommendPct": 84, "year": 2026, "releaseDate": "2026-10-15", "runtime": 106, "genres": ["动画", "家庭喜剧"], "ageRating": "G", "synopsis": "胡迪、巴斯光年与伙伴们面对电子平板时代的新挑战，展开一场守护童年陪伴与想象力的欢乐冒险。", "cast": [{"name": "汤姆·汉克斯", "enName": "Tom Hanks", "role": "Woody"}, {"name": "蒂姆·艾伦", "enName": "Tim Allen", "role": "Buzz Lightyear"}]}, {"id": "dnp_andor", "title": "安多", "enTitle": "Andor", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 815, "imdb": 8.5, "recommendPct": 93, "year": 2025, "releaseDate": "2025-04-22", "seasonNumber": 2, "totalEpisodes": 12, "airedEpisodes": 12, "genres": ["科幻", "谍战惊悚"], "ageRating": "TV-14", "synopsis": "卡西安·安多从独善其身的边缘旅人蜕变为义军同盟核心情报特工，直抵《侠盗一号》爆发前夜。", "cast": [{"name": "迭戈·鲁纳", "enName": "Diego Luna", "role": "Cassian Andor"}, {"name": "斯特兰·斯卡斯加德", "enName": "Stellan Skarsgard", "role": "Luthen Rael"}]}, {"id": "dnp_bear", "title": "大熊餐厅", "enTitle": "The Bear", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 792, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-25", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["剧情", "职场喜剧"], "ageRating": "TV-MA", "synopsis": "卡米与西德尼在米其林星级压力与资金倒计时中全力守住餐厅灵魂。", "cast": [{"name": "杰瑞米·艾伦·怀特", "enName": "Jeremy Allen White", "role": "Carmy"}, {"name": "阿约·艾德维利", "enName": "Ayo Edebiri", "role": "Sydney"}]}, {"id": "dnp_avatar_fire", "title": "阿凡达：火与烬", "enTitle": "Avatar: Fire and Ash", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 778, "imdb": 7.8, "recommendPct": 83, "year": 2025, "releaseDate": "2026-06-12", "runtime": 192, "genres": ["科幻", "史诗冒险"], "ageRating": "PG-13", "synopsis": "杰克与奈蒂莉一家遭遇潘多拉火山灰烬部族，揭开纳威族群更深层的冲突与抉择。", "cast": [{"name": "萨姆·沃辛顿", "enName": "Sam Worthington", "role": "Jake Sully"}, {"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Neytiri"}]}, {"id": "dnp_only_murders", "title": "大楼里只有谋杀", "enTitle": "Only Murders in the Building", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 745, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-09-08", "seasonNumber": 5, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["悬疑", "犯罪喜剧"], "ageRating": "TV-MA", "synopsis": "阿科尼亚公寓播客三人组再度卷入扑朔迷离的全新命案线索。", "cast": [{"name": "史蒂夫·马丁", "enName": "Steve Martin", "role": "Charles"}, {"name": "赛琳娜·戈麦斯", "enName": "Selena Gomez", "role": "Mabel"}]}, {"id": "dnp_shogun", "title": "幕府将军", "enTitle": "Shogun", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 730, "imdb": 8.6, "recommendPct": 96, "year": 2024, "releaseDate": "2024-02-27", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["历史", "战争权谋"], "ageRating": "TV-MA", "synopsis": "战国风云诡谲之际，吉井虎永武将与英国领航员按针在生死棋局中改写时代走向。", "cast": [{"name": "真田广之", "enName": "Hiroyuki Sanada", "role": "Toranaga"}, {"name": "泽井杏奈", "enName": "Anna Sawai", "role": "Mariko"}]}, {"id": "nfx_the_body", "title": "青春共体", "enTitle": "The Body", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 976, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["心理惊悚", "悬疑剧情"], "ageRating": "TV-MA", "synopsis": "2004年圣马可女子中学，风云舞蹈队在废弃修道院举行万圣夜入队仪式时意外酿成秘密，少女们在集体恐慌与权力角力中逐步失控。", "cast": [{"name": "Quinn Shephard", "enName": "Quinn Shephard", "role": "Creator"}, {"name": "Riley Keough", "enName": "Riley Keough", "role": "Producer"}]}, {"id": "nfx_black_doves", "title": "黑鸽", "enTitle": "Black Doves", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 944, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-05", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战", "动作惊悚"], "ageRating": "TV-MA", "synopsis": "潜伏伦敦政坛高层的秘密间谍海伦与老搭档山姆再度联手，在圣诞夜前夕追查牵动地下情报网的致命阴谋。", "cast": [{"name": "凯拉·奈特莉", "enName": "Keira Knightley", "role": "Helen Webb"}, {"name": "本·卫肖", "enName": "Ben Whishaw", "role": "Sam Young"}]}, {"id": "nfx_blue_road", "title": "罪蓝之路", "enTitle": "The Blue Road", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 918, "imdb": 8.2, "recommendPct": 87, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "跨国悬疑"], "ageRating": "TV-MA", "synopsis": "一桩横跨东亚港口的连环失踪悬案将两位性格迥异的刑警卷入深水暗流，全季8集已一次上线。", "cast": [{"name": "孙锡久", "enName": "Son Suk-ku", "role": "Detective"}, {"name": "永山瑛太", "enName": "Eita Nagayama", "role": "Inspector"}]}, {"id": "nfx_miracles_er", "title": "急诊室的奇迹", "enTitle": "Miracles of the ER", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 885, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-12", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["医疗职场", "剧情"], "ageRating": "TV-14", "synopsis": "央大医院急诊医学部主治团队带领三位新晋住院医师，在分秒必争的急救现场与伦理抉择中直面生死考验。", "cast": [{"name": "霍建华", "enName": "Wallace Huo", "role": "周承俊"}, {"name": "杨谨华", "enName": "Cheryl Yang", "role": "何宇华"}, {"name": "蔡凡熙", "enName": "Kent Tsai", "role": "林耿明"}]}, {"id": "nfx_cliff_booth", "title": "克里夫·布兹历险记", "enTitle": "The Adventures of Cliff Booth", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 874, "imdb": 8.3, "recommendPct": 88, "year": 2026, "releaseDate": "2026-11-18", "runtime": 138, "genres": ["犯罪喜剧", "剧情"], "ageRating": "R", "synopsis": "大卫·芬奇执导、昆汀编剧，聚焦好莱坞替身演员兼片场危机调解员克里夫·布兹在70年代洛杉矶的荒诞暗涌往事。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Cliff Booth"}, {"name": "伊丽莎白·德比齐", "enName": "Elizabeth Debicki", "role": "Lead"}]}, {"id": "nfx_possible_love", "title": "可能的爱情", "enTitle": "Possible Love", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 846, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-06", "runtime": 132, "genres": ["剧情", "文艺"], "ageRating": "R", "synopsis": "李沧东执导新作，讲述两对生活轨迹截然相反的夫妻在偶然交汇后，平静日常下悄然裂变的情感暗流。", "cast": [{"name": "全道嬿", "enName": "Jeon Do-yeon", "role": "Mi-ok"}, {"name": "薛景求", "enName": "Sol Kyung-gu", "role": "Ho-seok"}, {"name": "赵寅成", "enName": "Zo In-sung", "role": "Sang-woo"}]}, {"id": "nfx_diplomat", "title": "头号外交官", "enTitle": "The Diplomat", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 822, "imdb": 8.0, "recommendPct": 87, "year": 2026, "releaseDate": "2026-10-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["政治惊悚", "剧情"], "ageRating": "TV-MA", "synopsis": "凯特·怀勒大使在国际外交风暴中心周旋，每一句谈判辞令都牵动大国博弈。", "cast": [{"name": "凯丽·拉塞尔", "enName": "Keri Russell", "role": "Kate Wyler"}, {"name": "鲁弗斯·塞维尔", "enName": "Rufus Sewell", "role": "Hal Wyler"}]}, {"id": "nfx_stranger_things", "title": "怪奇物语", "enTitle": "Stranger Things", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 810, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-26", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻惊悚", "奇幻"], "ageRating": "TV-14", "synopsis": "霍金斯小镇迎来最终决战，小十一与伙伴们集结直面颠倒世界的终极威胁。", "cast": [{"name": "米莉·博比·布朗", "enName": "Millie Bobby Brown", "role": "Eleven"}, {"name": "芬恩·伍法德", "enName": "Finn Wolfhard", "role": "Mike"}]}, {"id": "nfx_gentlemen", "title": "绅士们", "enTitle": "The Gentlemen", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 782, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "英伦黑色幽默"], "ageRating": "TV-MA", "synopsis": "继承公爵庄园的艾迪与苏茜再度扩张地下版图，直面欧洲老牌家族挑战。", "cast": [{"name": "西奥·詹姆斯", "enName": "Theo James", "role": "Eddie Horniman"}, {"name": "卡雅·斯考达里奥", "enName": "Kaya Scodelario", "role": "Susie Glass"}]}, {"id": "nfx_guarding_stars", "title": "守护星辰", "enTitle": "Guarding Stars", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 765, "imdb": 7.3, "recommendPct": 79, "year": 2026, "releaseDate": "2026-11-18", "runtime": 112, "genres": ["浪漫爱情", "剧情"], "ageRating": "PG-13", "synopsis": "Netflix 11月全球流媒体电影榜热播新作，温暖治愈的冬日都市故事。", "cast": [{"name": "Netflix Original", "enName": "Lead Cast", "role": "Starring"}]}, {"id": "atp_presumed_innocent", "title": "无罪推定", "enTitle": "Presumed Innocent", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 962, "imdb": 7.7, "recommendPct": 85, "year": 2026, "releaseDate": "2026-06-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "法庭悬疑"], "ageRating": "TV-MA", "synopsis": "一起震撼检控官办公室的凶杀案让首席副检察官沦为头号嫌疑人，法庭攻防与家庭裂痕层层反转。", "cast": [{"name": "杰克·吉伦哈尔", "enName": "Jake Gyllenhaal", "role": "Rusty Sabich"}, {"name": "露丝·内伽", "enName": "Ruth Negga", "role": "Barbara Sabich"}, {"name": "比尔·坎普", "enName": "Bill Camp", "role": "Raymond Horgan"}]}, {"id": "atp_slow_horses", "title": "流人", "enTitle": "Slow Horses", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 935, "imdb": 8.3, "recommendPct": 97, "year": 2026, "releaseDate": "2026-10-07", "seasonNumber": 6, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战惊悚", "英剧"], "ageRating": "TV-MA", "synopsis": "杰克逊·兰姆率领斯劳部门一众弃子特工，在毒舌与混乱中再度挫败危及军情五处的致命暗杀。", "cast": [{"name": "加里·奥德曼", "enName": "Gary Oldman", "role": "Jackson Lamb"}, {"name": "杰克·劳登", "enName": "Jack Lowden", "role": "River Cartwright"}, {"name": "克里斯汀·斯科特·托马斯", "enName": "Kristin Scott Thomas", "role": "Diana Taverner"}]}, {"id": "atp_silo", "title": "羊毛战记", "enTitle": "Silo", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 908, "imdb": 8.1, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 4, "genres": ["科幻", "末日悬疑"], "ageRating": "TV-MA", "synopsis": "朱丽叶深入相邻地堡核心，逐步揭开百座地下筒仓建立之初的惊人真相。", "cast": [{"name": "丽贝卡·弗格森", "enName": "Rebecca Ferguson", "role": "Juliette Nichols"}, {"name": "蒂姆·罗宾斯", "enName": "Tim Robbins", "role": "Bernard Holland"}]}, {"id": "atp_f1_movie", "title": "F1：狂飙飞车", "enTitle": "F1", "mediaType": "movie", "platformId": "apple", "providers": ["apple"], "heat": 888, "imdb": 8.0, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-15", "runtime": 155, "genres": ["运动动作", "剧情"], "ageRating": "PG-13", "synopsis": "退役传奇车手重返一级方程式赛场，搭档天才新秀车手在极限风速中挑战车队逆袭。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Sonny Hayes"}, {"name": "戴姆森·伊德瑞斯", "enName": "Damson Idris", "role": "Joshua Pearce"}]}, {"id": "atp_severance", "title": "人生切割术", "enTitle": "Severance", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 872, "imdb": 8.7, "recommendPct": 96, "year": 2025, "releaseDate": "2025-01-17", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["科幻悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "卢蒙公司宏观数据精检部员工在记忆切割边界内外展开惊心动魄的觉醒追寻。", "cast": [{"name": "亚当·斯科特", "enName": "Adam Scott", "role": "Mark Scout"}, {"name": "布丽特·洛薇尔", "enName": "Britt Lower", "role": "Helly"}]}, {"id": "atp_shrinking", "title": "诊疗中", "enTitle": "Shrinking", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 830, "imdb": 8.1, "recommendPct": 91, "year": 2026, "releaseDate": "2026-10-14", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 7, "genres": ["喜剧", "温暖治愈"], "ageRating": "TV-MA", "synopsis": "心理治疗师吉米打破常规对来访者直言不讳，在与导师保罗的碰撞中彼此治愈。", "cast": [{"name": "杰森·席格尔", "enName": "Jason Segel", "role": "Jimmy"}, {"name": "哈里森·福特", "enName": "Harrison Ford", "role": "Paul"}]}, {"id": "atp_ted_lasso", "title": "足球教练", "enTitle": "Ted Lasso", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 805, "imdb": 8.8, "recommendPct": 93, "year": 2026, "releaseDate": "2026-08-21", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["运动喜剧", "剧情"], "ageRating": "TV-MA", "synopsis": "乐观温暖的教练重返里士满绿茵场，带领球队迎接新赛季挑战。", "cast": [{"name": "杰森·苏戴奇斯", "enName": "Jason Sudeikis", "role": "Ted Lasso"}, {"name": "汉娜·沃丁厄姆", "enName": "Hannah Waddingham", "role": "Rebecca"}]}, {"id": "atp_dark_matter", "title": "人生复本", "enTitle": "Dark Matter", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 780, "imdb": 7.7, "recommendPct": 83, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 9, "airedEpisodes": 9, "genres": ["科幻", "平行宇宙"], "ageRating": "TV-MA", "synopsis": "物理学家穿越无限叠加态平行世界，只为找回真正属于自己的家人与人生。", "cast": [{"name": "乔尔·埃哲顿", "enName": "Joel Edgerton", "role": "Jason Dessen"}, {"name": "詹妮弗·康纳利", "enName": "Jennifer Connelly", "role": "Daniela"}]}, {"id": "atp_the_studio", "title": "片场风云", "enTitle": "The Studio", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 760, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-03-26", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["讽刺喜剧", "影视幕后"], "ageRating": "TV-MA", "synopsis": "新上任的好莱坞传统制片厂掌门人在艺术追求与商业票房夹缝中焦头烂额。", "cast": [{"name": "塞斯·罗根", "enName": "Seth Rogen", "role": "Matt Remick"}, {"name": "凯瑟琳·欧哈拉", "enName": "Catherine O'Hara", "role": "Patty"}]}, {"id": "atp_foundation", "title": "基地", "enTitle": "Foundation", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 742, "imdb": 7.6, "recommendPct": 82, "year": 2025, "releaseDate": "2025-07-11", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["硬核科幻", "太空歌剧"], "ageRating": "TV-14", "synopsis": "心理史学预言危机降临，银河帝国与基地迎来跨越世纪的正面交锋。", "cast": [{"name": "杰瑞德·哈里斯", "enName": "Jared Harris", "role": "Hari Seldon"}, {"name": "李·佩斯", "enName": "Lee Pace", "role": "Brother Day"}]}, {"id": "hbo_gilded_age", "title": "镀金时代", "enTitle": "The Gilded Age", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 956, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-01", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["年代剧", "豪门剧情"], "ageRating": "TV-MA", "synopsis": "19世纪末纽约第五大道新贵罗素家族与老钱阶层的社交博弈升级，每周一更新1集。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Bertha Russell"}, {"name": "克里斯汀·芭伦斯基", "enName": "Christine Baranski", "role": "Agnes van Rhijn"}]}, {"id": "hbo_lanterns", "title": "绿灯军团", "enTitle": "Lanterns", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 928, "imdb": 8.4, "recommendPct": 91, "year": 2026, "releaseDate": "2026-09-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻罪案", "DC悬疑"], "ageRating": "TV-MA", "synopsis": "传奇绿灯侠哈尔·乔丹与新晋成员约翰·斯图尔特深入美国腹地调查一桩牵连星际黑暗秘密的谋杀案。", "cast": [{"name": "凯尔·钱德勒", "enName": "Kyle Chandler", "role": "Hal Jordan"}, {"name": "亚伦·皮埃尔", "enName": "Aaron Pierre", "role": "John Stewart"}]}, {"id": "hbo_house_dragon", "title": "龙之家族", "enTitle": "House of the Dragon", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 902, "imdb": 8.3, "recommendPct": 87, "year": 2026, "releaseDate": "2026-07-12", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻史诗", "权谋战争"], "ageRating": "TV-MA", "synopsis": "坦格利安血龙狂舞全面开战，黑党与绿党在维斯特洛大陆展开巨龙对决。", "cast": [{"name": "艾玛·达西", "enName": "Emma D'Arcy", "role": "Rhaenyra"}, {"name": "马特·史密斯", "enName": "Matt Smith", "role": "Daemon"}]}, {"id": "hbo_supergirl", "title": "超女：明日之女", "enTitle": "Supergirl", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 878, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-09-25", "runtime": 128, "genres": ["科幻动作", "冒险"], "ageRating": "PG-13", "synopsis": "卡拉·佐-艾尔在星际边缘陪伴少女露丝踏上横跨星系的复仇与救赎之旅。", "cast": [{"name": "米莉·阿尔柯克", "enName": "Milly Alcock", "role": "Kara Zor-El"}, {"name": "杰森·莫玛", "enName": "Jason Momoa", "role": "Lobo"}]}, {"id": "hbo_last_of_us", "title": "最后生还者", "enTitle": "The Last of Us", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 860, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-04-13", "seasonNumber": 2, "totalEpisodes": 7, "airedEpisodes": 7, "genres": ["末日生存", "剧情"], "ageRating": "TV-MA", "synopsis": "杰克逊定居点的平静破碎后，艾莉踏上前往西雅图的残酷旅程。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Joel"}, {"name": "贝拉·拉姆齐", "enName": "Bella Ramsey", "role": "Ellie"}]}, {"id": "hbo_white_lotus", "title": "白莲花度假村", "enTitle": "The White Lotus", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 835, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-02-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["黑色幽默", "悬疑讽刺"], "ageRating": "TV-MA", "synopsis": "奢华度假村迎来了新一批心怀鬼胎的宾客，热带风光下危机四伏。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Laurie"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "Rick"}]}, {"id": "hbo_penguin", "title": "企鹅人", "enTitle": "The Penguin", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 818, "imdb": 8.6, "recommendPct": 95, "year": 2024, "releaseDate": "2024-09-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "暗黑黑帮"], "ageRating": "TV-MA", "synopsis": "奥兹·科伯在哥谭地下世界权力真空期步步为营，登顶黑帮帝国王座。", "cast": [{"name": "科林·法瑞尔", "enName": "Colin Farrell", "role": "Oz Cobb"}, {"name": "克里斯汀·米利欧缇", "enName": "Cristin Milioti", "role": "Sofia Falcone"}]}, {"id": "hbo_pitt", "title": "匹兹堡医护前线", "enTitle": "The Pitt", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 798, "imdb": 8.7, "recommendPct": 95, "year": 2026, "releaseDate": "2026-01-08", "seasonNumber": 2, "totalEpisodes": 15, "airedEpisodes": 15, "genres": ["医疗写实", "高能剧情"], "ageRating": "TV-MA", "synopsis": "以一集一小时实时视角直击创伤急救中心15小时轮班的生死博弈。", "cast": [{"name": "诺亚·怀尔", "enName": "Noah Wyle", "role": "Dr. Robby"}]}, {"id": "hbo_dune_prophecy", "title": "沙丘：预言", "enTitle": "Dune: Prophecy", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 772, "imdb": 7.4, "recommendPct": 78, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 2, "genres": ["科幻", "星际权谋"], "ageRating": "TV-MA", "synopsis": "哈克南姐妹创立贝尼·杰瑟里特姐妹会，在帝国王座背后编织跨越万年的命运网络。", "cast": [{"name": "艾米丽·沃森", "enName": "Emily Watson", "role": "Valya Harkonnen"}, {"name": "奥莉维亚·威廉姆斯", "enName": "Olivia Williams", "role": "Tula Harkonnen"}]}, {"id": "hbo_dune2", "title": "沙丘2", "enTitle": "Dune: Part Two", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 755, "imdb": 8.5, "recommendPct": 92, "year": 2024, "releaseDate": "2024-03-01", "runtime": 166, "genres": ["科幻史诗", "冒险"], "ageRating": "PG-13", "synopsis": "保罗·厄崔迪融入弗雷曼人，踏上改写已知宇宙命运的沙漠圣战。", "cast": [{"name": "蒂莫西·柴勒梅德", "enName": "Timothee Chalamet", "role": "Paul Atreides"}, {"name": "赞达亚", "enName": "Zendaya", "role": "Chani"}]}, {"id": "amp_rings_of_power", "title": "指环王：力量之戒", "enTitle": "The Lord of the Rings: The Rings of Power", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 968, "imdb": 7.1, "recommendPct": 83, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻史诗", "冒险"], "ageRating": "TV-14", "synopsis": "第三季于11月11日回归，索伦铸造至尊魔戒的阴谋逼近中土核心，精灵与矮人防线迎来大战。", "cast": [{"name": "莫菲德·克拉克", "enName": "Morfydd Clark", "role": "Galadriel"}, {"name": "查理·维卡斯", "enName": "Charlie Vickers", "role": "Sauron"}]}, {"id": "amp_blade_runner_2099", "title": "银翼杀手 2099", "enTitle": "Blade Runner 2099", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 932, "imdb": 8.4, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["赛博朋克", "科幻惊悚"], "ageRating": "TV-MA", "synopsis": "设定于《银翼杀手2049》五十年后的雨夜洛杉矶，老牌复制人与伪装身份的逃亡少女卷入颠覆城市的秘密。", "cast": [{"name": "杨紫琼", "enName": "Michelle Yeoh", "role": "Olwen"}, {"name": "亨特·莎弗", "enName": "Hunter Schafer", "role": "Cora"}]}, {"id": "amp_project_hail_mary", "title": "挽救计划", "enTitle": "Project Hail Mary", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 904, "imdb": 8.5, "recommendPct": 93, "year": 2026, "releaseDate": "2026-09-10", "runtime": 146, "genres": ["硬核科幻", "太空救援"], "ageRating": "PG-13", "synopsis": "中学科学老师在距地球数光年的飞船上独自苏醒，凭借科学推理与意外结识的外星伙伴拯救太阳危机。", "cast": [{"name": "瑞恩·高斯林", "enName": "Ryan Gosling", "role": "Ryland Grace"}, {"name": "桑德拉·惠勒", "enName": "Sandra Huller", "role": "Eva Stratt"}]}, {"id": "amp_madden", "title": "麦登传奇", "enTitle": "Madden", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 864, "imdb": 7.5, "recommendPct": 81, "year": 2026, "releaseDate": "2026-11-19", "runtime": 126, "genres": ["传记剧情", "体育"], "ageRating": "PG-13", "synopsis": "尼古拉斯·凯奇化身传奇教练约翰·麦登，讲述他从赛场隐退到缔造现象级橄榄球游戏帝国的热血历程。", "cast": [{"name": "尼古拉斯·凯奇", "enName": "Nicolas Cage", "role": "John Madden"}, {"name": "克里斯蒂安·贝尔", "enName": "Christian Bale", "role": "Al Davis"}]}, {"id": "amp_reacher", "title": "侠探杰克", "enTitle": "Reacher", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 848, "imdb": 8.0, "recommendPct": 88, "year": 2026, "releaseDate": "2026-08-14", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["动作犯罪", "硬汉悬疑"], "ageRating": "TV-MA", "synopsis": "流浪前宪兵调查官杰克·雷彻独自深入敌营，用精密推理与铁拳瓦解跨州走私集团。", "cast": [{"name": "阿兰·里奇森", "enName": "Alan Ritchson", "role": "Jack Reacher"}]}, {"id": "amp_fallout", "title": "辐射", "enTitle": "Fallout", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 832, "imdb": 8.4, "recommendPct": 93, "year": 2026, "releaseDate": "2026-04-10", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["废土科幻", "动作冒险"], "ageRating": "TV-MA", "synopsis": "露西与尸鬼踏入新维加斯荒漠，揭开避难所科技高层的战前阴谋。", "cast": [{"name": "艾拉·珀内尔", "enName": "Ella Purnell", "role": "Lucy"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "The Ghoul"}]}, {"id": "amp_the_boys", "title": "黑袍纠察队", "enTitle": "The Boys", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 816, "imdb": 8.7, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-18", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["反超英", "暗黑动作"], "ageRating": "TV-MA", "synopsis": "布彻尔与休伊迎来对抗祖国人极权统治的终局之战。", "cast": [{"name": "卡尔·厄本", "enName": "Karl Urban", "role": "Billy Butcher"}, {"name": "安东尼·斯塔尔", "enName": "Antony Starr", "role": "Homelander"}]}, {"id": "amp_mighty_nein", "title": "强力九人组", "enTitle": "The Mighty Nein", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 786, "imdb": 8.4, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻动画", "跑团冒险"], "ageRating": "TV-MA", "synopsis": "一群性格乖张的边缘冒险者意外结成小队，阻止足以撕裂大陆的远古圣物落入恶徒之手。", "cast": [{"name": "劳拉·贝利", "enName": "Laura Bailey", "role": "Jester"}, {"name": "马修·麦瑟", "enName": "Matthew Mercer", "role": "Essek"}]}, {"id": "amp_accountant2", "title": "会计刺客2", "enTitle": "The Accountant 2", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 758, "imdb": 7.3, "recommendPct": 80, "year": 2025, "releaseDate": "2025-08-12", "runtime": 125, "genres": ["动作惊悚", "犯罪"], "ageRating": "R", "synopsis": "天才数学会计师克里斯蒂安与弟弟联手追查财政部老友遇刺背后的杀手网络。", "cast": [{"name": "本·阿弗莱克", "enName": "Ben Affleck", "role": "Christian Wolff"}, {"name": "乔恩·伯恩瑟尔", "enName": "Jon Bernthal", "role": "Brax"}]}, {"id": "amp_invincible", "title": "无敌少侠", "enTitle": "Invincible", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 740, "imdb": 8.7, "recommendPct": 96, "year": 2026, "releaseDate": "2026-03-12", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["热血动画", "科幻动作"], "ageRating": "TV-MA", "synopsis": "马克在维尔图姆帝国大军压境之际扛起守护地球的重担。", "cast": [{"name": "史蒂文·元", "enName": "Steven Yeun", "role": "Mark Grayson"}, {"name": "J·K·西蒙斯", "enName": "J.K. Simmons", "role": "Omni-Man"}]}, {"id": "pmp_mobland", "title": "黑帮领地", "enTitle": "MobLand", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 948, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["黑帮犯罪", "惊悚"], "ageRating": "TV-MA", "synopsis": "伦敦两大犯罪家族战火重燃，忠诚冷峻的家族清道夫哈里在枪火与背叛间力保帝国不倒，11月20日迎来第二季收官。", "cast": [{"name": "汤姆·哈迪", "enName": "Tom Hardy", "role": "Harry Da Souza"}, {"name": "皮尔斯·布鲁斯南", "enName": "Pierce Brosnan", "role": "Conrad Harrigan"}, {"name": "海伦·米伦", "enName": "Helen Mirren", "role": "Maeve Harrigan"}]}, {"id": "pmp_tulsa_king", "title": "塔尔萨之王", "enTitle": "Tulsa King", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 922, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-10-18", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 6, "genres": ["犯罪剧情", "动作"], "ageRating": "TV-MA", "synopsis": "黑帮老将德怀特·曼弗雷迪在俄克拉荷马州继续扩张商业版图，迎战来自堪萨斯与纽约的双重围剿。", "cast": [{"name": "西尔维斯特·史泰龙", "enName": "Sylvester Stallone", "role": "Dwight Manfredi"}]}, {"id": "pmp_landman", "title": "石油天王", "enTitle": "Landman", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 896, "imdb": 8.3, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["商战剧情", "西部硬派"], "ageRating": "TV-MA", "synopsis": "西德克萨斯油田繁荣背后暗流汹涌，危机处理专家汤米在资本大鳄与油井险情间孤身斡旋。", "cast": [{"name": "比利·鲍伯·松顿", "enName": "Billy Bob Thornton", "role": "Tommy Norris"}, {"name": "黛米·摩尔", "enName": "Demi Moore", "role": "Cami Miller"}]}, {"id": "pmp_dexter_res", "title": "嗜血法医：复活", "enTitle": "Dexter: Resurrection", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 870, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 3, "genres": ["犯罪悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "死里逃生的德克斯特·摩根隐匿于大都会暗夜，一面追寻儿子哈里森的下落，一面面对旧案猎犬的步步紧逼。", "cast": [{"name": "迈克尔·C·豪尔", "enName": "Michael C. Hall", "role": "Dexter Morgan"}]}, {"id": "pmp_lioness", "title": "特别行动：母狮", "enTitle": "Lioness", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 840, "imdb": 7.9, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-27", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["特种作战", "谍战惊悚"], "ageRating": "TV-MA", "synopsis": "乔率领母狮秘密外勤小队执行高危渗透行动，在国家任务与家庭破碎边缘承受极限压力。", "cast": [{"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Joe"}, {"name": "妮可·基德曼", "enName": "Nicole Kidman", "role": "Kaitlyn Meade"}]}, {"id": "pmp_gladiator2", "title": "角斗士2", "enTitle": "Gladiator II", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 812, "imdb": 7.0, "recommendPct": 76, "year": 2024, "releaseDate": "2025-01-21", "runtime": 148, "genres": ["历史动作", "史诗"], "ageRating": "R", "synopsis": "卢修斯被迫踏入罗马斗兽场，在暴君统治下为恢复罗马昔日荣光挥剑奋战。", "cast": [{"name": "保罗·麦斯卡", "enName": "Paul Mescal", "role": "Lucius"}, {"name": "丹泽尔·华盛顿", "enName": "Denzel Washington", "role": "Macrinus"}]}, {"id": "pmp_mi8", "title": "碟中谍8：最终清算", "enTitle": "Mission: Impossible - The Final Reckoning", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 796, "imdb": 7.9, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-10", "runtime": 169, "genres": ["特工动作", "冒险"], "ageRating": "PG-13", "synopsis": "伊森·亨特与 IMF 小队深入深海潜艇残骸与万米高空，终结失控人工智能智体的全球危机。", "cast": [{"name": "汤姆·克鲁斯", "enName": "Tom Cruise", "role": "Ethan Hunt"}, {"name": "海莉·阿特维尔", "enName": "Hayley Atwell", "role": "Grace"}]}, {"id": "pmp_yellowjackets", "title": "黄蜂", "enTitle": "Yellowjackets", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 774, "imdb": 7.8, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-13", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["悬疑惊悚", "荒野求生"], "ageRating": "TV-MA", "synopsis": "高中女子足球队空难幸存者跨越二十五年的荒野秘密再度浮出水面。", "cast": [{"name": "梅兰妮·林斯基", "enName": "Melanie Lynskey", "role": "Shauna"}, {"name": "克里斯蒂娜·里奇", "enName": "Christina Ricci", "role": "Misty"}]}, {"id": "pmp_marshals", "title": "联邦法警", "enTitle": "Marshals", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 752, "imdb": 7.7, "recommendPct": 81, "year": 2026, "releaseDate": "2026-10-25", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 5, "genres": ["西部犯罪", "动作"], "ageRating": "TV-MA", "synopsis": "黄石宇宙衍生新作，聚焦蒙大拿州边境联邦法警追缉亡命重犯的硬派故事。", "cast": [{"name": "卢克·葛莱姆斯", "enName": "Luke Grimes", "role": "Kayce Dutton"}]}, {"id": "pmp_yellowstone", "title": "黄石", "enTitle": "Yellowstone", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 738, "imdb": 8.7, "recommendPct": 90, "year": 2024, "releaseDate": "2024-11-10", "seasonNumber": 5, "totalEpisodes": 14, "airedEpisodes": 14, "genres": ["现代西部", "家族剧情"], "ageRating": "TV-MA", "synopsis": "达顿家族为守护广袤牧场与各方势力展开终极较量。", "cast": [{"name": "凯莉·蕾莉", "enName": "Kelly Reilly", "role": "Beth Dutton"}, {"name": "科尔·豪瑟", "enName": "Cole Hauser", "role": "Rip Wheeler"}]}];
+      const SEED_ITEMS = [{"id": "dnp_visionquest", "title": "幻视征途", "enTitle": "VisionQuest", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 985, "imdb": 7.8, "recommendPct": 82, "year": 2026, "releaseDate": "2026-10-13", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻奇幻", "剧情"], "ageRating": "TV-14", "synopsis": "重启后的幻视隐居避世，试图摆脱将他武器化的人，并通过与体内的多个 AI 人格（包括奥创）交流寻找存在意义。然而高额悬赏打破了平静，他被迫与神秘少年托马斯一同逃亡。", "cast": [{"name": "保罗·贝坦尼", "enName": "Paul Bettany", "role": "Vision"}, {"name": "詹姆斯·斯派德", "enName": "James Spader", "role": "Ultron"}, {"name": "Ruaridh Mollica", "enName": "Ruaridh Mollica", "role": "Thomas"}, {"name": "Todd Stashwick", "enName": "Todd Stashwick", "role": "Paladin"}]}, {"id": "dnp_percy_jackson", "title": "波西·杰克逊", "enTitle": "Percy Jackson and the Olympians", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 912, "imdb": 7.4, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-04", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻", "动作冒险"], "ageRating": "TV-PG", "synopsis": "半神少年波西·杰克逊重返混血营，为拯救好友格罗弗与守护营地结界，踏上深入魔兽之海寻找金羊毛的全新征途。", "cast": [{"name": "沃克·斯科贝尔", "enName": "Walker Scobell", "role": "Percy Jackson"}, {"name": "莉亚·杰弗里斯", "enName": "Leah Sava Jeffries", "role": "Annabeth"}, {"name": "阿利安·西姆哈德里", "enName": "Aryan Simhadri", "role": "Grover"}]}, {"id": "dnp_mandalorian_grogu", "title": "曼达洛人与古古", "enTitle": "The Mandalorian and Grogu", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 890, "imdb": 7.9, "recommendPct": 88, "year": 2026, "releaseDate": "2026-10-28", "runtime": 124, "genres": ["科幻", "太空冒险"], "ageRating": "PG-13", "synopsis": "新共和国崛起之际，丁·贾林与古古受命踏上跨越星际的秘密行动，在帝国残党阴影下守护银河边缘的秩序。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Din Djarin"}, {"name": "西格妮·韦弗", "enName": "Sigourney Weaver", "role": "Colonel Ward"}]}, {"id": "dnp_remarried_empress", "title": "再婚皇后", "enTitle": "The Remarried Empress", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 858, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-11-03", "seasonNumber": 1, "totalEpisodes": 12, "airedEpisodes": 6, "genres": ["宫廷奇幻", "爱情"], "ageRating": "TV-14", "synopsis": "东大帝国完美皇后娜菲尔在皇帝执意迎娶逃奴并要求离婚之际，当庭宣布改嫁西王国王子海因里，掀起两国宫廷风暴。", "cast": [{"name": "申敏儿", "enName": "Shin Min-a", "role": "Navier"}, {"name": "李钟硕", "enName": "Lee Jong-suk", "role": "Heinrey"}]}, {"id": "dnp_toystory5", "title": "玩具总动员5", "enTitle": "Toy Story 5", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 842, "imdb": 7.7, "recommendPct": 84, "year": 2026, "releaseDate": "2026-10-15", "runtime": 106, "genres": ["动画", "家庭喜剧"], "ageRating": "G", "synopsis": "胡迪、巴斯光年与伙伴们面对电子平板时代的新挑战，展开一场守护童年陪伴与想象力的欢乐冒险。", "cast": [{"name": "汤姆·汉克斯", "enName": "Tom Hanks", "role": "Woody"}, {"name": "蒂姆·艾伦", "enName": "Tim Allen", "role": "Buzz Lightyear"}]}, {"id": "dnp_andor", "title": "安多", "enTitle": "Andor", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 815, "imdb": 8.5, "recommendPct": 93, "year": 2025, "releaseDate": "2025-04-22", "seasonNumber": 2, "totalEpisodes": 12, "airedEpisodes": 12, "genres": ["科幻", "谍战惊悚"], "ageRating": "TV-14", "synopsis": "卡西安·安多从独善其身的边缘旅人蜕变为义军同盟核心情报特工，直抵《侠盗一号》爆发前夜。", "cast": [{"name": "迭戈·鲁纳", "enName": "Diego Luna", "role": "Cassian Andor"}, {"name": "斯特兰·斯卡斯加德", "enName": "Stellan Skarsgard", "role": "Luthen Rael"}]}, {"id": "dnp_bear", "title": "大熊餐厅", "enTitle": "The Bear", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 792, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-25", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["剧情", "职场喜剧"], "ageRating": "TV-MA", "synopsis": "卡米与西德尼在米其林星级压力与资金倒计时中全力守住餐厅灵魂。", "cast": [{"name": "杰瑞米·艾伦·怀特", "enName": "Jeremy Allen White", "role": "Carmy"}, {"name": "阿约·艾德维利", "enName": "Ayo Edebiri", "role": "Sydney"}]}, {"id": "dnp_avatar_fire", "title": "阿凡达：火与烬", "enTitle": "Avatar: Fire and Ash", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 778, "imdb": 7.8, "recommendPct": 83, "year": 2025, "releaseDate": "2026-06-12", "runtime": 192, "genres": ["科幻", "史诗冒险"], "ageRating": "PG-13", "synopsis": "杰克与奈蒂莉一家遭遇潘多拉火山灰烬部族，揭开纳威族群更深层的冲突与抉择。", "cast": [{"name": "萨姆·沃辛顿", "enName": "Sam Worthington", "role": "Jake Sully"}, {"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Neytiri"}]}, {"id": "dnp_only_murders", "title": "大楼里只有谋杀", "enTitle": "Only Murders in the Building", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 745, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-09-08", "seasonNumber": 5, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["悬疑", "犯罪喜剧"], "ageRating": "TV-MA", "synopsis": "阿科尼亚公寓播客三人组再度卷入扑朔迷离的全新命案线索。", "cast": [{"name": "史蒂夫·马丁", "enName": "Steve Martin", "role": "Charles"}, {"name": "赛琳娜·戈麦斯", "enName": "Selena Gomez", "role": "Mabel"}]}, {"id": "dnp_shogun", "title": "幕府将军", "enTitle": "Shogun", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 730, "imdb": 8.6, "recommendPct": 96, "year": 2024, "releaseDate": "2024-02-27", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["历史", "战争权谋"], "ageRating": "TV-MA", "synopsis": "战国风云诡谲之际，吉井虎永武将与英国领航员按针在生死棋局中改写时代走向。", "cast": [{"name": "真田广之", "enName": "Hiroyuki Sanada", "role": "Toranaga"}, {"name": "泽井杏奈", "enName": "Anna Sawai", "role": "Mariko"}]}, {"id": "nfx_the_body", "title": "青春共体", "enTitle": "The Body", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 976, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["心理惊悚", "悬疑剧情"], "ageRating": "TV-MA", "synopsis": "2004年圣马可女子中学，风云舞蹈队在废弃修道院举行万圣夜入队仪式时意外酿成秘密，少女们在集体恐慌与权力角力中逐步失控。", "cast": [{"name": "Quinn Shephard", "enName": "Quinn Shephard", "role": "Creator"}, {"name": "Riley Keough", "enName": "Riley Keough", "role": "Producer"}]}, {"id": "nfx_black_doves", "title": "黑鸽", "enTitle": "Black Doves", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 944, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-05", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战", "动作惊悚"], "ageRating": "TV-MA", "synopsis": "潜伏伦敦政坛高层的秘密间谍海伦与老搭档山姆再度联手，在圣诞夜前夕追查牵动地下情报网的致命阴谋。", "cast": [{"name": "凯拉·奈特莉", "enName": "Keira Knightley", "role": "Helen Webb"}, {"name": "本·卫肖", "enName": "Ben Whishaw", "role": "Sam Young"}]}, {"id": "nfx_blue_road", "title": "罪蓝之路", "enTitle": "The Blue Road", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 918, "imdb": 8.2, "recommendPct": 87, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "跨国悬疑"], "ageRating": "TV-MA", "synopsis": "一桩横跨东亚港口的连环失踪悬案将两位性格迥异的刑警卷入深水暗流，全季8集已一次上线。", "cast": [{"name": "孙锡久", "enName": "Son Suk-ku", "role": "Detective"}, {"name": "永山瑛太", "enName": "Eita Nagayama", "role": "Inspector"}]}, {"id": "nfx_miracles_er", "title": "急诊室的奇迹", "enTitle": "Miracles of the ER", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 885, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-12", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["医疗职场", "剧情"], "ageRating": "TV-14", "synopsis": "央大医院急诊医学部主治团队带领三位新晋住院医师，在分秒必争的急救现场与伦理抉择中直面生死考验。", "cast": [{"name": "霍建华", "enName": "Wallace Huo", "role": "周承俊"}, {"name": "杨谨华", "enName": "Cheryl Yang", "role": "何宇华"}, {"name": "蔡凡熙", "enName": "Kent Tsai", "role": "林耿明"}]}, {"id": "nfx_cliff_booth", "title": "克里夫·布兹历险记", "enTitle": "The Adventures of Cliff Booth", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 874, "imdb": 8.3, "recommendPct": 88, "year": 2026, "releaseDate": "2026-11-18", "runtime": 138, "genres": ["犯罪喜剧", "剧情"], "ageRating": "R", "synopsis": "大卫·芬奇执导、昆汀编剧，聚焦好莱坞替身演员兼片场危机调解员克里夫·布兹在70年代洛杉矶的荒诞暗涌往事。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Cliff Booth"}, {"name": "伊丽莎白·德比齐", "enName": "Elizabeth Debicki", "role": "Lead"}]}, {"id": "nfx_possible_love", "title": "可能的爱情", "enTitle": "Possible Love", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 846, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-06", "runtime": 132, "genres": ["剧情", "文艺"], "ageRating": "R", "synopsis": "李沧东执导新作，讲述两对生活轨迹截然相反的夫妻在偶然交汇后，平静日常下悄然裂变的情感暗流。", "cast": [{"name": "全道嬿", "enName": "Jeon Do-yeon", "role": "Mi-ok"}, {"name": "薛景求", "enName": "Sol Kyung-gu", "role": "Ho-seok"}, {"name": "赵寅成", "enName": "Zo In-sung", "role": "Sang-woo"}]}, {"id": "nfx_diplomat", "title": "头号外交官", "enTitle": "The Diplomat", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 822, "imdb": 8.0, "recommendPct": 87, "year": 2026, "releaseDate": "2026-10-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["政治惊悚", "剧情"], "ageRating": "TV-MA", "synopsis": "凯特·怀勒大使在国际外交风暴中心周旋，每一句谈判辞令都牵动大国博弈。", "cast": [{"name": "凯丽·拉塞尔", "enName": "Keri Russell", "role": "Kate Wyler"}, {"name": "鲁弗斯·塞维尔", "enName": "Rufus Sewell", "role": "Hal Wyler"}]}, {"id": "nfx_stranger_things", "title": "怪奇物语", "enTitle": "Stranger Things", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 810, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-26", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻惊悚", "奇幻"], "ageRating": "TV-14", "synopsis": "霍金斯小镇迎来最终决战，小十一与伙伴们集结直面颠倒世界的终极威胁。", "cast": [{"name": "米莉·博比·布朗", "enName": "Millie Bobby Brown", "role": "Eleven"}, {"name": "芬恩·伍法德", "enName": "Finn Wolfhard", "role": "Mike"}]}, {"id": "nfx_gentlemen", "title": "绅士们", "enTitle": "The Gentlemen", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 782, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "英伦黑色幽默"], "ageRating": "TV-MA", "synopsis": "继承公爵庄园的艾迪与苏茜再度扩张地下版图，直面欧洲老牌家族挑战。", "cast": [{"name": "西奥·詹姆斯", "enName": "Theo James", "role": "Eddie Horniman"}, {"name": "卡雅·斯考达里奥", "enName": "Kaya Scodelario", "role": "Susie Glass"}]}, {"id": "nfx_guarding_stars", "title": "守护星辰", "enTitle": "Guarding Stars", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 765, "imdb": 7.3, "recommendPct": 79, "year": 2026, "releaseDate": "2026-11-18", "runtime": 112, "genres": ["浪漫爱情", "剧情"], "ageRating": "PG-13", "synopsis": "Netflix 11月全球流媒体电影榜热播新作，温暖治愈的冬日都市故事。", "cast": [{"name": "Netflix Original", "enName": "Lead Cast", "role": "Starring"}]}, {"id": "atp_presumed_innocent", "title": "无罪推定", "enTitle": "Presumed Innocent", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 962, "imdb": 7.7, "recommendPct": 85, "year": 2026, "releaseDate": "2026-06-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "法庭悬疑"], "ageRating": "TV-MA", "synopsis": "一起震撼检控官办公室的凶杀案让首席副检察官沦为头号嫌疑人，法庭攻防与家庭裂痕层层反转。", "cast": [{"name": "杰克·吉伦哈尔", "enName": "Jake Gyllenhaal", "role": "Rusty Sabich"}, {"name": "露丝·内伽", "enName": "Ruth Negga", "role": "Barbara Sabich"}, {"name": "比尔·坎普", "enName": "Bill Camp", "role": "Raymond Horgan"}]}, {"id": "atp_slow_horses", "title": "流人", "enTitle": "Slow Horses", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 935, "imdb": 8.3, "recommendPct": 97, "year": 2026, "releaseDate": "2026-10-07", "seasonNumber": 6, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战惊悚", "英剧"], "ageRating": "TV-MA", "synopsis": "杰克逊·兰姆率领斯劳部门一众弃子特工，在毒舌与混乱中再度挫败危及军情五处的致命暗杀。", "cast": [{"name": "加里·奥德曼", "enName": "Gary Oldman", "role": "Jackson Lamb"}, {"name": "杰克·劳登", "enName": "Jack Lowden", "role": "River Cartwright"}, {"name": "克里斯汀·斯科特·托马斯", "enName": "Kristin Scott Thomas", "role": "Diana Taverner"}]}, {"id": "atp_silo", "title": "羊毛战记", "enTitle": "Silo", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 908, "imdb": 8.1, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 4, "genres": ["科幻", "末日悬疑"], "ageRating": "TV-MA", "synopsis": "朱丽叶深入相邻地堡核心，逐步揭开百座地下筒仓建立之初的惊人真相。", "cast": [{"name": "丽贝卡·弗格森", "enName": "Rebecca Ferguson", "role": "Juliette Nichols"}, {"name": "蒂姆·罗宾斯", "enName": "Tim Robbins", "role": "Bernard Holland"}]}, {"id": "atp_f1_movie", "title": "F1：狂飙飞车", "enTitle": "F1", "mediaType": "movie", "platformId": "apple", "providers": ["apple"], "heat": 888, "imdb": 8.0, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-15", "runtime": 155, "genres": ["运动动作", "剧情"], "ageRating": "PG-13", "synopsis": "退役传奇车手重返一级方程式赛场，搭档天才新秀车手在极限风速中挑战车队逆袭。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Sonny Hayes"}, {"name": "戴姆森·伊德瑞斯", "enName": "Damson Idris", "role": "Joshua Pearce"}]}, {"id": "atp_severance", "title": "人生切割术", "enTitle": "Severance", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 872, "imdb": 8.7, "recommendPct": 96, "year": 2025, "releaseDate": "2025-01-17", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["科幻悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "卢蒙公司宏观数据精检部员工在记忆切割边界内外展开惊心动魄的觉醒追寻。", "cast": [{"name": "亚当·斯科特", "enName": "Adam Scott", "role": "Mark Scout"}, {"name": "布丽特·洛薇尔", "enName": "Britt Lower", "role": "Helly"}]}, {"id": "atp_shrinking", "title": "诊疗中", "enTitle": "Shrinking", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 830, "imdb": 8.1, "recommendPct": 91, "year": 2026, "releaseDate": "2026-10-14", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 7, "genres": ["喜剧", "温暖治愈"], "ageRating": "TV-MA", "synopsis": "心理治疗师吉米打破常规对来访者直言不讳，在与导师保罗的碰撞中彼此治愈。", "cast": [{"name": "杰森·席格尔", "enName": "Jason Segel", "role": "Jimmy"}, {"name": "哈里森·福特", "enName": "Harrison Ford", "role": "Paul"}]}, {"id": "atp_ted_lasso", "title": "足球教练", "enTitle": "Ted Lasso", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 805, "imdb": 8.8, "recommendPct": 93, "year": 2026, "releaseDate": "2026-08-21", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["运动喜剧", "剧情"], "ageRating": "TV-MA", "synopsis": "乐观温暖的教练重返里士满绿茵场，带领球队迎接新赛季挑战。", "cast": [{"name": "杰森·苏戴奇斯", "enName": "Jason Sudeikis", "role": "Ted Lasso"}, {"name": "汉娜·沃丁厄姆", "enName": "Hannah Waddingham", "role": "Rebecca"}]}, {"id": "atp_dark_matter", "title": "人生复本", "enTitle": "Dark Matter", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 780, "imdb": 7.7, "recommendPct": 83, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 9, "airedEpisodes": 9, "genres": ["科幻", "平行宇宙"], "ageRating": "TV-MA", "synopsis": "物理学家穿越无限叠加态平行世界，只为找回真正属于自己的家人与人生。", "cast": [{"name": "乔尔·埃哲顿", "enName": "Joel Edgerton", "role": "Jason Dessen"}, {"name": "詹妮弗·康纳利", "enName": "Jennifer Connelly", "role": "Daniela"}]}, {"id": "atp_the_studio", "title": "片场风云", "enTitle": "The Studio", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 760, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-03-26", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["讽刺喜剧", "影视幕后"], "ageRating": "TV-MA", "synopsis": "新上任的好莱坞传统制片厂掌门人在艺术追求与商业票房夹缝中焦头烂额。", "cast": [{"name": "塞斯·罗根", "enName": "Seth Rogen", "role": "Matt Remick"}, {"name": "凯瑟琳·欧哈拉", "enName": "Catherine O'Hara", "role": "Patty"}]}, {"id": "atp_foundation", "title": "基地", "enTitle": "Foundation", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 742, "imdb": 7.6, "recommendPct": 82, "year": 2025, "releaseDate": "2025-07-11", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["硬核科幻", "太空歌剧"], "ageRating": "TV-14", "synopsis": "心理史学预言危机降临，银河帝国与基地迎来跨越世纪的正面交锋。", "cast": [{"name": "杰瑞德·哈里斯", "enName": "Jared Harris", "role": "Hari Seldon"}, {"name": "李·佩斯", "enName": "Lee Pace", "role": "Brother Day"}]}, {"id": "hbo_gilded_age", "title": "镀金时代", "enTitle": "The Gilded Age", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 956, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-01", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["年代剧", "豪门剧情"], "ageRating": "TV-MA", "synopsis": "19世纪末纽约第五大道新贵罗素家族与老钱阶层的社交博弈升级，每周一更新1集。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Bertha Russell"}, {"name": "克里斯汀·芭伦斯基", "enName": "Christine Baranski", "role": "Agnes van Rhijn"}]}, {"id": "hbo_lanterns", "title": "绿灯军团", "enTitle": "Lanterns", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 928, "imdb": 8.4, "recommendPct": 91, "year": 2026, "releaseDate": "2026-09-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻罪案", "DC悬疑"], "ageRating": "TV-MA", "synopsis": "传奇绿灯侠哈尔·乔丹与新晋成员约翰·斯图尔特深入美国腹地调查一桩牵连星际黑暗秘密的谋杀案。", "cast": [{"name": "凯尔·钱德勒", "enName": "Kyle Chandler", "role": "Hal Jordan"}, {"name": "亚伦·皮埃尔", "enName": "Aaron Pierre", "role": "John Stewart"}]}, {"id": "hbo_house_dragon", "title": "龙之家族", "enTitle": "House of the Dragon", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 902, "imdb": 8.3, "recommendPct": 87, "year": 2026, "releaseDate": "2026-07-12", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻史诗", "权谋战争"], "ageRating": "TV-MA", "synopsis": "坦格利安血龙狂舞全面开战，黑党与绿党在维斯特洛大陆展开巨龙对决。", "cast": [{"name": "艾玛·达西", "enName": "Emma D'Arcy", "role": "Rhaenyra"}, {"name": "马特·史密斯", "enName": "Matt Smith", "role": "Daemon"}]}, {"id": "hbo_supergirl", "title": "超女：明日之女", "enTitle": "Supergirl", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 878, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-09-25", "runtime": 128, "genres": ["科幻动作", "冒险"], "ageRating": "PG-13", "synopsis": "卡拉·佐-艾尔在星际边缘陪伴少女露丝踏上横跨星系的复仇与救赎之旅。", "cast": [{"name": "米莉·阿尔柯克", "enName": "Milly Alcock", "role": "Kara Zor-El"}, {"name": "杰森·莫玛", "enName": "Jason Momoa", "role": "Lobo"}]}, {"id": "hbo_last_of_us", "title": "最后生还者", "enTitle": "The Last of Us", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 860, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-04-13", "seasonNumber": 2, "totalEpisodes": 7, "airedEpisodes": 7, "genres": ["末日生存", "剧情"], "ageRating": "TV-MA", "synopsis": "杰克逊定居点的平静破碎后，艾莉踏上前往西雅图的残酷旅程。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Joel"}, {"name": "贝拉·拉姆齐", "enName": "Bella Ramsey", "role": "Ellie"}]}, {"id": "hbo_white_lotus", "title": "白莲花度假村", "enTitle": "The White Lotus", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 835, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-02-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["黑色幽默", "悬疑讽刺"], "ageRating": "TV-MA", "synopsis": "奢华度假村迎来了新一批心怀鬼胎的宾客，热带风光下危机四伏。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Laurie"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "Rick"}]}, {"id": "hbo_penguin", "title": "企鹅人", "enTitle": "The Penguin", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 818, "imdb": 8.6, "recommendPct": 95, "year": 2024, "releaseDate": "2024-09-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "暗黑黑帮"], "ageRating": "TV-MA", "synopsis": "奥兹·科伯在哥谭地下世界权力真空期步步为营，登顶黑帮帝国王座。", "cast": [{"name": "科林·法瑞尔", "enName": "Colin Farrell", "role": "Oz Cobb"}, {"name": "克里斯汀·米利欧缇", "enName": "Cristin Milioti", "role": "Sofia Falcone"}]}, {"id": "hbo_pitt", "title": "匹兹堡医护前线", "enTitle": "The Pitt", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 798, "imdb": 8.7, "recommendPct": 95, "year": 2026, "releaseDate": "2026-01-08", "seasonNumber": 2, "totalEpisodes": 15, "airedEpisodes": 15, "genres": ["医疗写实", "高能剧情"], "ageRating": "TV-MA", "synopsis": "以一集一小时实时视角直击创伤急救中心15小时轮班的生死博弈。", "cast": [{"name": "诺亚·怀尔", "enName": "Noah Wyle", "role": "Dr. Robby"}]}, {"id": "hbo_dune_prophecy", "title": "沙丘：预言", "enTitle": "Dune: Prophecy", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 772, "imdb": 7.4, "recommendPct": 78, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 2, "genres": ["科幻", "星际权谋"], "ageRating": "TV-MA", "synopsis": "哈克南姐妹创立贝尼·杰瑟里特姐妹会，在帝国王座背后编织跨越万年的命运网络。", "cast": [{"name": "艾米丽·沃森", "enName": "Emily Watson", "role": "Valya Harkonnen"}, {"name": "奥莉维亚·威廉姆斯", "enName": "Olivia Williams", "role": "Tula Harkonnen"}]}, {"id": "hbo_dune2", "title": "沙丘2", "enTitle": "Dune: Part Two", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 755, "imdb": 8.5, "recommendPct": 92, "year": 2024, "releaseDate": "2024-03-01", "runtime": 166, "genres": ["科幻史诗", "冒险"], "ageRating": "PG-13", "synopsis": "保罗·厄崔迪融入弗雷曼人，踏上改写已知宇宙命运的沙漠圣战。", "cast": [{"name": "蒂莫西·柴勒梅德", "enName": "Timothee Chalamet", "role": "Paul Atreides"}, {"name": "赞达亚", "enName": "Zendaya", "role": "Chani"}]}, {"id": "amp_rings_of_power", "title": "指环王：力量之戒", "enTitle": "The Lord of the Rings: The Rings of Power", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 968, "imdb": 7.1, "recommendPct": 83, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻史诗", "冒险"], "ageRating": "TV-14", "synopsis": "第三季于11月11日回归，索伦铸造至尊魔戒的阴谋逼近中土核心，精灵与矮人防线迎来大战。", "cast": [{"name": "莫菲德·克拉克", "enName": "Morfydd Clark", "role": "Galadriel"}, {"name": "查理·维卡斯", "enName": "Charlie Vickers", "role": "Sauron"}]}, {"id": "amp_blade_runner_2099", "title": "银翼杀手 2099", "enTitle": "Blade Runner 2099", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 932, "imdb": 8.4, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["赛博朋克", "科幻惊悚"], "ageRating": "TV-MA", "synopsis": "设定于《银翼杀手2049》五十年后的雨夜洛杉矶，老牌复制人与伪装身份的逃亡少女卷入颠覆城市的秘密。", "cast": [{"name": "杨紫琼", "enName": "Michelle Yeoh", "role": "Olwen"}, {"name": "亨特·莎弗", "enName": "Hunter Schafer", "role": "Cora"}]}, {"id": "amp_project_hail_mary", "title": "挽救计划", "enTitle": "Project Hail Mary", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 904, "imdb": 8.5, "recommendPct": 93, "year": 2026, "releaseDate": "2026-09-10", "runtime": 146, "genres": ["硬核科幻", "太空救援"], "ageRating": "PG-13", "synopsis": "中学科学老师在距地球数光年的飞船上独自苏醒，凭借科学推理与意外结识的外星伙伴拯救太阳危机。", "cast": [{"name": "瑞恩·高斯林", "enName": "Ryan Gosling", "role": "Ryland Grace"}, {"name": "桑德拉·惠勒", "enName": "Sandra Huller", "role": "Eva Stratt"}]}, {"id": "amp_madden", "title": "麦登传奇", "enTitle": "Madden", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 864, "imdb": 7.5, "recommendPct": 81, "year": 2026, "releaseDate": "2026-11-19", "runtime": 126, "genres": ["传记剧情", "体育"], "ageRating": "PG-13", "synopsis": "尼古拉斯·凯奇化身传奇教练约翰·麦登，讲述他从赛场隐退到缔造现象级橄榄球游戏帝国的热血历程。", "cast": [{"name": "尼古拉斯·凯奇", "enName": "Nicolas Cage", "role": "John Madden"}, {"name": "克里斯蒂安·贝尔", "enName": "Christian Bale", "role": "Al Davis"}]}, {"id": "amp_reacher", "title": "侠探杰克", "enTitle": "Reacher", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 848, "imdb": 8.0, "recommendPct": 88, "year": 2026, "releaseDate": "2026-08-14", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["动作犯罪", "硬汉悬疑"], "ageRating": "TV-MA", "synopsis": "流浪前宪兵调查官杰克·雷彻独自深入敌营，用精密推理与铁拳瓦解跨州走私集团。", "cast": [{"name": "阿兰·里奇森", "enName": "Alan Ritchson", "role": "Jack Reacher"}]}, {"id": "amp_fallout", "title": "辐射", "enTitle": "Fallout", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 832, "imdb": 8.4, "recommendPct": 93, "year": 2026, "releaseDate": "2026-04-10", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["废土科幻", "动作冒险"], "ageRating": "TV-MA", "synopsis": "露西与尸鬼踏入新维加斯荒漠，揭开避难所科技高层的战前阴谋。", "cast": [{"name": "艾拉·珀内尔", "enName": "Ella Purnell", "role": "Lucy"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "The Ghoul"}]}, {"id": "amp_the_boys", "title": "黑袍纠察队", "enTitle": "The Boys", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 816, "imdb": 8.7, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-18", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["反超英", "暗黑动作"], "ageRating": "TV-MA", "synopsis": "布彻尔与休伊迎来对抗祖国人极权统治的终局之战。", "cast": [{"name": "卡尔·厄本", "enName": "Karl Urban", "role": "Billy Butcher"}, {"name": "安东尼·斯塔尔", "enName": "Antony Starr", "role": "Homelander"}]}, {"id": "amp_mighty_nein", "title": "强力九人组", "enTitle": "The Mighty Nein", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 786, "imdb": 8.4, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻动画", "跑团冒险"], "ageRating": "TV-MA", "synopsis": "一群性格乖张的边缘冒险者意外结成小队，阻止足以撕裂大陆的远古圣物落入恶徒之手。", "cast": [{"name": "劳拉·贝利", "enName": "Laura Bailey", "role": "Jester"}, {"name": "马修·麦瑟", "enName": "Matthew Mercer", "role": "Essek"}]}, {"id": "amp_accountant2", "title": "会计刺客2", "enTitle": "The Accountant 2", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 758, "imdb": 7.3, "recommendPct": 80, "year": 2025, "releaseDate": "2025-08-12", "runtime": 125, "genres": ["动作惊悚", "犯罪"], "ageRating": "R", "synopsis": "天才数学会计师克里斯蒂安与弟弟联手追查财政部老友遇刺背后的杀手网络。", "cast": [{"name": "本·阿弗莱克", "enName": "Ben Affleck", "role": "Christian Wolff"}, {"name": "乔恩·伯恩瑟尔", "enName": "Jon Bernthal", "role": "Brax"}]}, {"id": "amp_invincible", "title": "无敌少侠", "enTitle": "Invincible", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 740, "imdb": 8.7, "recommendPct": 96, "year": 2026, "releaseDate": "2026-03-12", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["热血动画", "科幻动作"], "ageRating": "TV-MA", "synopsis": "马克在维尔图姆帝国大军压境之际扛起守护地球的重担。", "cast": [{"name": "史蒂文·元", "enName": "Steven Yeun", "role": "Mark Grayson"}, {"name": "J·K·西蒙斯", "enName": "J.K. Simmons", "role": "Omni-Man"}]}, {"id": "pmp_mobland", "title": "黑帮领地", "enTitle": "MobLand", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 948, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["黑帮犯罪", "惊悚"], "ageRating": "TV-MA", "synopsis": "伦敦两大犯罪家族战火重燃，忠诚冷峻的家族清道夫哈里在枪火与背叛间力保帝国不倒，11月20日迎来第二季收官。", "cast": [{"name": "汤姆·哈迪", "enName": "Tom Hardy", "role": "Harry Da Souza"}, {"name": "皮尔斯·布鲁斯南", "enName": "Pierce Brosnan", "role": "Conrad Harrigan"}, {"name": "海伦·米伦", "enName": "Helen Mirren", "role": "Maeve Harrigan"}]}, {"id": "pmp_tulsa_king", "title": "塔尔萨之王", "enTitle": "Tulsa King", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 922, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-10-18", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 6, "genres": ["犯罪剧情", "动作"], "ageRating": "TV-MA", "synopsis": "黑帮老将德怀特·曼弗雷迪在俄克拉荷马州继续扩张商业版图，迎战来自堪萨斯与纽约的双重围剿。", "cast": [{"name": "西尔维斯特·史泰龙", "enName": "Sylvester Stallone", "role": "Dwight Manfredi"}]}, {"id": "pmp_landman", "title": "石油天王", "enTitle": "Landman", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 896, "imdb": 8.3, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["商战剧情", "西部硬派"], "ageRating": "TV-MA", "synopsis": "西德克萨斯油田繁荣背后暗流汹涌，危机处理专家汤米在资本大鳄与油井险情间孤身斡旋。", "cast": [{"name": "比利·鲍伯·松顿", "enName": "Billy Bob Thornton", "role": "Tommy Norris"}, {"name": "黛米·摩尔", "enName": "Demi Moore", "role": "Cami Miller"}]}, {"id": "pmp_dexter_res", "title": "嗜血法医：复活", "enTitle": "Dexter: Resurrection", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 870, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 3, "genres": ["犯罪悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "死里逃生的德克斯特·摩根隐匿于大都会暗夜，一面追寻儿子哈里森的下落，一面面对旧案猎犬的步步紧逼。", "cast": [{"name": "迈克尔·C·豪尔", "enName": "Michael C. Hall", "role": "Dexter Morgan"}]}, {"id": "pmp_lioness", "title": "特别行动：母狮", "enTitle": "Lioness", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 840, "imdb": 7.9, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-27", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["特种作战", "谍战惊悚"], "ageRating": "TV-MA", "synopsis": "乔率领母狮秘密外勤小队执行高危渗透行动，在国家任务与家庭破碎边缘承受极限压力。", "cast": [{"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Joe"}, {"name": "妮可·基德曼", "enName": "Nicole Kidman", "role": "Kaitlyn Meade"}]}, {"id": "pmp_gladiator2", "title": "角斗士2", "enTitle": "Gladiator II", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 812, "imdb": 7.0, "recommendPct": 76, "year": 2024, "releaseDate": "2025-01-21", "runtime": 148, "genres": ["历史动作", "史诗"], "ageRating": "R", "synopsis": "卢修斯被迫踏入罗马斗兽场，在暴君统治下为恢复罗马昔日荣光挥剑奋战。", "cast": [{"name": "保罗·麦斯卡", "enName": "Paul Mescal", "role": "Lucius"}, {"name": "丹泽尔·华盛顿", "enName": "Denzel Washington", "role": "Macrinus"}]}, {"id": "pmp_mi8", "title": "碟中谍8：最终清算", "enTitle": "Mission: Impossible - The Final Reckoning", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 796, "imdb": 7.9, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-10", "runtime": 169, "genres": ["特工动作", "冒险"], "ageRating": "PG-13", "synopsis": "伊森·亨特与 IMF 小队深入深海潜艇残骸与万米高空，终结失控人工智能智体的全球危机。", "cast": [{"name": "汤姆·克鲁斯", "enName": "Tom Cruise", "role": "Ethan Hunt"}, {"name": "海莉·阿特维尔", "enName": "Hayley Atwell", "role": "Grace"}]}, {"id": "pmp_yellowjackets", "title": "黄蜂", "enTitle": "Yellowjackets", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 774, "imdb": 7.8, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-13", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["悬疑惊悚", "荒野求生"], "ageRating": "TV-MA", "synopsis": "高中女子足球队空难幸存者跨越二十五年的荒野秘密再度浮出水面。", "cast": [{"name": "梅兰妮·林斯基", "enName": "Melanie Lynskey", "role": "Shauna"}, {"name": "克里斯蒂娜·里奇", "enName": "Christina Ricci", "role": "Misty"}]}, {"id": "pmp_marshals", "title": "联邦法警", "enTitle": "Marshals", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 752, "imdb": 7.7, "recommendPct": 81, "year": 2026, "releaseDate": "2026-10-25", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 5, "genres": ["西部犯罪", "动作"], "ageRating": "TV-MA", "synopsis": "黄石宇宙衍生新作，聚焦蒙大拿州边境联邦法警追缉亡命重犯的硬派故事。", "cast": [{"name": "卢克·葛莱姆斯", "enName": "Luke Grimes", "role": "Kayce Dutton"}]}, {"id": "pmp_yellowstone", "title": "黄石", "enTitle": "Yellowstone", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 738, "imdb": 8.7, "recommendPct": 90, "year": 2024, "releaseDate": "2024-11-10", "seasonNumber": 5, "totalEpisodes": 14, "airedEpisodes": 14, "genres": ["现代西部", "家族剧情"], "ageRating": "TV-MA", "synopsis": "达顿家族为守护广袤牧场与各方势力展开终极较量。", "cast": [{"name": "凯莉·蕾莉", "enName": "Kelly Reilly", "role": "Beth Dutton"}, {"name": "科尔·豪瑟", "enName": "Cole Hauser", "role": "Rip Wheeler"}]}];
 
       const GIST_FILENAME = "dramov-tracker-sync-v1.json";
       const STORAGE_KEY = "dramov_state_v2";
@@ -2062,6 +2002,26 @@
         probe.src = posterUrl;
       }
 
+      // 把 TVmaze / iTunes / TMDB 返回的英文类型统一成中文，并去重
+      const GENRE_EN_ZH = {
+        "action": "动作", "adventure": "冒险", "action & adventure": "动作冒险", "animation": "动画", "anime": "动画",
+        "children": "儿童", "kids": "儿童", "kids & family": "家庭", "family": "家庭", "comedy": "喜剧", "crime": "犯罪",
+        "documentary": "纪录片", "drama": "剧情", "espionage": "谍战", "fantasy": "奇幻", "history": "历史",
+        "horror": "恐怖", "legal": "法律", "medical": "医疗", "music": "音乐", "musicals": "歌舞", "mystery": "悬疑",
+        "romance": "爱情", "science-fiction": "科幻", "science fiction": "科幻", "sci-fi & fantasy": "科幻奇幻",
+        "sci-fi": "科幻", "sports": "体育", "supernatural": "超自然", "thriller": "惊悚", "war": "战争",
+        "war & politics": "战争政治", "western": "西部", "reality": "真人秀", "talk": "脱口秀", "news": "新闻",
+        "soap": "肥皂剧", "independent": "独立电影", "holiday": "节日", "suspense": "悬疑", "politics": "政治"
+      };
+      function zhGenres(list) {
+        const out = [];
+        (list || []).forEach((g) => {
+          const zh = GENRE_EN_ZH[String(g || "").trim().toLowerCase()] || g;
+          if (zh && !out.includes(zh)) out.push(zh);
+        });
+        return out;
+      }
+
       function escapeHtml(str) {
         return String(str || "")
           .replace(/&/g, "&amp;")
@@ -2296,7 +2256,7 @@
         const fallbackSvg = makeEditorialPosterSvg(cur, true, false);
         const posterSrc = getPosterUrl(cur, true, false);
         const typeText = cur.mediaType === "movie" ? "电影" : "剧集";
-        const genreStr = (cur.genres || []).slice(0, 2).join(" · ") || "热门";
+        const genreStr = zhGenres(cur.genres).slice(0, 2).join(" · ") || "热门";
         const ageStr = cur.ageRating || (cur.mediaType === "movie" ? "PG-13" : "TV-MA");
         const showEn = cur.enTitle && normalizeSimple(cur.enTitle) !== normalizeSimple(cur.title);
         const prioAttr = !isClone && realIdx === 0 ? 'fetchpriority="high"' : "";
@@ -2719,7 +2679,7 @@
         const imdbVal = Number(cur.imdb) ? Number(cur.imdb).toFixed(1) : "8.0";
         const yearStr = cur.year || "2026";
         const showEn = cur.enTitle && normalizeSimple(cur.enTitle) !== normalizeSimple(cur.title);
-        const genreStr = (cur.genres || []).filter((g) => g !== "纪录片").slice(0, 2).join(" · ");
+        const genreStr = zhGenres(cur.genres).filter((g) => g !== "纪录片").slice(0, 2).join(" · ");
         const syn = cur.synopsis || "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。";
         const pm = PLATFORM_MAP[cur.platformId] || PLATFORMS[0];
 
@@ -3094,7 +3054,7 @@
         };
         heroImg.src = getPosterUrl(item, true, false);
 
-        const genres = (item.genres || []).slice(0, 2).join(" · ") || (item.mediaType === "movie" ? "电影" : "剧集");
+        const genres = zhGenres(item.genres).slice(0, 2).join(" · ") || (item.mediaType === "movie" ? "电影" : "剧集");
         if (item.mediaType === "movie") {
           document.getElementById("detailSubMeta").textContent =
             `电影 · ${genres}${item.runtime ? ` · ${item.runtime} 分钟` : ""}${item.year ? ` · ${item.year}` : ""}`;
@@ -3352,10 +3312,58 @@
         }
       }
 
+      // 各平台在 TVmaze 上的频道名关键词，用来在同名剧里挑出正确的那一部
+      const TVMAZE_CHANNEL_HINTS = {
+        netflix: ["netflix"],
+        disney: ["disney"],
+        hbo: ["hbo", "max"],
+        prime: ["prime video", "amazon"],
+        paramount: ["paramount"],
+        apple: ["apple tv"]
+      };
+      const POSTER_RETRY_MS = 6 * 60 * 60 * 1000;
+
+      function pickBestTvmazeShow(results, item) {
+        const want = normalizeSimple(item.enTitle || item.title);
+        const hints = TVMAZE_CHANNEL_HINTS[item.platformId] || [];
+        let best = null;
+        let bestScore = -Infinity;
+        (results || []).forEach((r) => {
+          const show = r && r.show;
+          if (!show) return;
+          const channel = `${show.webChannel?.name || ""} ${show.network?.name || ""}`.toLowerCase();
+          let sc = Number(r.score) || 0;
+          if (normalizeSimple(show.name) === want) sc += 2;
+          if (hints.some((h) => channel.includes(h))) sc += 3;
+          if (show.image?.original) sc += 1;
+          if (sc > bestScore) {
+            bestScore = sc;
+            best = show;
+          }
+        });
+        return best;
+      }
+
+      async function fetchItunesMovie(term, country) {
+        const r = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=movie&limit=5${country ? `&country=${country}` : ""}`
+        );
+        if (!r.ok) return null;
+        const data = await r.json();
+        const list = (data.results || []).filter((m) => m.artworkUrl100);
+        const want = normalizeSimple(term);
+        return list.find((m) => normalizeSimple(m.trackName) === want) ||
+          list.find((m) => normalizeSimple(m.trackName).includes(want)) ||
+          list[0] || null;
+      }
+
       async function enrichSingleItemMedia(item) {
         const k = itemKey(item);
         const existing = enrichCache[k] || {};
-        if (existing.fullLoaded) return false;
+        // 旧版本会在“有演员表但没海报”时也标记完成，这里放行让它们重新找海报
+        if (existing.fullLoaded && (existing.posterHd || item.posterHd)) return false;
+        // 上次没找到海报：6 小时内不重复请求
+        if (existing.posterTriedAt && Date.now() - existing.posterTriedAt < POSTER_RETRY_MS) return false;
 
         const queryName = item.enTitle || item.title;
         let changed = false;
@@ -3363,18 +3371,26 @@
 
         try {
           if (item.mediaType === "show") {
-            const r = await fetch(
-              `https://api.tvmaze.com/singlesearch/shows?q=${encodeURIComponent(queryName)}&embed[]=cast&embed[]=images&embed[]=episodes`
-            );
-            if (r.ok) {
-              const show = await r.json();
+            // 先搜索候选，按“同名 + 同平台 + 有海报”挑出正确的剧，再取详情
+            let show = null;
+            const sr = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(queryName)}`);
+            if (sr.ok) {
+              const picked = pickBestTvmazeShow(await sr.json(), item);
+              if (picked?.id) {
+                const dr = await fetch(
+                  `https://api.tvmaze.com/shows/${picked.id}?embed[]=cast&embed[]=images&embed[]=episodes`
+                );
+                if (dr.ok) show = await dr.json();
+              }
+            }
+            if (show) {
               if (show.image?.original && !item.posterHd && !entry.posterHd) {
                 entry.posterHd = String(show.image.original).replace(/^http:/, "https:");
                 entry.posterThumb = String(show.image.medium || show.image.original).replace(/^http:/, "https:");
                 changed = true;
               }
               const castArr = show._embedded?.cast || [];
-              if (castArr.length) {
+              if (castArr.length && !entry.cast) {
                 entry.cast = castArr.slice(0, 8).map((c) => ({
                   name: c.person?.name || "",
                   enName: c.person?.name || "",
@@ -3404,30 +3420,31 @@
               }
             }
           } else {
-            const r = await fetch(
-              `https://itunes.apple.com/search?term=${encodeURIComponent(queryName)}&entity=movie&limit=2`
-            );
-            if (r.ok) {
-              const data = await r.json();
-              const mv = (data.results || [])[0];
-              if (mv && mv.artworkUrl100) {
-                if (!item.posterHd && !entry.posterHd) {
-                  entry.posterHd = mv.artworkUrl100.replace("100x100bb", "1000x1500bb");
-                  entry.posterThumb = mv.artworkUrl100.replace("100x100bb", "400x600bb");
-                }
-                if (mv.previewUrl) entry.trailerUrl = mv.previewUrl;
-                changed = true;
+            // 美区用英文名找；找不到再去中国区用中文名找
+            let mv = await fetchItunesMovie(queryName, "");
+            if (!mv && item.title && item.title !== queryName) mv = await fetchItunesMovie(item.title, "cn");
+            if (mv) {
+              if (!item.posterHd && !entry.posterHd) {
+                entry.posterHd = mv.artworkUrl100.replace("100x100bb", "1000x1500bb");
+                entry.posterThumb = mv.artworkUrl100.replace("100x100bb", "400x600bb");
               }
+              if (mv.previewUrl) entry.trailerUrl = mv.previewUrl;
+              changed = true;
             }
           }
         } catch (e) {}
 
-        if (changed) {
+        const hasPoster = !!(item.posterHd || entry.posterHd);
+        if (hasPoster) {
+          // 只有拿到海报才算“加载完成”，否则以后还会再试
           entry.fullLoaded = true;
-          enrichCache[k] = entry;
-          saveEnrichCache();
-          updateImagesInPlace(k, entry.posterHd, entry.posterThumb);
+          delete entry.posterTriedAt;
+        } else {
+          entry.posterTriedAt = Date.now();
         }
+        enrichCache[k] = entry;
+        saveEnrichCache();
+        if (changed && entry.posterHd) updateImagesInPlace(k, entry.posterHd, entry.posterThumb);
         return changed;
       }
 
@@ -3690,6 +3707,16 @@
           if (isNavMinimized === minState) return;
           isNavMinimized = minState;
           const wrap = document.getElementById("bottomNavWrap");
+          if (minState) {
+            // 收起后左侧圆按钮显示“当前所在标签”的图标（Apple Music 行为）
+            const activeBtn = document.querySelector(`#bottomNav .nav-btn[data-nav="${activeNav}"]`);
+            const orb = document.getElementById("minHomeBtn");
+            const svg = activeBtn && activeBtn.querySelector("svg");
+            if (orb && svg) {
+              orb.innerHTML = svg.outerHTML;
+              orb.setAttribute("aria-label", `展开导航栏（当前：${activeBtn.textContent.trim()}）`);
+            }
+          }
           if (wrap) wrap.classList.toggle("minimized", minState);
         }
 
@@ -3823,8 +3850,8 @@
 
         // Minimized Split Bar Buttons: Left = Expand & Home, Right = Expand & Search!
         document.getElementById("minHomeBtn").addEventListener("click", () => {
+          // 只展开导航栏，留在当前页面
           setNavMinimized(false);
-          if (activeNav !== "home") switchMainTab("home");
         });
         document.getElementById("minSearchBtn").addEventListener("click", () => {
           setNavMinimized(false);
