@@ -1,12 +1,12 @@
-const CACHE_NAME = "dramov-pwa-v14";
+const CACHE_NAME = "dramov-pwa-v15";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./apple-touch-icon.png?v=9",
-  "./icon-192.png?v=9",
-  "./icon-512.png?v=9",
-  "./icon-maskable-512.png?v=9"
+  "./apple-touch-icon.png?v=10",
+  "./icon-192.png?v=10",
+  "./icon-512.png?v=10",
+  "./icon-maskable-512.png?v=10"
 ];
 
 self.addEventListener("install", (event) => {

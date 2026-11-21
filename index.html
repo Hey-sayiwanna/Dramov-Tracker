@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Dramov" />
   <meta name="theme-color" id="themeColorMeta" content="#05070d" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=9" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=9" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=10" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=10" />
   <script>
     (function () {
       try {
@@ -431,6 +431,16 @@
       cursor: pointer;
       min-width: 0;
     }
+    /* 点按卡片时立刻轻微缩小，手感更跟手 */
+    .rank-card,
+    .plat-catalog-card {
+      transition: transform 0.22s var(--push-ease);
+    }
+    .rank-card:active,
+    .plat-catalog-card:active {
+      transform: scale(0.965);
+      transition-duration: 0.08s;
+    }
     .top10-row:active {
       background: var(--accent-soft);
     }
@@ -476,8 +486,16 @@
       background: rgba(0, 0, 0, 0.48);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+      transition: opacity var(--shell-dur, var(--pop-dur)) var(--shell-ease, var(--push-ease));
       will-change: opacity;
+    }
+    #detailScrim.open,
+    #platformScrim.open {
+      transition-duration: var(--shell-dur, var(--push-dur));
+    }
+    #detailScrim.dragging,
+    #platformScrim.dragging {
+      transition: none !important;
     }
     #detailScrim.open {
       opacity: 1;
@@ -487,7 +505,33 @@
     #mainViewsWrap {
       width: 100%;
       overflow-x: hidden;
-      transform: none !important;
+    }
+
+    /* 页面推入 / 返回：iOS 同款曲线，底下那层轻微视差左移 */
+    :root {
+      --push-ease: cubic-bezier(0.32, 0.72, 0, 1);
+      --push-dur: 0.44s;
+      --pop-dur: 0.36s;
+      --under-shift: -24%;
+    }
+    #mainViewsWrap.page-under,
+    #platformShell.page-under {
+      transform: translate3d(var(--under-shift), 0, 0);
+    }
+    #mainViewsWrap.page-moving,
+    #platformShell.page-moving {
+      will-change: transform;
+    }
+    #mainViewsWrap,
+    #platformShell.page-under-anim {
+      transition: transform var(--shell-dur, var(--pop-dur)) var(--shell-ease, var(--push-ease));
+    }
+    #mainViewsWrap.page-under {
+      transition-duration: var(--shell-dur, var(--push-dur));
+    }
+    #mainViewsWrap.page-dragging,
+    #platformShell.page-dragging {
+      transition: none !important;
     }
 
     /* Platform Secondary Catalog Shell & Title Detail Shell (Single-Layer 120Hz GPU Slide-Over) */
@@ -500,15 +544,25 @@
       visibility: hidden;
       pointer-events: none;
       box-shadow: -14px 0 36px rgba(0, 0, 0, 0.62);
-      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.25s;
+      transition: transform var(--shell-dur, var(--pop-dur)) var(--shell-ease, var(--push-ease)),
+        visibility 0s linear var(--shell-dur, var(--pop-dur));
       will-change: transform;
       contain: layout style paint;
+    }
+    /* 推入前先在屏幕外画好内容，再开始滑动，避免第一帧卡顿 */
+    .gpu-page-shell.prep {
+      visibility: visible;
+      transition: none;
     }
     .gpu-page-shell.open {
       transform: translate3d(0, 0, 0);
       visibility: visible;
       pointer-events: auto;
-      transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0s;
+      transition: transform var(--shell-dur, var(--push-dur)) var(--shell-ease, var(--push-ease)), visibility 0s linear 0s;
+    }
+    /* 详情页盖在二级页上时，二级页本身也是底层，需要同时保留它的推入动画 */
+    #platformShell.open.page-under-anim {
+      transition: transform var(--shell-dur, var(--push-dur)) var(--shell-ease, var(--push-ease)), visibility 0s linear 0s;
     }
     .gpu-page-shell.dragging {
       transition: none !important;
@@ -521,7 +575,7 @@
       background: rgba(0, 0, 0, 0.44);
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity var(--shell-dur, var(--pop-dur)) var(--shell-ease, var(--push-ease));
     }
     #platformScrim.open {
       opacity: 1;
@@ -3706,6 +3760,81 @@
         if (typeof applyLocale === "function") applyLocale(document.getElementById("platformShell"));
       }
 
+      // ---------- 页面推入 / 返回（二级页、详情页共用） ----------
+      const PAGE_UNDER_SHIFT = 24; // 底层页面视差左移的百分比，和 CSS --under-shift 一致
+      function underLayerFor(shell) {
+        if (shell && shell.id === "detailShell" && isPlatformOpen) return document.getElementById("platformShell");
+        return document.getElementById("mainViewsWrap");
+      }
+      function setShellTiming(els, dur, ease) {
+        els.forEach((el) => {
+          if (!el) return;
+          if (dur == null) {
+            el.style.removeProperty("--shell-dur");
+            el.style.removeProperty("--shell-ease");
+          } else {
+            el.style.setProperty("--shell-dur", dur + "s");
+            if (ease) el.style.setProperty("--shell-ease", ease);
+            else el.style.removeProperty("--shell-ease");
+          }
+        });
+      }
+      function markPageMoving(els, ms) {
+        els.forEach((el) => {
+          if (!el) return;
+          el.classList.add("page-moving");
+          clearTimeout(el._movingTimer);
+          el._movingTimer = setTimeout(() => el.classList.remove("page-moving"), ms + 80);
+        });
+      }
+      function pushShell(shell, scrim) {
+        const under = underLayerFor(shell);
+        const token = (shell._pushToken = (shell._pushToken || 0) + 1);
+        clearTimeout(shell._timingTimer);
+        setShellTiming([shell, scrim, under], 0.44);
+        shell.classList.remove("dragging");
+        scrim.classList.remove("dragging");
+        shell.style.transform = "";
+        scrim.style.opacity = "";
+        // 先在屏幕外把内容画好（visible 但还在右边），下一帧再开始滑入
+        shell.classList.add("prep");
+        void shell.offsetWidth;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (shell._pushToken !== token) return;
+          shell.classList.remove("prep");
+          markPageMoving([shell, under], 440);
+          scrim.classList.add("open");
+          shell.classList.add("open");
+          if (under) {
+            under.style.transform = "";
+            under.classList.add("page-under");
+          }
+        }));
+      }
+      function popShell(shell, scrim, opts) {
+        const under = underLayerFor(shell);
+        shell._pushToken = (shell._pushToken || 0) + 1; // 取消还没开始的推入
+        // 上下两层用同一个时长和曲线，保证它们严丝合缝地一起动
+        const dur = opts && typeof opts.dur === "number" ? opts.dur : 0.36;
+        setShellTiming([shell, scrim, under], dur, opts && opts.ease);
+        markPageMoving([shell, under], dur * 1000);
+        shell.classList.remove("prep", "dragging");
+        scrim.classList.remove("dragging");
+        if (under) under.classList.remove("page-dragging");
+        shell.style.transform = "";
+        scrim.style.opacity = "";
+        shell.classList.remove("open");
+        scrim.classList.remove("open");
+        if (under) {
+          under.style.transform = "";
+          under.classList.remove("page-under");
+        }
+        clearTimeout(shell._timingTimer);
+        shell._timingTimer = setTimeout(() => {
+          if (!shell.classList.contains("open")) setShellTiming([shell, scrim, under], null);
+        }, dur * 1000 + 80);
+      }
+
       function syncOverlayBodyLock() {
         if (!isDetailOpen && !isPlatformOpen) {
           document.body.classList.remove("detail-open", "subpage-pushed", "subpage-dragging");
@@ -3783,26 +3912,16 @@
         scroller.scrollTop = 0;
 
         syncOverlayBodyLock();
-        shell.classList.remove("dragging");
-        shell.style.transform = "";
-        scrim.style.opacity = "";
-        scrim.classList.add("open");
-        shell.classList.add("open");
+        if (!shell.classList.contains("open")) pushShell(shell, scrim);
 
         if (!(pm && pm.kind === "schedule")) fetchMoreSecondaryCatalog(feedKey);
       }
 
-      function closePlatformPage() {
+      function closePlatformPage(opts) {
         if (!isPlatformOpen) return;
         isPlatformOpen = false;
         activePlatformPageId = null;
-        const shell = document.getElementById("platformShell");
-        const scrim = document.getElementById("platformScrim");
-        shell.classList.remove("dragging");
-        shell.style.transform = "";
-        scrim.style.opacity = "";
-        shell.classList.remove("open");
-        scrim.classList.remove("open");
+        popShell(document.getElementById("platformShell"), document.getElementById("platformScrim"), opts);
         syncOverlayBodyLock();
       }
 
@@ -3910,11 +4029,7 @@
         isDetailOpen = true;
         if (!wasAlreadyOpen) detailDirty = false;
         syncOverlayBodyLock();
-        shell.classList.remove("dragging");
-        shell.style.transform = "";
-        scrim.style.opacity = "";
-        scrim.classList.add("open");
-        shell.classList.add("open");
+        if (!wasAlreadyOpen) pushShell(shell, scrim);
         if (!wasAlreadyOpen) {
           document.getElementById("detailTopbar").classList.remove("scrolled");
           ov.scrollTop = 0;
@@ -4607,26 +4722,20 @@
           if (activeNav !== "home") syncAmbientTopBarForItem(null);
         }
 
-        function closeDetailPage() {
+        function closeDetailPage(opts) {
           if (!isDetailOpen) return;
           isDetailOpen = false;
-          const shell = document.getElementById("detailShell");
-          const scrim = document.getElementById("detailScrim");
-          shell.classList.remove("dragging");
           document.body.classList.remove("subpage-dragging");
-                    shell.style.transform = "";
-          scrim.style.opacity = "";
-          shell.classList.remove("open");
-          scrim.classList.remove("open");
+          popShell(document.getElementById("detailShell"), document.getElementById("detailScrim"), opts);
 
           syncOverlayBodyLock();
 
-          // Defer any DOM sync until AFTER the 260ms GPU slide-out completes so 0ms frame is 100% butter-smooth!
+          // 等返回动画完全结束后再刷新底下的页面，动画过程中不碰 DOM
           if (detailDirty) {
             detailDirty = false;
             setTimeout(() => {
               if (!isDetailOpen && !isPlatformOpen) renderActiveView();
-            }, 280);
+            }, 420);
           }
 
           if (activeNav === "home" && !isPlatformOpen) {
@@ -4855,34 +4964,28 @@
           }
         }, { passive: true });
 
-        document.getElementById("closeDetailBtn").addEventListener("click", closeDetailPage);
-        detScrimEl.addEventListener("click", closeDetailPage);
-        document.getElementById("closePlatformBtn").addEventListener("click", closePlatformPage);
-        platScrimEl.addEventListener("click", closePlatformPage);
+        document.getElementById("closeDetailBtn").addEventListener("click", () => closeDetailPage());
+        detScrimEl.addEventListener("click", () => closeDetailPage());
+        document.getElementById("closePlatformBtn").addEventListener("click", () => closePlatformPage());
+        platScrimEl.addEventListener("click", () => closePlatformPage());
 
         function bindSilkyShellSwipeBack(shellEl, scrimEl, isOpenFn, closeFn, hasUnderlyingMain) {
           let st = null;
           shellEl.addEventListener("touchstart", (e) => {
-            if (!isOpenFn() || !e.touches || e.touches.length !== 1) {
+            if (!isOpenFn() || !shellEl.classList.contains("open") || !e.touches || e.touches.length !== 1) {
               st = null;
               return;
             }
             const t = e.touches[0];
-            const inHorizStrip = Boolean(e.target.closest(".cast-scroll, .authority-rating-strip"));
+            const inHorizStrip = Boolean(e.target.closest(".cast-scroll, .authority-rating-strip, .sort-seg"));
             const isLeftEdge = t.clientX <= 52;
             const isRightEdge = t.clientX >= window.innerWidth - 44;
             if (inHorizStrip && !isLeftEdge && !isRightEdge) {
               st = null;
               return;
             }
-            st = {
-              startX: t.clientX,
-              startY: t.clientY,
-              startTime: performance.now(),
-              isRightEdge,
-              locked: null,
-              lastDx: 0
-            };
+            const now = performance.now();
+            st = { startX: t.clientX, startY: t.clientY, isRightEdge, locked: null, lastDx: 0, prevX: t.clientX, prevT: now, vx: 0, under: null };
           }, { passive: true });
 
           shellEl.addEventListener("touchmove", (e) => {
@@ -4893,46 +4996,60 @@
 
             if (st.locked === null) {
               if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-              if (dx > 10 && dx > Math.abs(dy) * 1.2) {
-                st.locked = "ltr";
-                shellEl.classList.add("dragging");
-                if (hasUnderlyingMain()) document.body.classList.add("subpage-dragging");
-              } else if (st.isRightEdge && dx < -10 && Math.abs(dx) > Math.abs(dy) * 1.35) {
-                st.locked = "rtl-edge";
-                shellEl.classList.add("dragging");
-                if (hasUnderlyingMain()) document.body.classList.add("subpage-dragging");
-              } else {
+              if (dx > 10 && dx > Math.abs(dy) * 1.2) st.locked = "ltr";
+              else if (st.isRightEdge && dx < -10 && Math.abs(dx) > Math.abs(dy) * 1.35) st.locked = "rtl-edge";
+              else {
                 st.locked = "vertical";
                 return;
               }
+              st.under = underLayerFor(shellEl);
+              shellEl.classList.add("dragging");
+              scrimEl.classList.add("dragging");
+              if (st.under) st.under.classList.add("page-dragging", "page-moving");
+              if (hasUnderlyingMain()) document.body.classList.add("subpage-dragging");
             }
 
             if (st.locked === "ltr" || st.locked === "rtl-edge") {
+              if (e.cancelable) e.preventDefault(); // 横向拖动时不让页面跟着上下滚
               const shift = st.locked === "ltr" ? Math.max(0, dx) : Math.max(0, -dx * 0.88);
+              const now = performance.now();
+              const instV = (shift - st.lastDx) / Math.max(1, now - st.prevT);
+              st.vx = st.vx * 0.6 + instV * 0.4;
+              st.prevT = now;
               st.lastDx = shift;
               const w = window.innerWidth || 375;
               const prog = Math.min(1, shift / w);
               shellEl.style.transform = `translate3d(${shift}px, 0, 0)`;
-              scrimEl.style.opacity = String(Math.max(0, 1 - prog * 0.92));
-
+              scrimEl.style.opacity = String(Math.max(0, 1 - prog));
+              if (st.under) st.under.style.transform = `translate3d(${(-PAGE_UNDER_SHIFT * (1 - prog)).toFixed(2)}%, 0, 0)`;
             }
-          }, { passive: true });
+          }, { passive: false });
 
           function endSwipe() {
             if (!st) return;
             const cur = st;
             st = null;
             if (cur.locked !== "ltr" && cur.locked !== "rtl-edge") return;
-            shellEl.classList.remove("dragging");
             document.body.classList.remove("subpage-dragging");
-            const dt = Math.max(1, performance.now() - cur.startTime);
-            const velocity = cur.lastDx / dt;
             const w = window.innerWidth || 375;
-            if (cur.lastDx > Math.min(84, w * 0.23) || (cur.lastDx > 28 && velocity > 0.44)) {
-              closeFn();
+            const v = Math.max(0, cur.vx); // px/ms，手指松开时的速度
+            if (cur.lastDx > Math.min(110, w * 0.3) || (cur.lastDx > 24 && v > 0.35)) {
+              // 按手指速度把剩下的距离滑完，快甩就快收
+              const remaining = Math.max(0, w - cur.lastDx);
+              const dur = Math.min(0.36, Math.max(0.16, (remaining / Math.max(v, 0.9)) / 1000 * 1.5));
+              closeFn({ dur: Number(dur.toFixed(3)), ease: "cubic-bezier(0.25, 0.9, 0.35, 1)" });
             } else {
+              // 回弹到原位
+              const under = cur.under;
+              setShellTiming([shellEl, scrimEl, under], 0.32);
+              markPageMoving([shellEl, under], 320);
+              shellEl.classList.remove("dragging");
+              scrimEl.classList.remove("dragging");
+              if (under) under.classList.remove("page-dragging");
               shellEl.style.transform = "";
               scrimEl.style.opacity = "";
+              if (under) under.style.transform = "";
+              setTimeout(() => setShellTiming([shellEl, scrimEl, under], null), 400);
             }
           }
 
@@ -4940,6 +5057,7 @@
           shellEl.addEventListener("touchcancel", endSwipe, { passive: true });
         }
 
+        document.addEventListener("touchstart", () => {}, { passive: true });
         bindSilkyShellSwipeBack(detShellEl, detScrimEl, () => isDetailOpen, closeDetailPage, () => !isPlatformOpen);
         bindSilkyShellSwipeBack(platShellEl, platScrimEl, () => isPlatformOpen && !isDetailOpen, closePlatformPage, () => true);
         document.getElementById("shareDetailBtn").addEventListener("click", () => {
