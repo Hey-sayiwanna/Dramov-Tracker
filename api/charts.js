@@ -287,7 +287,8 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     jwId: node.id || "",
     title: zh.title || en.title || "Untitled",
     enTitle: en.title || zh.title || "",
-    mediaType: rawGenres.some((g) => g.shortName === "doc") ? "doc" : (isShow ? "show" : "movie"),
+    mediaType: isShow ? "show" : "movie",
+    isDoc: rawGenres.some((g) => g.shortName === "doc"),
     hasEpisodes: isShow,
     platformId: defaultPlatformId || Array.from(providersSet)[0] || "netflix",
     providers: Array.from(providersSet),
@@ -372,33 +373,42 @@ module.exports = async (req, res) => {
     const allSixCodes = Array.from(new Set(Object.values(codeMap).flat()));
 
     const tasks = [
-      // Task 0: Hot NEW TV Shows released in the current window (for Homepage Top 5 Hero!)
+      // Task 0: Hot NEW TV Shows released in the current window (for Homepage 8-Poster Hero)
       fetchTitlesWithFilter(
         {
           packages: allSixCodes,
           objectTypes: ["SHOW"],
           releaseYear: { min: minNewYear }
         },
-        28,
+        30,
         country
       ),
-      // Task 1: Overall Popular across all 6 platforms
+      // Task 1: Cross-Platform Hottest TV Shows (Pure popularity across all 6 streamers!)
       fetchTitlesWithFilter(
         {
           packages: allSixCodes,
-          objectTypes: ["MOVIE", "SHOW"]
+          objectTypes: ["SHOW"]
         },
-        12,
+        18,
         country
       ),
-      // Tasks 2..7: Per-platform Top 10 (Movies + TV Shows combined)
+      // Task 2: Cross-Platform Hottest Movies (Pure popularity across all 6 streamers!)
+      fetchTitlesWithFilter(
+        {
+          packages: allSixCodes,
+          objectTypes: ["MOVIE"]
+        },
+        18,
+        country
+      ),
+      // Tasks 3..8: Per-platform Top 10 (Movies + TV Shows combined, excluding documentaries)
       ...PLATFORM_DEFS.map((def) =>
         fetchTitlesWithFilter(
           {
             packages: codeMap[def.id],
             objectTypes: ["MOVIE", "SHOW"]
           },
-          10,
+          14,
           country
         )
       )
@@ -408,7 +418,7 @@ module.exports = async (req, res) => {
 
     const rawNewShowCandidates =
       settled[0].status === "fulfilled"
-        ? settled[0].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title)
+        ? settled[0].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc)
         : [];
 
     // Enrich top 12 new show candidates in parallel with TVmaze dates/episodes (fast 2.2s cap)
@@ -433,17 +443,25 @@ module.exports = async (req, res) => {
     });
     const heroNewShows = Array.from(heroMap.values()).slice(0, 16);
 
-    const globalTop =
+    const hotShowsTop =
       settled[1].status === "fulfilled"
-        ? settled[1].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title)
+        ? settled[1].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc).slice(0, 14)
+        : [];
+
+    const hotMoviesTop =
+      settled[2].status === "fulfilled"
+        ? settled[2].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc).slice(0, 14)
         : [];
 
     const chartsByPlatform = {};
     PLATFORM_DEFS.forEach((def, idx) => {
-      const s = settled[idx + 2];
+      const s = settled[idx + 3];
       chartsByPlatform[def.id] =
         s.status === "fulfilled" && s.value.length
-          ? s.value.slice(0, 10).map((e, rankIdx) => normalizeNode(e.node, def.id, rankIdx))
+          ? s.value
+              .map((e, rankIdx) => normalizeNode(e.node, def.id, rankIdx))
+              .filter((x) => x.title && !x.isDoc)
+              .slice(0, 10)
           : [];
     });
 
@@ -455,7 +473,9 @@ module.exports = async (req, res) => {
       fetchedAt: new Date().toISOString(),
       providerIcons: iconMap,
       heroNewShows,
-      globalTop: globalTop.slice(0, 10),
+      hotShowsTop,
+      hotMoviesTop,
+      globalTop: [...hotShowsTop.slice(0, 5), ...hotMoviesTop.slice(0, 5)],
       chartsByPlatform
     });
   } catch (err) {

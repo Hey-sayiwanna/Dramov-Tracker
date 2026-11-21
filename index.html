@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Dramov" />
   <meta name="theme-color" id="themeColorMeta" content="#05070d" />
   <link rel="manifest" href="./manifest.json" />
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=7" />
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=7" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=9" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=9" />
   <script>
     (function () {
       try {
@@ -480,13 +480,9 @@
     }
 
     #mainViewsWrap {
-      transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    body.subpage-pushed #mainViewsWrap {
-      transform: translate3d(-22%, 0, 0);
-    }
-    body.subpage-dragging #mainViewsWrap {
-      transition: none !important;
+      width: 100%;
+      overflow-x: hidden;
+      transform: none !important;
     }
 
     /* Platform Secondary Catalog Shell & Title Detail Shell (Single-Layer 120Hz GPU Slide-Over) */
@@ -939,7 +935,7 @@
     }
 
     /* Immersive Cinema Layout */
-    /* Apple Music Ultra-Clear Liquid Glass Bottom Bar + Sliding Droplet Lens + Scroll-Down Minimize */
+    /* True iOS 26 Optical Liquid Glass Bottom Bar (Fresnel Rim + Protruding Hollow Meniscus Lens) */
     #bottomNavWrap {
       position: fixed;
       left: 50%;
@@ -947,8 +943,8 @@
       bottom: max(10px, calc(env(safe-area-inset-bottom, 10px) - 14px));
       z-index: 50;
       width: calc(100% - 28px);
-      max-width: 416px;
-      height: 56px;
+      max-width: 408px;
+      height: 58px;
       pointer-events: none;
     }
 
@@ -959,15 +955,18 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      background: rgba(26, 32, 46, 0.20);
-      backdrop-filter: blur(18px) saturate(195%) brightness(1.05);
-      -webkit-backdrop-filter: blur(18px) saturate(195%) brightness(1.05);
-      border: 0.5px solid rgba(255, 255, 255, 0.34);
-      box-shadow:
-        inset 0 1px 0.5px rgba(255, 255, 255, 0.52),
-        inset 0 -0.5px 0.5px rgba(255, 255, 255, 0.18),
-        0 10px 28px rgba(0, 0, 0, 0.34);
+      overflow: visible;
+      /* Clear dark-tinted optical glass — never milky opaque gray! */
+      background:
+        radial-gradient(120% 180% at 50% 0%, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.01) 55%),
+        rgba(18, 22, 32, 0.34);
+      backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
+      -webkit-backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
       border-radius: 999px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.32),
+        inset 0 -0.5px 0 rgba(255, 255, 255, 0.12),
+        0 12px 32px rgba(0, 0, 0, 0.42);
       padding: 4px;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -975,30 +974,37 @@
       transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
     }
     html[data-theme="light"] #bottomNav {
-      background: rgba(255, 255, 255, 0.44);
-      border-color: rgba(255, 255, 255, 0.78);
+      background:
+        radial-gradient(120% 180% at 50% 0%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.32) 60%),
+        rgba(248, 250, 252, 0.52);
       box-shadow:
-        inset 0 1px 0.5px rgba(255, 255, 255, 0.95),
-        inset 0 -0.5px 0.5px rgba(15, 23, 42, 0.08),
-        0 10px 26px rgba(15, 23, 42, 0.12);
+        inset 0 1.5px 0.5px rgba(255, 255, 255, 0.96),
+        inset 0 -1px 0.5px rgba(15, 23, 42, 0.06),
+        0 10px 28px rgba(15, 23, 42, 0.14);
     }
 
+    /* Directional 1px Fresnel Specular Glass Rim (bright top-left & bottom-right curves, subtle sides) */
     #bottomNav::before {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: 999px;
+      padding: 1px;
       background: linear-gradient(
-        118deg,
-        rgba(255, 255, 255, 0.18) 0%,
-        rgba(255, 255, 255, 0.03) 34%,
-        rgba(255, 255, 255, 0.0) 62%,
-        rgba(255, 255, 255, 0.09) 100%
+        152deg,
+        rgba(255, 255, 255, 0.68) 0%,
+        rgba(255, 255, 255, 0.12) 34%,
+        rgba(255, 255, 255, 0.06) 66%,
+        rgba(255, 255, 255, 0.44) 100%
       );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
       pointer-events: none;
     }
 
-    /* Continuous Draggable / Sliding Liquid Glass Droplet Lens */
+    /* Hollow Meniscus Crystal Droplet Lens:
+       Transparent center + luminous curved outer meniscus + chromatic dispersion edge! */
     #navSlidingLens {
       position: absolute;
       top: 4px;
@@ -1008,48 +1014,91 @@
       border-radius: 999px;
       z-index: 1;
       pointer-events: none;
-      background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.24) 0%,
-        rgba(255, 255, 255, 0.07) 52%,
-        rgba(255, 255, 255, 0.14) 100%
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.06) 54%,
+        rgba(255, 255, 255, 0.17) 86%,
+        rgba(255, 255, 255, 0.30) 100%
       );
-      border: 0.5px solid rgba(255, 255, 255, 0.46);
       box-shadow:
-        inset 0 1.5px 1px rgba(255, 255, 255, 0.62),
+        inset 0 1px 1px rgba(255, 255, 255, 0.52),
         inset 0 -1px 1px rgba(255, 255, 255, 0.18),
-        0 4px 14px rgba(0, 0, 0, 0.22);
+        0 4px 12px rgba(0, 0, 0, 0.22);
       transform: translate3d(0, 0, 0) scale(1);
-      transition: transform 0.34s cubic-bezier(0.28, 1.15, 0.36, 1), background 0.18s ease, box-shadow 0.18s ease;
+      transition:
+        transform 0.34s cubic-bezier(0.28, 1.14, 0.36, 1),
+        top 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+        bottom 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.18s ease,
+        box-shadow 0.18s ease;
       will-change: transform;
     }
-    html[data-theme="light"] #navSlidingLens {
+    #navSlidingLens::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      padding: 1px;
       background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.82) 0%,
-        rgba(255, 255, 255, 0.48) 55%,
-        rgba(255, 255, 255, 0.68) 100%
+        145deg,
+        rgba(255, 255, 255, 0.78) 0%,
+        rgba(125, 211, 252, 0.26) 32%,
+        rgba(196, 181, 253, 0.22) 68%,
+        rgba(255, 255, 255, 0.56) 100%
       );
-      border-color: rgba(255, 255, 255, 0.95);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    html[data-theme="light"] #navSlidingLens {
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(15, 23, 42, 0.02) 0%,
+        rgba(15, 23, 42, 0.03) 56%,
+        rgba(255, 255, 255, 0.65) 88%,
+        rgba(255, 255, 255, 0.92) 100%
+      );
       box-shadow:
-        inset 0 1.5px 1px rgba(255, 255, 255, 1),
+        inset 0 1.5px 1px rgba(255, 255, 255, 0.98),
         0 4px 14px rgba(15, 23, 42, 0.10);
     }
 
-    /* Raised 3D Magnifying Water-Droplet State While Sliding Finger! */
+    /* Protruding 3D Magnifying Water-Droplet When Touching/Sliding (Matches Apple Music Screenshot 4!) */
     #bottomNav.lens-dragging #navSlidingLens {
-      transition: background 0.12s ease, box-shadow 0.12s ease !important;
-      background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.36) 0%,
-        rgba(255, 255, 255, 0.10) 48%,
-        rgba(186, 230, 253, 0.22) 100%
+      top: -7px;
+      bottom: -7px;
+      transition:
+        top 0.14s cubic-bezier(0.22, 1, 0.36, 1),
+        bottom 0.14s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.12s ease,
+        box-shadow 0.12s ease !important;
+      background: radial-gradient(
+        ellipse at 50% 48%,
+        rgba(255, 255, 255, 0.01) 0%,
+        rgba(255, 255, 255, 0.03) 56%,
+        rgba(255, 255, 255, 0.22) 84%,
+        rgba(255, 255, 255, 0.46) 100%
       );
-      border: 1px solid rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(4px) saturate(230%) brightness(1.10);
+      -webkit-backdrop-filter: blur(4px) saturate(230%) brightness(1.10);
       box-shadow:
-        inset 0 2px 2px rgba(255, 255, 255, 0.88),
-        inset 0 -1.5px 2px rgba(125, 211, 252, 0.36),
-        0 10px 24px rgba(0, 0, 0, 0.36);
+        inset 0 2px 2.5px rgba(255, 255, 255, 0.88),
+        inset 0 -1.5px 2.5px rgba(56, 189, 248, 0.34),
+        0 12px 28px rgba(0, 0, 0, 0.38);
+    }
+    #bottomNav.lens-dragging #navSlidingLens::after {
+      padding: 1.4px;
+      background: conic-gradient(
+        from 140deg at 50% 50%,
+        rgba(255, 255, 255, 0.92) 0deg,
+        rgba(56, 189, 248, 0.55) 75deg,
+        rgba(255, 255, 255, 0.20) 140deg,
+        rgba(251, 191, 36, 0.38) 215deg,
+        rgba(167, 139, 250, 0.52) 290deg,
+        rgba(255, 255, 255, 0.92) 360deg
+      );
     }
 
     .nav-btn {
@@ -1058,32 +1107,42 @@
       border: none;
       background: transparent !important;
       box-shadow: none !important;
-      color: rgba(226, 232, 240, 0.76);
+      color: rgba(226, 232, 240, 0.78);
       border-radius: 999px;
       padding: 5px 4px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 2px;
+      gap: 2.5px;
       font-size: 10.5px;
       font-weight: 600;
+      letter-spacing: -0.01em;
       white-space: nowrap;
       cursor: pointer;
       transition: color 0.16s ease, transform 0.16s ease;
     }
+    .nav-btn svg {
+      width: 21px;
+      height: 21px;
+      display: block;
+    }
     html[data-theme="light"] .nav-btn {
-      color: #475569;
+      color: #1e293b;
     }
     .nav-btn.active,
     .nav-btn.lens-hover {
-      color: var(--nav-active-text);
+      color: #38bdf8;
+    }
+    html[data-theme="light"] .nav-btn.active,
+    html[data-theme="light"] .nav-btn.lens-hover {
+      color: #007aff;
     }
     .nav-btn.lens-hover {
-      transform: scale(1.07);
+      transform: scale(1.08);
     }
 
-    /* Scroll-Down Minimized Split Mode: Left Home Glass Pill + Far-Right Search Glass Circle */
+    /* Scroll-Down Minimized Split Mode: Pure Icon-Only Crystal Orbs (Left Home Icon + Right Search Icon!) */
     #bottomNavMini {
       position: absolute;
       inset: 0;
@@ -1092,44 +1151,63 @@
       justify-content: space-between;
       pointer-events: none;
       opacity: 0;
-      transform: scale(0.94) translate3d(0, 6px, 0);
+      transform: scale(0.92) translate3d(0, 6px, 0);
       transition: opacity 0.24s cubic-bezier(0.32, 0.72, 0, 1), transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
     }
     .mini-glass-orb {
+      position: relative;
       pointer-events: none;
+      width: 50px;
       height: 50px;
+      padding: 0;
       border-radius: 999px;
-      background: rgba(26, 32, 46, 0.22);
-      backdrop-filter: blur(18px) saturate(195%) brightness(1.06);
-      -webkit-backdrop-filter: blur(18px) saturate(195%) brightness(1.06);
-      border: 0.5px solid rgba(255, 255, 255, 0.38);
+      border: none;
+      background:
+        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.14) 85%, rgba(255, 255, 255, 0.28) 100%),
+        rgba(18, 22, 32, 0.34);
+      backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
+      -webkit-backdrop-filter: blur(22px) saturate(210%) brightness(1.06);
       box-shadow:
-        inset 0 1px 0.5px rgba(255, 255, 255, 0.58),
-        inset 0 -0.5px 0.5px rgba(255, 255, 255, 0.18),
-        0 10px 26px rgba(0, 0, 0, 0.34);
+        inset 0 1px 1px rgba(255, 255, 255, 0.55),
+        inset 0 -0.5px 1px rgba(255, 255, 255, 0.16),
+        0 10px 26px rgba(0, 0, 0, 0.38);
       color: #ffffff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
-      padding: 0 16px;
       transition: transform 0.15s ease;
     }
-    .mini-glass-orb.circle {
-      width: 50px;
-      padding: 0;
-      font-size: 18px;
+    .mini-glass-orb::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      padding: 1px;
+      background: linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.75) 0%,
+        rgba(255, 255, 255, 0.10) 45%,
+        rgba(255, 255, 255, 0.48) 100%
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .mini-glass-orb svg {
+      width: 22px;
+      height: 22px;
+      display: block;
     }
     html[data-theme="light"] .mini-glass-orb {
-      background: rgba(255, 255, 255, 0.48);
-      border-color: rgba(255, 255, 255, 0.84);
+      background:
+        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.30) 0%, rgba(255, 255, 255, 0.85) 100%),
+        rgba(248, 250, 252, 0.56);
       color: #0f172a;
     }
     .mini-glass-orb:active {
-      transform: scale(0.93);
+      transform: scale(0.92);
     }
 
     #bottomNavWrap.minimized #bottomNav {
@@ -1143,6 +1221,71 @@
     }
     #bottomNavWrap.minimized .mini-glass-orb {
       pointer-events: auto;
+    }
+
+    /* Cross-Platform Mixed Popularity Shelves ('热播电视剧' & '热播电影') */
+    .mixed-shelf-wrap {
+      padding: 4px 0 12px 0;
+    }
+    .mixed-shelf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px 10px 16px;
+      cursor: pointer;
+    }
+    .mixed-shelf-track {
+      display: flex;
+      gap: 11px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+      padding: 0 16px 6px 16px;
+      scrollbar-width: none;
+    }
+    .mixed-shelf-track::-webkit-scrollbar {
+      display: none;
+    }
+    .mixed-poster-card {
+      flex: 0 0 122px;
+      width: 122px;
+      scroll-snap-align: start;
+      cursor: pointer;
+      contain: layout paint;
+    }
+    .mixed-poster-box {
+      position: relative;
+      width: 122px;
+      height: 180px;
+      border-radius: 13px;
+      overflow: hidden;
+      background: var(--surface-col);
+      border: 1px solid var(--surface-border);
+      margin-bottom: 6px;
+    }
+    .mixed-poster-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .mixed-plat-corner {
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+    }
+    .mixed-plat-corner svg,
+    .mixed-plat-corner img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
     }
 
     /* Platform Secondary Catalog Page Cards */
@@ -1336,7 +1479,31 @@
     </div>
 
     <div class="home-charts-wrap">
-      <div class="section-heading">今天的流媒体榜单</div>
+      <!-- Cross-Platform Mixed Popularity Shelf 1: Hot TV Series -->
+      <div class="mixed-shelf-wrap">
+        <div class="mixed-shelf-header" data-openfeed="hot_shows" role="button" tabindex="0">
+          <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电视剧</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
+            <span>热播库</span>
+            <span style="font-size: 16px; line-height: 1;">›</span>
+          </div>
+        </div>
+        <div id="hotShowsShelfTrack" class="mixed-shelf-track"></div>
+      </div>
+
+      <!-- Cross-Platform Mixed Popularity Shelf 2: Hot Movies -->
+      <div class="mixed-shelf-wrap" style="margin-top: 4px; margin-bottom: 6px;">
+        <div class="mixed-shelf-header" data-openfeed="hot_movies" role="button" tabindex="0">
+          <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">热播电影</div>
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
+            <span>热播库</span>
+            <span style="font-size: 16px; line-height: 1;">›</span>
+          </div>
+        </div>
+        <div id="hotMoviesShelfTrack" class="mixed-shelf-track"></div>
+      </div>
+
+      <div class="section-heading" style="margin-top: 6px;">今天的流媒体榜单</div>
       <div id="chartsColumnsContainer"></div>
     </div>
   </section>
@@ -1475,30 +1642,44 @@
     <nav id="bottomNav" aria-label="主导航">
       <div id="navSlidingLens" aria-hidden="true"></div>
       <button type="button" class="nav-btn active" data-nav="home" data-navidx="0">
-        <span style="font-size: 16px; line-height: 1;">🎬</span>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.25 8.25a.75.75 0 0 1-1.06 1.06l-.72-.72V19.5a2.25 2.25 0 0 1-2.25 2.25h-3a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75h-3A2.25 2.25 0 0 1 4.99 19.5v-7.07l-.72.72a.75.75 0 1 1-1.06-1.06l8.26-8.25Z"/>
+        </svg>
         <span>首页</span>
       </button>
       <button type="button" class="nav-btn" data-nav="search" data-navidx="1">
-        <span style="font-size: 16px; line-height: 1;">🔍</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.8-3.8"/>
+        </svg>
         <span>搜索</span>
       </button>
       <button type="button" class="nav-btn" data-nav="watchlist" data-navidx="2">
-        <span style="font-size: 16px; line-height: 1;">🎞️</span>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M5.5 3.75A2.75 2.75 0 0 0 2.75 6.5v11A2.75 2.75 0 0 0 5.5 20.25h13a2.75 2.75 0 0 0 2.75-2.75v-11A2.75 2.75 0 0 0 18.5 3.75h-13Zm4.75 4.9a.75.75 0 0 1 1.13-.65l4.5 2.75a.75.75 0 0 1 0 1.3l-4.5 2.75a.75.75 0 0 1-1.13-.65v-5.5Z"/>
+        </svg>
         <span>片单</span>
       </button>
       <button type="button" class="nav-btn" data-nav="settings" data-navidx="3">
-        <span style="font-size: 16px; line-height: 1;">⚙️</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+        </svg>
         <span>设置</span>
       </button>
     </nav>
 
     <div id="bottomNavMini" aria-label="快捷收起导航">
-      <button type="button" id="minHomeBtn" class="mini-glass-orb" aria-label="展开导航栏并回首页">
-        <span style="font-size: 16px; line-height: 1;">🎬</span>
-        <span>首页</span>
+      <button type="button" id="minHomeBtn" class="mini-glass-orb" aria-label="展开导航栏">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.25 8.25a.75.75 0 0 1-1.06 1.06l-.72-.72V19.5a2.25 2.25 0 0 1-2.25 2.25h-3a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75V21a.75.75 0 0 1-.75.75h-3A2.25 2.25 0 0 1 4.99 19.5v-7.07l-.72.72a.75.75 0 1 1-1.06-1.06l8.26-8.25Z"/>
+        </svg>
       </button>
-      <button type="button" id="minSearchBtn" class="mini-glass-orb circle" aria-label="搜索">
-        🔍
+      <button type="button" id="minSearchBtn" class="mini-glass-orb" aria-label="搜索">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.8-3.8"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -1519,24 +1700,19 @@
           <div id="platformHeroIcon" style="width: 44px; height: 44px; border-radius: 12px; overflow: hidden; flex-shrink: 0;"></div>
           <div>
             <div id="platformHeroTitle" style="font-size: 28px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1;">Netflix</div>
-            <div id="platformHeroSub" style="font-size: 12.5px; color: rgba(226,232,240,0.76); margin-top: 3px;">今日播放前十与高分片库 · 剧集 / 电影 / 纪录片</div>
+            <div id="platformHeroSub" style="font-size: 12.5px; color: rgba(226,232,240,0.76); margin-top: 3px;">平台精选电视剧与电影 · 热播库</div>
           </div>
         </div>
       </div>
 
-      <div style="max-width: 760px; margin: 0 auto; padding: 14px 16px 24px 16px;">
-        <div style="font-size: 16px; font-weight: 800; margin-bottom: 6px; color: #f8fafc;">今日播放前十</div>
-        <div id="platformTop10List"></div>
-
-        <div style="margin-top: 22px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.10);">
-          <div class="row-between" style="margin-bottom: 6px;">
-            <div style="font-size: 16px; font-weight: 800; color: #f8fafc;">高分好评片库</div>
-            <div style="font-size: 11.5px; color: #8b9bb4;">按评分由高到低 · 同分新片优先</div>
-          </div>
-          <div id="platformAcclaimedList"></div>
-          <div id="platformLoadSentinel" style="padding: 22px 0; text-align: center; font-size: 12.5px; color: #8b9bb4;">
-            正在加载更多高分剧集、电影与纪录片…
-          </div>
+      <div style="max-width: 760px; margin: 0 auto; padding: 12px 16px 24px 16px;">
+        <div class="row-between" style="margin-bottom: 6px;">
+          <div id="platformListHeading" style="font-size: 16.5px; font-weight: 800; color: #f8fafc;">热播库</div>
+          <div id="platformListSortHint" style="font-size: 11.5px; color: #8b9bb4;">电视剧与电影 · 按评分与年份排序</div>
+        </div>
+        <div id="platformAcclaimedList"></div>
+        <div id="platformLoadSentinel" style="padding: 22px 0; text-align: center; font-size: 12.5px; color: #8b9bb4;">
+          正在加载更多热门电视剧与电影…
         </div>
       </div>
     </div>
@@ -1714,6 +1890,8 @@
       let enrichCache = loadEnrichCache();
       let liveChartsByPlatform = {};
       let liveHeroNewShows = [];
+      let liveHotShowsTop = [];
+      let liveHotMoviesTop = [];
       let liveGlobalTop = [];
       let extraSearchItems = [];
 
@@ -2085,8 +2263,7 @@
       }
 
             function getItemTypeLabel(item) {
-        if (item.mediaType === "doc" || (Array.isArray(item.genres) && item.genres.includes("纪录片"))) return "纪录片";
-        return item.mediaType === "movie" ? "电影" : "剧集";
+        return item.mediaType === "movie" ? "电影" : "电视剧";
       }
 
       function itemHasEpisodes(item) {
@@ -2197,7 +2374,82 @@
         }
       }
 
+      
+      function getMixedPopularItems(targetType) {
+        const visibleSet = new Set(getVisiblePlatformIds());
+        const liveSource = targetType === "show" ? liveHotShowsTop : liveHotMoviesTop;
+        const map = new Map();
+
+        const pushItem = (raw) => {
+          const it = getEnrichedItem(raw);
+          if (it.mediaType !== targetType) return;
+          if (Array.isArray(it.genres) && it.genres.includes("纪录片")) return;
+          const matchesVis =
+            visibleSet.has(it.platformId) ||
+            (Array.isArray(it.providers) && it.providers.some((p) => visibleSet.has(p)));
+          if (!matchesVis) return;
+          const k = itemKey(it);
+          if (!map.has(k) || (Number(it.heat) || 0) > (Number(map.get(k).heat) || 0)) {
+            map.set(k, it);
+          }
+        };
+
+        // 1. Live cross-platform popularity chart first (preserves pure popularity order!)
+        liveSource.forEach(pushItem);
+
+        // 2. Supplement from visible platform Top 10 charts & seed items sorted purely by heat
+        const extras = [];
+        getVisiblePlatformIds().forEach((pid) => {
+          getPlatformItems(pid).forEach((it) => {
+            if (it.mediaType === targetType) extras.push(it);
+          });
+          SEED_ITEMS.forEach((s) => {
+            if (s.platformId === pid && s.mediaType === targetType) extras.push(s);
+          });
+        });
+        extras.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
+        extras.forEach(pushItem);
+
+        return Array.from(map.values()).slice(0, 14);
+      }
+
+      function renderMixedHotShelves() {
+        const renderShelf = (trackId, items) => {
+          const el = document.getElementById(trackId);
+          if (!el) return;
+          el.innerHTML = items
+            .map((it) => {
+              const k = itemKey(it);
+              const posterSrc = getPosterUrl(it, false, true);
+              const fallbackSrc = makeEditorialPosterSvg(it, true, true);
+              return `
+                <div class="mixed-poster-card" data-openkey="${escapeHtml(k)}">
+                  <div class="mixed-poster-box">
+                    <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
+                      loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                      onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                    <div class="mixed-plat-corner">
+                      ${renderBrandIconHtml(it.platformId, "brand-icon-full")}
+                    </div>
+                  </div>
+                  <div style="font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">
+                    ${escapeHtml(it.title)}
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml((PLATFORM_MAP[it.platformId] || PLATFORMS[0]).name)} · ${escapeHtml(String(it.year || 2026))}
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+        };
+
+        renderShelf("hotShowsShelfTrack", getMixedPopularItems("show"));
+        renderShelf("hotMoviesShelfTrack", getMixedPopularItems("movie"));
+      }
+
       function renderStreamingCharts() {
+        renderMixedHotShelves();
         const visibleIds = getVisiblePlatformIds();
         const wrap = document.getElementById("chartsColumnsContainer");
 
@@ -2243,8 +2495,8 @@
                     ${renderBrandIconHtml(pid, "brand-icon-wrap")}
                     <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.03em;">${escapeHtml(pm.name.toUpperCase())}</span>
                   </div>
-                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px;">
-                    <span>全部片库</span>
+                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
+                    <span style="white-space:nowrap;">热播库</span>
                     <span style="font-size: 15px; line-height: 1;">›</span>
                   </span>
                 </div>
@@ -2458,26 +2710,26 @@
         return (Number(b.heat) || 0) - (Number(a.heat) || 0);
       }
 
-      function buildPlatformCatalogCardHtml(it, rankNumOrNull) {
+      function buildSecondaryCatalogCardHtml(it, showPlatformBadge = false) {
         const cur = getEnrichedItem(it);
         const k = itemKey(cur);
         const posterSrc = getPosterUrl(cur, false, true);
         const fallbackSrc = makeEditorialPosterSvg(cur, true, true);
         const tLabel = getItemTypeLabel(cur);
-        const isDoc = tLabel === "纪录片";
         const imdbVal = Number(cur.imdb) ? Number(cur.imdb).toFixed(1) : "8.0";
         const yearStr = cur.year || "2026";
         const showEn = cur.enTitle && normalizeSimple(cur.enTitle) !== normalizeSimple(cur.title);
         const genreStr = (cur.genres || []).filter((g) => g !== "纪录片").slice(0, 2).join(" · ");
-        const syn = cur.synopsis || "平台高口碑流媒体佳作，点击查看演职员、评分与官方正版播放入口。";
+        const syn = cur.synopsis || "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。";
+        const pm = PLATFORM_MAP[cur.platformId] || PLATFORMS[0];
 
         return `
           <div class="plat-catalog-card" data-openkey="${escapeHtml(k)}">
-            ${rankNumOrNull !== null ? `<div class="plat-rank-num">${rankNumOrNull}</div>` : ""}
             <div class="plat-catalog-poster">
               <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(cur.title)}"
                 loading="lazy" decoding="async" referrerpolicy="no-referrer"
                 onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+              ${showPlatformBadge ? `<div class="mixed-plat-corner" style="width:20px;height:20px;top:5px;left:5px;border-radius:5px;">${renderBrandIconHtml(cur.platformId, "brand-icon-full")}</div>` : ""}
             </div>
             <div style="flex: 1 1 0%; min-width: 0;">
               <div style="font-size: 15.5px; font-weight: 800; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -2485,7 +2737,8 @@
               </div>
               ${showEn ? `<div style="font-size: 11.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${escapeHtml(cur.enTitle)}</div>` : ""}
               <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 12px; color: #cbd5e1;">
-                <span class="cat-type-pill ${isDoc ? "doc" : ""}">${escapeHtml(tLabel)}</span>
+                ${showPlatformBadge ? `<span style="font-weight:700;color:#93c5fd;">${escapeHtml(pm.name)}</span>` : ""}
+                <span class="cat-type-pill">${escapeHtml(tLabel)}</span>
                 <span style="font-weight: 700; color: #f8fafc;">${escapeHtml(String(yearStr))}</span>
                 <span class="imdb-gold-tag">IMDb</span>
                 <span style="font-weight: 800; color: #fde047;">${imdbVal}</span>
@@ -2499,26 +2752,56 @@
         `;
       }
 
-      function ensurePlatformPool(pid) {
-        if (!platformCatalogPools[pid]) {
-          const top10 = getPlatformItems(pid);
-          const seenKeys = new Set(top10.map(itemKey));
-          const seedCandidates = [
-            ...EXTRA_ACCLAIMED_ITEMS.filter((x) => x.platformId === pid || (x.providers && x.providers.includes(pid))),
-            ...SEED_ITEMS.filter((x) => x.platformId === pid || (x.providers && x.providers.includes(pid)))
-          ];
-          const initialBuffer = [];
-          seedCandidates.forEach((sc) => {
-            const k = itemKey(sc);
-            if (!seenKeys.has(k)) {
-              seenKeys.add(k);
-              initialBuffer.push(getEnrichedItem(sc));
-            }
-          });
-          initialBuffer.sort(compareAcclaimedScoreThenYear);
+      function ensureSecondaryPool(feedKey) {
+        if (!platformCatalogPools[feedKey]) {
+          const isHotShows = feedKey === "hot_shows";
+          const isHotMovies = feedKey === "hot_movies";
+          const isMixedPopular = isHotShows || isHotMovies;
 
-          platformCatalogPools[pid] = {
-            top10Keys: new Set(top10.map(itemKey)),
+          const seenKeys = new Set();
+          const initialBuffer = [];
+
+          if (isMixedPopular) {
+            const targetMedia = isHotShows ? "show" : "movie";
+            const baseList = getMixedPopularItems(targetMedia);
+            // Add remaining matching seed & acclaimed items ordered purely by heat!
+            const restPool = [
+              ...Object.values(liveChartsByPlatform).flat(),
+              ...SEED_ITEMS,
+              ...EXTRA_ACCLAIMED_ITEMS
+            ]
+              .filter((x) => x.mediaType === targetMedia && !(x.genres || []).includes("纪录片"))
+              .sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
+
+            [...baseList, ...restPool].forEach((raw) => {
+              const k = itemKey(raw);
+              if (k && !seenKeys.has(k)) {
+                seenKeys.add(k);
+                initialBuffer.push(getEnrichedItem(raw));
+              }
+            });
+          } else {
+            // Single-platform '热播库': Exclude Homepage Top 10 so there is zero repetition!
+            const top10 = getPlatformItems(feedKey);
+            top10.forEach((t) => seenKeys.add(itemKey(t)));
+
+            const seedCandidates = [
+              ...EXTRA_ACCLAIMED_ITEMS.filter((x) => x.platformId === feedKey || (x.providers && x.providers.includes(feedKey))),
+              ...SEED_ITEMS.filter((x) => x.platformId === feedKey || (x.providers && x.providers.includes(feedKey)))
+            ].filter((x) => x.mediaType === "show" || x.mediaType === "movie");
+
+            seedCandidates.forEach((sc) => {
+              const k = itemKey(sc);
+              if (k && !seenKeys.has(k)) {
+                seenKeys.add(k);
+                initialBuffer.push(getEnrichedItem(sc));
+              }
+            });
+            initialBuffer.sort(compareAcclaimedScoreThenYear);
+          }
+
+          platformCatalogPools[feedKey] = {
+            isMixedPopular,
             seenKeys,
             renderedCount: 0,
             buffer: initialBuffer,
@@ -2528,27 +2811,30 @@
             mode: "auto",
             hasMoreRemote: true,
             tvmazePage: 0,
+            tvmazeFailed: false,
             fetching: false
           };
         }
-        return platformCatalogPools[pid];
+        return platformCatalogPools[feedKey];
       }
 
-      async function fetchMorePlatformCatalog(pid) {
-        const st = ensurePlatformPool(pid);
+      async function fetchMoreSecondaryCatalog(feedKey) {
+        const st = ensureSecondaryPool(feedKey);
         if (st.fetching) return;
         st.fetching = true;
         const sentinel = document.getElementById("platformLoadSentinel");
-        if (sentinel && activePlatformPageId === pid) {
-          sentinel.textContent = "正在加载更多高分剧集、电影与纪录片…";
+        if (sentinel && activePlatformPageId === feedKey) {
+          sentinel.textContent = "正在加载更多热门剧集与电影…";
         }
 
         let newlyAdded = 0;
 
-        // 1. Live Vercel /api/catalog endpoint (GraphQL paginated catalog for this exact platform)
+        // 1. Live Vercel /api/catalog endpoint
         if (st.hasMoreRemote && (location.protocol === "http:" || location.protocol === "https:")) {
           try {
-            const qs = `?platform=${encodeURIComponent(pid)}&band=${st.band}&cursor=${encodeURIComponent(st.cursor)}&mode=${encodeURIComponent(st.mode)}`;
+            const qs = st.isMixedPopular
+              ? `?feedType=${encodeURIComponent(feedKey)}&cursor=${encodeURIComponent(st.cursor)}`
+              : `?feedType=platform&platform=${encodeURIComponent(feedKey)}&band=${st.band}&cursor=${encodeURIComponent(st.cursor)}&mode=${encodeURIComponent(st.mode)}`;
             const res = await fetch(`./api/catalog${qs}`);
             if (res.ok) {
               const data = await res.json();
@@ -2560,6 +2846,8 @@
 
                 const freshBatch = [];
                 data.items.forEach((raw) => {
+                  if (raw.mediaType !== "show" && raw.mediaType !== "movie") return;
+                  if (Array.isArray(raw.genres) && raw.genres.includes("纪录片")) return;
                   const k = itemKey(raw);
                   if (k && !st.seenKeys.has(k)) {
                     st.seenKeys.add(k);
@@ -2569,7 +2857,10 @@
                     newlyAdded++;
                   }
                 });
-                freshBatch.sort(compareAcclaimedScoreThenYear);
+                // For single platform: sort by Score Desc -> Year Desc. For hot_shows/hot_movies: keep pure popularity order!
+                if (!st.isMixedPopular) {
+                  freshBatch.sort(compareAcclaimedScoreThenYear);
+                }
                 st.buffer.push(...freshBatch);
               } else {
                 st.hasMoreRemote = false;
@@ -2582,9 +2873,8 @@
           }
         }
 
-        // 2. Endless Supplemental Stream via TVmaze Public Show Index (filtered to streaming network / high rating)
-        //    Guarantees the feed truly NEVER runs dry even after hundreds of scrolls or on static GitHub Pages!
-        if (st.buffer.length - st.renderedCount < 16 && st.tvmazePage < 30 && !st.tvmazeFailed) {
+        // 2. Supplemental TVmaze public show stream (for shows & platform feeds when buffer runs low)
+        if (feedKey !== "hot_movies" && st.buffer.length - st.renderedCount < 16 && st.tvmazePage < 30 && !st.tvmazeFailed) {
           try {
             const pageToFetch = st.tvmazePage++;
             const tvRes = await fetch(`https://api.tvmaze.com/shows?page=${pageToFetch}`);
@@ -2592,37 +2882,50 @@
               const shows = await tvRes.json();
               const webMatchMap = {
                 netflix: ["netflix"],
-                disney: ["disney", "hulu", "fx", "abc", "national geographic"],
+                disney: ["disney", "hulu", "fx", "abc"],
                 hbo: ["hbo", "max", "warner"],
                 prime: ["amazon", "prime"],
                 paramount: ["paramount", "cbs", "showtime"],
                 apple: ["apple"]
               };
-              const keywords = webMatchMap[pid] || [];
               const extraBatch = [];
 
               shows.forEach((s) => {
+                if (s.type === "Documentary" || (Array.isArray(s.genres) && s.genres.some((g) => g.toLowerCase().includes("documentary")))) return;
                 const score = Number(s.rating?.average) || 0;
-                if (score < 7.3) return;
-                const chName = String(s.webChannel?.name || s.network?.name || "").toLowerCase();
-                const isMatch = keywords.some((kw) => chName.includes(kw));
-                if (!isMatch && score < 8.3) return;
-                if (!isMatch && (s.id % 6) !== PLATFORMS.findIndex((p) => p.id === pid)) return;
+                const weight = Number(s.weight) || 50;
+                if (!st.isMixedPopular && score < 7.3) return;
+                if (st.isMixedPopular && weight < 85 && score < 7.5) return;
 
-                const isDoc = Array.isArray(s.genres) && s.genres.some((g) => g.toLowerCase().includes("documentary") || s.type === "Documentary");
+                const chName = String(s.webChannel?.name || s.network?.name || "").toLowerCase();
+                let resolvedPid = st.isMixedPopular ? "netflix" : feedKey;
+                for (const [candPid, kws] of Object.entries(webMatchMap)) {
+                  if (kws.some((kw) => chName.includes(kw))) {
+                    resolvedPid = candPid;
+                    break;
+                  }
+                }
+                if (!st.isMixedPopular) {
+                  const kws = webMatchMap[feedKey] || [];
+                  const isMatch = kws.some((kw) => chName.includes(kw));
+                  if (!isMatch && score < 8.4) return;
+                  if (!isMatch && (s.id % 6) !== PLATFORMS.findIndex((p) => p.id === feedKey)) return;
+                }
+
                 const yr = s.premiered ? Number(String(s.premiered).slice(0, 4)) : 2024;
                 const itemObj = {
                   id: "tvm_cat_" + s.id,
                   title: s.name,
                   enTitle: s.name,
-                  mediaType: isDoc ? "doc" : "show",
+                  mediaType: "show",
                   hasEpisodes: true,
-                  platformId: pid,
-                  providers: [pid],
-                  imdb: Number(score.toFixed(1)),
+                  platformId: resolvedPid,
+                  providers: [resolvedPid],
+                  heat: weight * 8 + score * 10,
+                  imdb: Number((score || 7.6).toFixed(1)),
                   year: yr,
                   releaseDate: s.premiered || `${yr}-01-01`,
-                  genres: isDoc ? ["纪录片", ...(s.genres || []).slice(0, 1)] : (s.genres || ["剧情"]).slice(0, 2),
+                  genres: (s.genres || ["剧情"]).slice(0, 2),
                   synopsis: String(s.summary || "").replace(/<[^>]+>/g, "").trim(),
                   posterHd: String(s.image?.original || "").replace(/^http:/, "https:"),
                   posterThumb: String(s.image?.medium || "").replace(/^http:/, "https:")
@@ -2636,51 +2939,73 @@
                 }
               });
 
-              extraBatch.sort(compareAcclaimedScoreThenYear);
+              if (st.isMixedPopular) {
+                extraBatch.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
+              } else {
+                extraBatch.sort(compareAcclaimedScoreThenYear);
+              }
               st.buffer.push(...extraBatch);
+            } else {
+              st.tvmazeFailed = true;
             }
-          } catch (e) { st.tvmazeFailed = true; }
+          } catch (e) {
+            st.tvmazeFailed = true;
+          }
         }
 
         st.fetching = false;
-        if (activePlatformPageId === pid) {
+        if (activePlatformPageId === feedKey) {
           if (newlyAdded > 0) {
-            appendNextPlatformCatalogChunk(pid, 20);
+            appendNextSecondaryChunk(feedKey, 20);
           } else if (sentinel) {
-            sentinel.textContent = `已展示当前已缓存的 ${st.renderedCount} 部高分佳作（联网下滑自动加载更多）`;
+            sentinel.textContent = `已展示 ${st.renderedCount} 部热播片单`;
           }
         }
-        warmMissingPostersQuietly();
       }
 
-      function appendNextPlatformCatalogChunk(pid, chunkSize = 20) {
-        const st = ensurePlatformPool(pid);
+      function appendNextSecondaryChunk(feedKey, chunkSize = 20) {
+        const st = ensureSecondaryPool(feedKey);
         const listEl = document.getElementById("platformAcclaimedList");
         const sentinel = document.getElementById("platformLoadSentinel");
-        if (!listEl || activePlatformPageId !== pid) return;
+        if (!listEl || activePlatformPageId !== feedKey) return;
 
         const slice = st.buffer.slice(st.renderedCount, st.renderedCount + chunkSize);
         if (slice.length > 0) {
-          const fragHtml = slice.map((it) => buildPlatformCatalogCardHtml(it, null)).join("");
+          const fragHtml = slice.map((it) => buildSecondaryCatalogCardHtml(it, st.isMixedPopular)).join("");
           listEl.insertAdjacentHTML("beforeend", fragHtml);
           st.renderedCount += slice.length;
+          // Immediately enrich posters for newly rendered rows so real artwork pops in fast!
+          Promise.allSettled(slice.slice(0, 10).map((it) => enrichSingleItemMedia(it)));
         }
 
-        // Prefetch next batch automatically if remaining buffer is running low
-        if (st.buffer.length - st.renderedCount < 14 && (st.hasMoreRemote || (st.tvmazePage < 30 && !st.tvmazeFailed))) {
-          fetchMorePlatformCatalog(pid);
+        if (st.buffer.length - st.renderedCount < 14 && (st.hasMoreRemote || (feedKey !== "hot_movies" && st.tvmazePage < 30 && !st.tvmazeFailed))) {
+          fetchMoreSecondaryCatalog(feedKey);
         } else if (!st.hasMoreRemote && st.renderedCount >= st.buffer.length && sentinel) {
-          sentinel.textContent = `已加载 ${st.renderedCount} 部高分佳作`;
+          sentinel.textContent = `已加载 ${st.renderedCount} 部热播影视`;
         }
       }
 
-      function openPlatformPage(pid) {
-        const pm = PLATFORM_MAP[pid];
-        if (!pm) return;
-        activePlatformPageId = pid;
+      function syncOverlayBodyLock() {
+        if (!isDetailOpen && !isPlatformOpen) {
+          document.body.classList.remove("detail-open", "subpage-pushed", "subpage-dragging");
+        } else {
+          document.body.classList.add("detail-open");
+        }
+      }
+
+      function openSecondaryFeedPage(feedKey) {
+        const isHotShows = feedKey === "hot_shows";
+        const isHotMovies = feedKey === "hot_movies";
+        const isMixed = isHotShows || isHotMovies;
+        const pm = PLATFORM_MAP[feedKey];
+        if (!isMixed && !pm) return;
+
+        activePlatformPageId = feedKey;
         isPlatformOpen = true;
 
         const bannerBgMap = {
+          hot_shows: "linear-gradient(180deg, rgba(30, 58, 138, 0.62) 0%, rgba(5, 7, 13, 1) 100%)",
+          hot_movies: "linear-gradient(180deg, rgba(124, 45, 18, 0.58) 0%, rgba(5, 7, 13, 1) 100%)",
           netflix: "linear-gradient(180deg, rgba(153, 27, 27, 0.58) 0%, rgba(5, 7, 13, 1) 100%)",
           disney: "linear-gradient(180deg, rgba(12, 74, 110, 0.65) 0%, rgba(5, 7, 13, 1) 100%)",
           hbo: "linear-gradient(180deg, rgba(49, 46, 129, 0.65) 0%, rgba(5, 7, 13, 1) 100%)",
@@ -2689,27 +3014,36 @@
           apple: "linear-gradient(180deg, rgba(63, 63, 70, 0.55) 0%, rgba(5, 7, 13, 1) 100%)"
         };
 
-        document.getElementById("platformHeroBanner").style.background = bannerBgMap[pid] || bannerBgMap.netflix;
-        document.getElementById("platformHeroIcon").innerHTML = renderBrandIconHtml(pid, "provider-icon-lg").replace('class="provider-icon-lg"', 'style="width:44px;height:44px;display:block;border-radius:12px;overflow:hidden;"');
-        document.getElementById("platformHeroTitle").textContent = pm.name;
-        document.getElementById("platformStickyTitle").textContent = pm.name;
+        document.getElementById("platformHeroBanner").style.background = bannerBgMap[feedKey] || bannerBgMap.netflix;
+        const iconEl = document.getElementById("platformHeroIcon");
+        if (isMixed) {
+          iconEl.style.display = "none";
+          const titleTxt = isHotShows ? "热播电视剧" : "热播电影";
+          document.getElementById("platformHeroTitle").textContent = titleTxt;
+          document.getElementById("platformStickyTitle").textContent = titleTxt;
+          document.getElementById("platformHeroSub").textContent = "六大流媒体混排 · 按全网观看热度实时排序";
+          document.getElementById("platformListHeading").textContent = "全网热播榜";
+          document.getElementById("platformListSortHint").textContent = "谁火排前面 · 实时热度无限流";
+        } else {
+          iconEl.style.display = "block";
+          iconEl.innerHTML = renderBrandIconHtml(feedKey, "provider-icon-lg").replace('class="provider-icon-lg"', 'style="width:44px;height:44px;display:block;border-radius:12px;overflow:hidden;"');
+          document.getElementById("platformHeroTitle").textContent = `${pm.name} · 热播库`;
+          document.getElementById("platformStickyTitle").textContent = `${pm.name} · 热播库`;
+          document.getElementById("platformHeroSub").textContent = "平台精选电视剧与电影 · 不含今日前十重复项";
+          document.getElementById("platformListHeading").textContent = "热播库";
+          document.getElementById("platformListSortHint").textContent = "按评分由高到低 · 同分新片优先";
+        }
 
-        // 1. Render Top 10 WITH Rank Numbers (1..10)
-        const top10 = getPlatformItems(pid);
-        document.getElementById("platformTop10List").innerHTML = top10
-          .map((it, idx) => buildPlatformCatalogCardHtml(it, idx + 1))
-          .join("");
-
-        // 2. Render Acclaimed Infinite Stream WITHOUT Rank Numbers & ZERO overlap with Top 10!
-        const st = ensurePlatformPool(pid);
-        // Ensure any newly synced Top 10 keys are excluded
-        const freshTopKeys = new Set(top10.map(itemKey));
-        st.buffer = st.buffer.filter((it) => !freshTopKeys.has(itemKey(it)));
-        freshTopKeys.forEach((k) => st.seenKeys.add(k));
+        const st = ensureSecondaryPool(feedKey);
+        if (!isMixed) {
+          const freshTopKeys = new Set(getPlatformItems(feedKey).map(itemKey));
+          st.buffer = st.buffer.filter((it) => !freshTopKeys.has(itemKey(it)));
+          freshTopKeys.forEach((k) => st.seenKeys.add(k));
+        }
         st.renderedCount = 0;
 
         document.getElementById("platformAcclaimedList").innerHTML = "";
-        appendNextPlatformCatalogChunk(pid, 16);
+        appendNextSecondaryChunk(feedKey, 18);
 
         const shell = document.getElementById("platformShell");
         const scroller = document.getElementById("platformScroller");
@@ -2717,15 +3051,14 @@
         document.getElementById("platformTopbar").classList.remove("scrolled");
         scroller.scrollTop = 0;
 
-        document.body.classList.add("detail-open", "subpage-pushed");
+        syncOverlayBodyLock();
         shell.classList.remove("dragging");
         shell.style.transform = "";
         scrim.style.opacity = "";
         scrim.classList.add("open");
         shell.classList.add("open");
 
-        // Trigger live remote catalog fetch immediately so hundreds of titles stream in seamlessly
-        fetchMorePlatformCatalog(pid);
+        fetchMoreSecondaryCatalog(feedKey);
       }
 
       function closePlatformPage() {
@@ -2739,9 +3072,7 @@
         scrim.style.opacity = "";
         shell.classList.remove("open");
         scrim.classList.remove("open");
-        if (!isDetailOpen) {
-          document.body.classList.remove("detail-open", "subpage-pushed");
-        }
+        syncOverlayBodyLock();
       }
 
       function openDetail(rawItem) {
@@ -2833,7 +3164,7 @@
         const scrim = document.getElementById("detailScrim");
         isDetailOpen = true;
         if (!wasAlreadyOpen) detailDirty = false;
-        document.body.classList.add("detail-open", "subpage-pushed");
+        syncOverlayBodyLock();
         shell.classList.remove("dragging");
         shell.style.transform = "";
         scrim.style.opacity = "";
@@ -3134,6 +3465,8 @@
               if (data && data.ok && data.chartsByPlatform) {
                 liveChartsByPlatform = data.chartsByPlatform;
                 liveHeroNewShows = Array.isArray(data.heroNewShows) ? data.heroNewShows : [];
+                liveHotShowsTop = Array.isArray(data.hotShowsTop) ? data.hotShowsTop : [];
+                liveHotMoviesTop = Array.isArray(data.hotMoviesTop) ? data.hotMoviesTop : [];
                 liveGlobalTop = data.globalTop || [];
                 if (data.providerIcons) liveProviderIcons = data.providerIcons;
                 gotServerCharts = true;
@@ -3385,15 +3718,12 @@
           const scrim = document.getElementById("detailScrim");
           shell.classList.remove("dragging");
           document.body.classList.remove("subpage-dragging");
-          document.getElementById("mainViewsWrap").style.transform = "";
-          shell.style.transform = "";
+                    shell.style.transform = "";
           scrim.style.opacity = "";
           shell.classList.remove("open");
           scrim.classList.remove("open");
 
-          if (!isPlatformOpen) {
-            document.body.classList.remove("detail-open", "subpage-pushed");
-          }
+          syncOverlayBodyLock();
 
           // Defer any DOM sync until AFTER the 260ms GPU slide-out completes so 0ms frame is 100% butter-smooth!
           if (detailDirty) {
@@ -3577,10 +3907,16 @@
             if (it) toggleFav(it);
             return;
           }
+          const feedHeader = e.target.closest("[data-openfeed]");
+          if (feedHeader) {
+            const fk = feedHeader.getAttribute("data-openfeed");
+            if (fk) openSecondaryFeedPage(fk);
+            return;
+          }
           const platHeader = e.target.closest("[data-openplat]");
           if (platHeader) {
             const pid = platHeader.getAttribute("data-openplat");
-            if (pid) openPlatformPage(pid);
+            if (pid) openSecondaryFeedPage(pid);
             return;
           }
           const openEl = e.target.closest("[data-openkey]");
@@ -3611,7 +3947,7 @@
             document.getElementById("platformTopbar").classList.toggle("scrolled", platScrollerEl.scrollTop > 130);
             // Infinite scroll trigger when within 650px of bottom
             if (platScrollerEl.scrollTop + platScrollerEl.clientHeight >= platScrollerEl.scrollHeight - 650) {
-              if (activePlatformPageId) appendNextPlatformCatalogChunk(activePlatformPageId, 20);
+              if (activePlatformPageId) appendNextSecondaryChunk(activePlatformPageId, 20);
             }
           }
         }, { passive: true });
@@ -3675,10 +4011,7 @@
               const prog = Math.min(1, shift / w);
               shellEl.style.transform = `translate3d(${shift}px, 0, 0)`;
               scrimEl.style.opacity = String(Math.max(0, 1 - prog * 0.92));
-              if (hasUnderlyingMain()) {
-                const parallaxPct = -22 * (1 - prog);
-                mainWrapEl.style.transform = `translate3d(${parallaxPct}%, 0, 0)`;
-              }
+
             }
           }, { passive: true });
 
@@ -3697,7 +4030,6 @@
             } else {
               shellEl.style.transform = "";
               scrimEl.style.opacity = "";
-              mainWrapEl.style.transform = "";
             }
           }
 

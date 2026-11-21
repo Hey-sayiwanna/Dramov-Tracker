@@ -1,6 +1,7 @@
-// Dramov v7 Serverless Function: Endless Acclaimed Platform Catalog
-// Supports per-platform pagination (Netflix, Disney+, HBO Max, Prime Video, Paramount+, Apple TV+)
-// mixing TV Series (剧集), Movies (电影), and Documentaries (纪录片), sorted by Score Desc -> Year Desc.
+// Dramov v8 Serverless Function: Endless Streaming Catalog
+// Supports:
+// 1) Per-platform '热播库' (feedType=platform): Movies & TV Shows ONLY (no documentaries), sorted by Score Desc -> Year Desc.
+// 2) Cross-platform '热播电视剧' (feedType=hot_shows) & '热播电影' (feedType=hot_movies): All 6 platforms mixed, sorted PURELY by popularity!
 
 const GRAPHQL_ENDPOINT = "https://apis.justwatch.com/graphql";
 const UA =
@@ -15,7 +16,6 @@ const PLATFORM_DEFS = {
   apple: { id: "apple", matchNames: ["apple tv+", "apple tv plus", "apple tv"], fallbackCodes: ["atp"] }
 };
 
-// Descending score bands so streaming batches stay globally ordered from 9.x -> 8.x -> 7.x -> 6.x
 const SCORE_BANDS = [
   { min: 8.6, max: 10.0 },
   { min: 8.1, max: 8.59 },
@@ -36,7 +36,6 @@ const GENRE_ZH = {
   hrr: "恐怖",
   rma: "爱情",
   ani: "动画",
-  doc: "纪录片",
   hst: "历史",
   war: "战争",
   mys: "悬疑",
@@ -158,35 +157,41 @@ function mapShortToPlatformId(shortName = "", clearName = "") {
   return null;
 }
 
-async function resolvePackageCodes(platformId, country = "US") {
-  const def = PLATFORM_DEFS[platformId] || PLATFORM_DEFS.netflix;
-  let codes = [...def.fallbackCodes];
+async function resolveCodeMap(country = "US") {
+  const map = {};
+  Object.values(PLATFORM_DEFS).forEach((d) => { map[d.id] = [...d.fallbackCodes]; });
   try {
     const res = await queryUpstream(PACKAGES_QUERY, { country, platform: "WEB" }, 3500);
     const pkgs = res?.data?.packages || [];
-    const matched = pkgs.filter((p) => {
-      const cn = String(p.clearName || "").toLowerCase().trim();
-      const tn = String(p.technicalName || "").toLowerCase().trim();
-      return def.matchNames.some((m) => cn === m || tn === m.replace(/\s+/g, ""));
+    Object.values(PLATFORM_DEFS).forEach((def) => {
+      const matched = pkgs.filter((p) => {
+        const cn = String(p.clearName || "").toLowerCase().trim();
+        const tn = String(p.technicalName || "").toLowerCase().trim();
+        return def.matchNames.some((m) => cn === m || tn === m.replace(/\s+/g, ""));
+      });
+      if (matched.length) {
+        map[def.id] = Array.from(new Set([...matched.map((p) => p.shortName).filter(Boolean), ...def.fallbackCodes]));
+      }
     });
-    if (matched.length) {
-      codes = Array.from(new Set([...matched.map((p) => p.shortName).filter(Boolean), ...def.fallbackCodes]));
-    }
   } catch (e) {}
-  return codes;
+  return map;
 }
 
-function normalizeCatalogNode(node, platformId) {
+function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
   const zh = node.contentZh || {};
   const en = node.contentEn || {};
   const sc = en.scoring || {};
   const isShow = node.objectType === "SHOW";
   const rawGenres = Array.isArray(en.genres) ? en.genres : [];
-  const isDoc = rawGenres.some((g) => g.shortName === "doc");
-  const offers = Array.isArray(node.offers) ? node.offers : [];
 
-  const providersSet = new Set([platformId]);
+  // Strictly exclude Documentaries ('doc') per user preference!
+  if (rawGenres.some((g) => g.shortName === "doc")) return null;
+
+  const offers = Array.isArray(node.offers) ? node.offers : [];
+  const providersSet = new Set();
   const providerLinks = {};
+  if (forcedPlatformId) providersSet.add(forcedPlatformId);
+
   for (const off of offers) {
     const pid = mapShortToPlatformId(off.package?.shortName, off.package?.clearName);
     if (pid) {
@@ -195,10 +200,12 @@ function normalizeCatalogNode(node, platformId) {
     }
   }
 
+  const primaryPid = forcedPlatformId || Array.from(providersSet)[0] || "netflix";
+  providersSet.add(primaryPid);
+
   const imdb = sc.imdbScore ? Number(Number(sc.imdbScore).toFixed(1)) : null;
   const tmdbScore = sc.tmdbScore ? Number(Number(sc.tmdbScore).toFixed(1)) : null;
-  const finalScore = imdb || tmdbScore || 0;
-  if (!finalScore) return null;
+  const finalScore = imdb || tmdbScore || 7.5;
 
   const tomato = sc.tomatoMeter ? Math.round(Number(sc.tomatoMeter)) : null;
   const popcornPct = tmdbScore
@@ -231,12 +238,12 @@ function normalizeCatalogNode(node, platformId) {
     jwId: node.id || "",
     title: zh.title || en.title || "",
     enTitle: en.title || zh.title || "",
-    mediaType: isDoc ? "doc" : (isShow ? "show" : "movie"),
+    mediaType: isShow ? "show" : "movie",
     hasEpisodes: isShow,
-    platformId,
+    platformId: primaryPid,
     providers: Array.from(providersSet),
     providerLinks,
-    heat: Math.round((Number(sc.tmdbPopularity) || 100) * 10) / 10,
+    heat: Math.round((Number(sc.tmdbPopularity) || Math.max(50, 1000 - rankOrder * 8)) * 10) / 10,
     imdb: finalScore,
     imdbVotes: sc.imdbVotes ? Number(sc.imdbVotes) : 0,
     tomatoPct: tomato,
@@ -248,7 +255,7 @@ function normalizeCatalogNode(node, platformId) {
     airedEpisodes: 0,
     runtime: Number(en.runtime) || 0,
     ageRating: en.ageCertification || (isShow ? "TV-MA" : "PG-13"),
-    genres: genres.length ? genres : [isDoc ? "纪录片" : (isShow ? "剧情" : "电影")],
+    genres: genres.length ? genres : [isShow ? "剧情" : "电影"],
     synopsis: zh.shortDescription || en.shortDescription || "",
     posterHd: formatImageUrl(rawPoster, "s718"),
     posterThumb: formatImageUrl(rawPoster, "s332"),
@@ -278,33 +285,69 @@ module.exports = async (req, res) => {
 
   try {
     const q = req.query || {};
+    const feedType = q.feedType ? String(q.feedType) : "platform"; // 'platform' | 'hot_shows' | 'hot_movies'
+    const cursor = q.cursor ? String(q.cursor) : null;
+    const country = "US";
+    const codeMap = await resolveCodeMap(country);
+
+    // =========================================================================
+    // MODE A: Cross-Platform Pure Popularity Stream ('hot_shows' or 'hot_movies')
+    // Preserves exact upstream POPULAR order (purely who is most watched/popular!)
+    // =========================================================================
+    if (feedType === "hot_shows" || feedType === "hot_movies") {
+      const allSix = Array.from(new Set(Object.values(codeMap).flat()));
+      const objTypes = feedType === "hot_shows" ? ["SHOW"] : ["MOVIE"];
+      const rPop = await queryUpstream(CATALOG_PAGE_QUERY, {
+        country,
+        first: 50,
+        after: cursor,
+        filter: {
+          packages: allSix,
+          objectTypes: objTypes
+        }
+      });
+      const conn = rPop?.data?.popularTitles;
+      const items = Array.isArray(conn?.edges)
+        ? conn.edges.map((e, idx) => normalizeCatalogNode(e.node, null, idx)).filter((x) => x && x.title)
+        : [];
+      const hasMore = Boolean(conn?.pageInfo?.hasNextPage && conn?.pageInfo?.endCursor);
+
+      return res.status(200).json({
+        ok: true,
+        feedType,
+        mode: "popular",
+        nextBand: 0,
+        nextCursor: hasMore ? conn.pageInfo.endCursor : "",
+        hasMore,
+        items
+      });
+    }
+
+    // =========================================================================
+    // MODE B: Single-Platform '热播库' (Sorted by Score Desc -> Year Desc!)
+    // =========================================================================
     const platformId = PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
     const bandIdx = Math.max(0, Math.min(SCORE_BANDS.length - 1, Number(q.band) || 0));
-    const cursor = q.cursor ? String(q.cursor) : null;
     const mode = q.mode ? String(q.mode) : "auto";
-    const country = "US";
+    const packages = codeMap[platformId] || PLATFORM_DEFS.netflix.fallbackCodes;
 
-    const packages = await resolvePackageCodes(platformId, country);
-
-    // Strategy 1: Score-band filtered GraphQL pagination so batches stay globally descending by score!
     if (mode !== "deep") {
       const band = SCORE_BANDS[bandIdx];
-      const bandedFilter = {
-        packages,
-        objectTypes: ["SHOW", "MOVIE"],
-        imdbScore: { min: band.min, max: band.max }
-      };
       const rBand = await queryUpstream(CATALOG_PAGE_QUERY, {
         country,
         first: 60,
         after: cursor,
-        filter: bandedFilter
+        filter: {
+          packages,
+          objectTypes: ["SHOW", "MOVIE"],
+          imdbScore: { min: band.min, max: band.max }
+        }
       }).catch(() => null);
 
       const conn = rBand?.data?.popularTitles;
       if (conn && Array.isArray(conn.edges)) {
         const items = sortScoreThenYearDesc(
-          conn.edges.map((e) => normalizeCatalogNode(e.node, platformId)).filter((x) => x && x.title)
+          conn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title)
         );
         const hasMoreInBand = Boolean(conn.pageInfo?.hasNextPage && conn.pageInfo?.endCursor);
         const nextBand = hasMoreInBand ? bandIdx : bandIdx + 1;
@@ -313,6 +356,7 @@ module.exports = async (req, res) => {
 
         return res.status(200).json({
           ok: true,
+          feedType: "platform",
           mode: "banded",
           platform: platformId,
           band: bandIdx,
@@ -324,7 +368,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Strategy 2 (Automatic Fallback): Deep multi-page cursor sweep (fetches ~180 titles per call & sorts by Score -> Year)
     let curAfter = cursor;
     let hasNext = true;
     const collected = [];
@@ -343,8 +386,8 @@ module.exports = async (req, res) => {
         hasNext = false;
         break;
       }
-      dConn.edges.forEach((e) => {
-        const norm = normalizeCatalogNode(e.node, platformId);
+      dConn.edges.forEach((e, idx) => {
+        const norm = normalizeCatalogNode(e.node, platformId, idx);
         if (norm && norm.title) collected.push(norm);
       });
       hasNext = Boolean(dConn.pageInfo?.hasNextPage && dConn.pageInfo?.endCursor);
@@ -355,6 +398,7 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       ok: true,
+      feedType: "platform",
       mode: "deep",
       platform: platformId,
       band: 0,
