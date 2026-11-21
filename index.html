@@ -1,0 +1,2889 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Dramov · Movie &amp; Drama Tracker</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Dramov" />
+  <meta name="theme-color" id="themeColorMeta" content="#eef2f9" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=1" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png?v=1" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("dramov_theme_v1");
+        var theme = saved === "dark" ? "dark" : "light";
+        var bg = theme === "dark" ? "#0b1120" : "#eef2f9";
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.backgroundColor = bg;
+        var meta = document.getElementById("themeColorMeta");
+        if (meta) meta.setAttribute("content", bg);
+      } catch (e) {}
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com/3.4.17" async></script>
+  <style>
+    :root {
+      --bg-solid: #eef2f9;
+      --card-glass: rgba(255, 255, 255, 0.84);
+      --card-glass-strong: rgba(255, 255, 255, 0.95);
+      --card-border: rgba(255, 255, 255, 0.78);
+      --card-shadow: 0 10px 28px -10px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --pill-bg: rgba(241, 245, 249, 0.92);
+      --pill-border: rgba(148, 163, 184, 0.24);
+      --accent: #2563eb;
+      --accent-soft: rgba(37, 99, 235, 0.11);
+      --emerald: #059669;
+      --emerald-soft: rgba(5, 150, 105, 0.12);
+      --amber: #d97706;
+      --amber-soft: rgba(217, 119, 6, 0.13);
+      --divider: rgba(148, 163, 184, 0.18);
+      --nav-bg: rgba(255, 255, 255, 0.88);
+      --input-bg: rgba(255, 255, 255, 0.92);
+    }
+
+    html[data-theme="dark"] {
+      --bg-solid: #0b1120;
+      --card-glass: rgba(23, 32, 51, 0.80);
+      --card-glass-strong: rgba(20, 29, 47, 0.95);
+      --card-border: rgba(148, 163, 184, 0.15);
+      --card-shadow: 0 12px 32px -10px rgba(2, 6, 23, 0.55);
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --pill-bg: rgba(30, 41, 59, 0.86);
+      --pill-border: rgba(148, 163, 184, 0.20);
+      --accent: #60a5fa;
+      --accent-soft: rgba(96, 165, 250, 0.16);
+      --emerald: #34d399;
+      --emerald-soft: rgba(52, 211, 153, 0.16);
+      --amber: #fbbf24;
+      --amber-soft: rgba(251, 191, 36, 0.16);
+      --divider: rgba(148, 163, 184, 0.14);
+      --nav-bg: rgba(17, 25, 42, 0.88);
+      --input-bg: rgba(15, 23, 42, 0.78);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body,
+    #topbar {
+      background-color: var(--bg-solid) !important;
+      transition: none !important;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      overscroll-behavior-y: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      padding-bottom: calc(136px + env(safe-area-inset-bottom, 16px));
+    }
+
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding-top: calc(10px + env(safe-area-inset-top, 0px));
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .app-shell {
+      max-width: 780px;
+      margin: 0 auto;
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .row-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .glass-card {
+      background: var(--card-glass);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border: 1px solid var(--card-border);
+      box-shadow: var(--card-shadow);
+      border-radius: 20px;
+    }
+
+    .glass-pill {
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--text-secondary);
+      border-radius: 999px;
+    }
+
+    #heroCard {
+      background: linear-gradient(135deg, #131c33 0%, #1e293b 54%, #0f172a 100%) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(148, 163, 184, 0.22) !important;
+      border-radius: 22px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 14px 32px -12px rgba(15, 23, 42, 0.42);
+    }
+
+    html[data-theme="dark"] :not(#heroCard):not(#heroCard *) {
+      border-color: var(--card-border);
+    }
+
+    #heroCard .hero-sub {
+      color: rgba(226, 232, 240, 0.78) !important;
+    }
+
+    #heroCard .hero-kpi-box {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.11) !important;
+      border-radius: 14px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .hero-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    #themeToggleBtn {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--text-primary);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .chip-scroll {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      overflow-x: auto;
+      padding: 3px 1px 5px 1px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .chip-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      border: 1px solid var(--pill-border);
+      background: var(--card-glass);
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .filter-chip.active {
+      background: var(--accent);
+      color: #ffffff !important;
+      border-color: transparent;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    html[data-theme="dark"] .filter-chip.active {
+      background: #3b82f6;
+      color: #ffffff !important;
+    }
+
+    .plat-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .drama-list {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+    @media (min-width: 660px) {
+      .drama-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .drama-card {
+      padding: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .drama-main {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .poster-box {
+      width: 84px;
+      min-width: 84px;
+      height: 118px;
+      border-radius: 13px;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      background: linear-gradient(155deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .poster-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .poster-fallback {
+      width: 100%;
+      height: 100%;
+      padding: 8px 7px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #f8fafc;
+      position: relative;
+    }
+
+    .poster-plat-tag {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff !important;
+      z-index: 2;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .ep-progress-panel {
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      border-radius: 12px;
+      padding: 7px 9px;
+      margin-top: 4px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .ep-bar-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.24);
+      overflow: hidden;
+      position: relative;
+      margin-top: 5px;
+    }
+
+    .ep-bar-aired {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .ep-bar-watched {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: var(--emerald);
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 2px;
+    }
+
+    .btn-action {
+      flex: 1 1 0%;
+      min-width: 0;
+      height: 34px;
+      padding: 0 8px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      border: 1px solid var(--pill-border);
+      background: var(--pill-bg);
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .btn-action.primary {
+      background: var(--accent);
+      color: #ffffff !important;
+      border-color: transparent;
+    }
+    html[data-theme="dark"] .btn-action.primary {
+      background: #3b82f6;
+      color: #ffffff !important;
+    }
+
+    .btn-action.watch-plus {
+      background: var(--emerald-soft);
+      color: var(--emerald) !important;
+      border-color: rgba(16, 185, 129, 0.30);
+    }
+
+    #bottomNav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(24px + env(safe-area-inset-bottom, 12px));
+      z-index: 50;
+      width: calc(100% - 28px);
+      max-width: 440px;
+      background: var(--nav-bg);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 14px 34px -8px rgba(15, 23, 42, 0.24);
+      border-radius: 999px;
+      padding: 5px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 4px;
+    }
+
+    .nav-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 999px;
+      padding: 7px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .nav-btn.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    #appToast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(96px + env(safe-area-inset-bottom, 12px));
+      transform: translateX(-50%) translateY(14px);
+      background: rgba(15, 23, 42, 0.95) !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(148, 163, 184, 0.28) !important;
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 120;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 10px 25px rgba(2, 6, 23, 0.35);
+    }
+    #appToast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.56);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-sheet {
+      width: 100%;
+      max-width: 500px;
+      max-height: 84vh;
+      overflow-y: auto;
+      background: var(--card-glass-strong);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 18px;
+      color: var(--text-primary);
+      box-shadow: 0 24px 48px -12px rgba(2, 6, 23, 0.45);
+    }
+
+    .celebrate-square {
+      width: 248px;
+      height: 248px;
+      border-radius: 28px;
+      background: var(--card-glass-strong);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 24px 48px rgba(2, 6, 23, 0.45);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .ep-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 10px;
+    }
+    .ep-cell {
+      height: 36px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 1px solid var(--pill-border);
+      background: var(--pill-bg);
+      color: var(--text-secondary);
+      user-select: none;
+    }
+    .ep-cell.aired {
+      border-color: rgba(37, 99, 235, 0.38);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .ep-cell.watched {
+      background: var(--emerald) !important;
+      color: #ffffff !important;
+      border-color: transparent !important;
+    }
+    .ep-cell.unaired {
+      border-style: dashed;
+      opacity: 0.56;
+    }
+
+    .app-input {
+      width: 100%;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid var(--pill-border);
+      background: var(--input-bg);
+      color: var(--text-primary);
+      padding: 0 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    .app-input:focus {
+      border-color: var(--accent);
+    }
+
+    .switch-btn {
+      width: 46px;
+      height: 27px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.38);
+      border: none;
+      position: relative;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .switch-btn.on {
+      background: var(--emerald);
+    }
+    .switch-knob {
+      width: 21px;
+      height: 21px;
+      border-radius: 999px;
+      background: #ffffff;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.18s ease;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+    }
+    .switch-btn.on .switch-knob {
+      transform: translateX(19px);
+    }
+
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .day-pill {
+      border-radius: 14px;
+      padding: 8px 2px;
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid var(--pill-border);
+      background: var(--card-glass);
+      color: var(--text-secondary);
+    }
+    .day-pill.active {
+      background: var(--accent);
+      color: #ffffff !important;
+      border-color: transparent;
+    }
+
+    .badge-today-up {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.30);
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-finished {
+      background: rgba(100, 116, 139, 0.16);
+      color: var(--text-secondary);
+      border: 1px solid var(--pill-border);
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .view-section {
+      display: none;
+    }
+    .view-section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header id="topbar">
+    <div class="app-shell row-between">
+      <div class="row-center" style="min-width: 0;">
+        <img src="./icon-192.png?v=1" alt="Dramov" style="width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;" />
+        <div style="min-width: 0;">
+          <div style="font-size: 16.5px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; white-space: nowrap;">Dramov</div>
+          <div id="liveStatusSub" style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Movie &amp; Drama Tracker</div>
+        </div>
+      </div>
+      <div class="row-center" style="flex-shrink: 0;">
+        <button id="openAddModalBtn" type="button" class="glass-pill whitespace-nowrap" style="height: 32px; padding: 0 11px; font-size: 12.5px; font-weight: 600; cursor: pointer;">
+          + 登记剧影
+        </button>
+        <button id="refreshLiveBtn" type="button" class="glass-pill whitespace-nowrap" style="height: 32px; padding: 0 10px; font-size: 12.5px; font-weight: 600; cursor: pointer;">
+          刷新片单
+        </button>
+        <button id="themeToggleBtn" type="button" aria-label="切换深浅色模式" title="切换深浅色">
+          <span id="themeIcon" style="font-size: 15px; line-height: 1;">🌙</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell" style="padding-top: 12px;">
+    <!-- Non-inverted Dark Slate Hero Summary Card -->
+    <section id="heroCard" style="margin-bottom: 14px;">
+      <div class="row-between" style="gap: 8px;">
+        <div style="min-width: 0;">
+          <div style="font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" class="hero-sub" id="heroDateLabel">今日剧影排播</div>
+          <div style="font-size: 16.5px; font-weight: 700; margin-top: 2px; white-space: nowrap;">各台剧集集数与新片追踪</div>
+        </div>
+        <button id="svipQuickBtn" type="button" class="whitespace-nowrap" style="flex-shrink: 0; white-space: nowrap; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; border: 1px solid rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.16); color: #fde68a; cursor: pointer;">
+          普通VIP视角
+        </button>
+      </div>
+      <div class="hero-kpi-grid">
+        <div class="hero-kpi-box">
+          <div style="font-size: 19px; font-weight: 700;" id="kpiTodayCount">0</div>
+          <div style="font-size: 11px; margin-top: 2px; white-space: nowrap;" class="hero-sub">今日更新</div>
+        </div>
+        <div class="hero-kpi-box">
+          <div style="font-size: 19px; font-weight: 700;" id="kpiAiringCount">0</div>
+          <div style="font-size: 11px; margin-top: 2px; white-space: nowrap;" class="hero-sub">在播/新片</div>
+        </div>
+        <div class="hero-kpi-box">
+          <div style="font-size: 19px; font-weight: 700;" id="kpiWatchingCount">0</div>
+          <div style="font-size: 11px; margin-top: 2px; white-space: nowrap;" class="hero-sub">在追/想看</div>
+        </div>
+        <div class="hero-kpi-box">
+          <div style="font-size: 19px; font-weight: 700; color: #6ee7b7;" id="kpiBacklogEps">0</div>
+          <div style="font-size: 11px; margin-top: 2px; white-space: nowrap;" class="hero-sub">待看新集</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 1: DISCOVER (DRAMAS + MOVIES ACROSS PLATFORMS) -->
+    <section id="view-discover" class="view-section active" data-view="discover">
+      <div class="row-center" style="margin-bottom: 10px;">
+        <input id="searchInput" type="search" class="app-input" placeholder="搜剧集 / 电影 / 演员（支持全网检索）..." />
+        <button id="onlineSearchBtn" type="button" class="btn-action primary whitespace-nowrap" style="flex: 0 0 auto; height: 38px; padding: 0 13px;">
+          全网搜片
+        </button>
+      </div>
+
+      <!-- Drama vs Movie Switcher + Status Filter -->
+      <div class="chip-scroll" style="margin-bottom: 6px;" id="mediaTypeChips">
+        <button type="button" class="filter-chip active" data-mtype="all">全部剧影</button>
+        <button type="button" class="filter-chip" data-mtype="drama">剧集排播</button>
+        <button type="button" class="filter-chip" data-mtype="movie">电影新片</button>
+        <button type="button" class="filter-chip" data-state="today">今日有更</button>
+        <button type="button" class="filter-chip" data-state="airing">连载中</button>
+        <button type="button" class="filter-chip" data-state="finished">全集/已上线</button>
+        <button type="button" class="filter-chip" id="hideTrackedChip">隐藏已在追/已看</button>
+      </div>
+
+      <!-- Platform Filter Strip -->
+      <div id="platformChips" class="chip-scroll" style="margin-bottom: 12px;"></div>
+
+      <div id="discoverList" class="drama-list"></div>
+    </section>
+
+    <!-- VIEW 2: WEEKLY RELEASE & AIRING CALENDAR -->
+    <section id="view-calendar" class="view-section" data-view="calendar">
+      <div class="glass-card" style="padding: 13px; margin-bottom: 12px;">
+        <div class="row-between" style="margin-bottom: 10px;">
+          <div style="font-size: 14.5px; font-weight: 700;" id="calSelectedTitle">本周剧影排播日历</div>
+          <button id="calOnlyMineBtn" type="button" class="filter-chip whitespace-nowrap" style="padding: 4px 11px; font-size: 12px;">
+            仅看我的片单
+          </button>
+        </div>
+        <div id="weekStrip" class="week-grid"></div>
+      </div>
+      <div id="calendarList" class="drama-list"></div>
+    </section>
+
+    <!-- VIEW 3: MY WATCHLIST (DRAMAS + MOVIES) -->
+    <section id="view-watchlist" class="view-section" data-view="watchlist">
+      <div class="chip-scroll" style="margin-bottom: 12px;" id="watchSubChips">
+        <button type="button" class="filter-chip active" data-wtab="watching">在追剧集</button>
+        <button type="button" class="filter-chip" data-wtab="unwatched">有新集待看</button>
+        <button type="button" class="filter-chip" data-wtab="wish">想看剧影</button>
+        <button type="button" class="filter-chip" data-wtab="done">已看完</button>
+      </div>
+      <div id="watchlistContainer" class="drama-list"></div>
+    </section>
+
+    <!-- VIEW 4: SYNC & SETTINGS -->
+    <section id="view-settings" class="view-section" data-view="settings">
+      <div class="glass-card" style="padding: 16px; margin-bottom: 12px;">
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px;">显示与提醒偏好</div>
+
+        <div class="row-between" style="padding: 8px 0; border-bottom: 1px solid var(--divider);">
+          <div>
+            <div style="font-size: 14px; font-weight: 600;">每日首次打开「待看新集」提醒弹窗</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">在追剧集当天有已播新集未看时，每天首次打开提醒一次</div>
+          </div>
+          <button id="toggleDailyPopup" type="button" class="switch-btn" role="switch" aria-checked="false">
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+
+        <div class="row-between" style="padding: 10px 0 4px 0;">
+          <div>
+            <div style="font-size: 14px; font-weight: 600;">SVIP / 超前多看 1 集进度视角</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">开启后支持超前权益的在播剧自动按 SVIP 最新集数展示</div>
+          </div>
+          <button id="toggleSvipSetting" type="button" class="switch-btn" role="switch" aria-checked="false">
+            <span class="switch-knob"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 16px; margin-bottom: 12px;">
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 6px;">多平台实时剧影数据源</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+          Vercel 端默认启用同源聚合接口（直连爱奇艺、芒果TV、哔哩哔哩、豆瓣剧影榜与 TVmaze 流媒体排播），全网搜片同时接入 Apple iTunes 电影库；也可填入 TMDB 密钥扩展更多海报。
+        </div>
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">可选 TMDB API Key 或 Read Token（留空亦正常使用）</label>
+        <div class="row-center">
+          <input id="tmdbKeyInput" type="password" class="app-input" placeholder="填入 TMDB v3 API Key 或 v4 Bearer Token..." />
+          <button id="saveTmdbBtn" type="button" class="btn-action primary whitespace-nowrap" style="flex: 0 0 auto; height: 38px; padding: 0 14px;">
+            保存并拉取
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 16px; margin-bottom: 12px;">
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">跨设备无损云同步（GitHub 私密 Gist）</div>
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
+          Dramov 严格隔离读写唯一专属文件 <code style="font-weight: 600; color: var(--accent);">dramov-tracker-sync-v1.json</code>，按每条剧影记录的 <code style="font-weight: 600;">updatedAt</code> 时间戳合并，绝不触碰你账号下其他软件的 Gist 文件。
+        </div>
+
+        <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">GitHub Personal Access Token（需勾选 gist 权限）</label>
+        <input id="gistTokenInput" type="password" class="app-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="margin-bottom: 10px;" />
+
+        <div id="gistSyncStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">尚未执行云端同步</div>
+
+        <div class="card-actions">
+          <button id="saveTokenBtn" type="button" class="btn-action whitespace-nowrap">保存密钥</button>
+          <button id="syncUpBtn" type="button" class="btn-action primary whitespace-nowrap">上传合并至云端</button>
+          <button id="syncDownBtn" type="button" class="btn-action whitespace-nowrap">从云端拉取合并</button>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 16px;">
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">本地 JSON 备份与恢复</div>
+        <div class="card-actions">
+          <button id="exportJsonBtn" type="button" class="btn-action whitespace-nowrap">导出备份 .json</button>
+          <button id="importJsonBtn" type="button" class="btn-action whitespace-nowrap">导入恢复 .json</button>
+          <input id="importFileInput" type="file" accept=".json,application/json" style="display: none;" />
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="bottomNav" aria-label="主导航">
+    <button type="button" class="nav-btn active" data-nav="discover">
+      <span style="font-size: 16px; line-height: 1;">🎬</span>
+      <span>各台上新</span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="calendar">
+      <span style="font-size: 16px; line-height: 1;">📅</span>
+      <span>排播日历</span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="watchlist">
+      <span style="font-size: 16px; line-height: 1;">🎞️</span>
+      <span>我的片单</span>
+    </button>
+    <button type="button" class="nav-btn" data-nav="settings">
+      <span style="font-size: 16px; line-height: 1;">☁️</span>
+      <span>同步设置</span>
+    </button>
+  </nav>
+
+  <!-- Detail & Episode / Movie Check-in Modal -->
+  <div id="detailModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="row-between" style="margin-bottom: 10px;">
+        <div style="min-width: 0;">
+          <div id="detailTitle" style="font-size: 17px; font-weight: 700; line-height: 1.25;">详情</div>
+          <div id="detailSub" style="font-size: 12px; color: var(--text-muted); margin-top: 3px;"></div>
+        </div>
+        <button id="closeDetailBtn" type="button" class="glass-pill" style="width: 32px; height: 32px; cursor: pointer; font-weight: 700;">✕</button>
+      </div>
+
+      <div class="card-actions" style="margin-bottom: 12px;" id="detailStatusBtns">
+        <button type="button" class="btn-action whitespace-nowrap" data-setstatus="watching">在追</button>
+        <button type="button" class="btn-action whitespace-nowrap" data-setstatus="wish">想看</button>
+        <button type="button" class="btn-action whitespace-nowrap" data-setstatus="done">已看完</button>
+        <button type="button" class="btn-action whitespace-nowrap" data-setstatus="none">移出片单</button>
+      </div>
+
+      <div id="dramaEpSection">
+        <div style="background: var(--pill-bg); border: 1px solid var(--pill-border); border-radius: 14px; padding: 11px; margin-bottom: 12px;">
+          <div class="row-between" style="margin-bottom: 8px;">
+            <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">平台集数微调（加更礼/改档校对）</span>
+            <button id="resetOverrideBtn" type="button" style="flex-shrink: 0; white-space: nowrap; border: none; background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer;">恢复自动推算</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px;">现在播到第几集</label>
+              <input id="editAiredInput" type="number" min="0" max="999" class="app-input" style="height: 34px;" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px;">全剧一共几集</label>
+              <input id="editTotalInput" type="number" min="0" max="999" class="app-input" style="height: 34px;" />
+            </div>
+            <div>
+              <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px;">我看到第几集</label>
+              <input id="editWatchedInput" type="number" min="0" max="999" class="app-input" style="height: 34px;" />
+            </div>
+          </div>
+          <div class="card-actions" style="margin-top: 9px;">
+            <button id="saveEpAdjustBtn" type="button" class="btn-action primary whitespace-nowrap">保存集数进度</button>
+            <button id="catchUpLatestBtn" type="button" class="btn-action watch-plus whitespace-nowrap">一键追平最新已播集</button>
+          </div>
+        </div>
+
+        <div class="row-between" style="margin-bottom: 4px;">
+          <span style="font-size: 13px; font-weight: 700;">点选分集打卡进度</span>
+          <span style="font-size: 11.5px; color: var(--text-muted);">绿=已看 · 蓝=已播待看 · 虚线=未播</span>
+        </div>
+        <div id="episodeGrid" class="ep-grid"></div>
+      </div>
+
+      <div class="card-actions" style="margin-top: 14px;">
+        <a id="detailPlayLink" href="#" target="_blank" rel="noopener noreferrer" class="btn-action primary whitespace-nowrap">前往官方平台页面 ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Custom Drama / Movie Modal -->
+  <div id="addModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="row-between" style="margin-bottom: 12px;">
+        <div style="font-size: 17px; font-weight: 700;">手动登记新剧 / 新电影</div>
+        <button id="closeAddBtn" type="button" class="glass-pill" style="width: 32px; height: 32px; cursor: pointer; font-weight: 700;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">作品类型</label>
+            <select id="newMediaType" class="app-input">
+              <option value="drama">剧集 / 番剧综艺</option>
+              <option value="movie">电影长片</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">上线平台</label>
+            <select id="newPlatform" class="app-input">
+              <option value="腾讯视频">腾讯视频</option>
+              <option value="爱奇艺">爱奇艺</option>
+              <option value="优酷">优酷</option>
+              <option value="芒果TV">芒果TV</option>
+              <option value="哔哩哔哩">哔哩哔哩</option>
+              <option value="Netflix">Netflix</option>
+              <option value="Disney+">Disney+</option>
+              <option value="HBO Max">HBO Max</option>
+              <option value="Apple TV+">Apple TV+</option>
+              <option value="海外其他">院线 / 其他</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">作品名称 *</label>
+          <input id="newTitle" type="text" class="app-input" placeholder="输入剧名或电影名..." />
+        </div>
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">题材或片长说明</label>
+          <input id="newGenre" type="text" class="app-input" placeholder="例如：悬疑 / 犯罪（或 电影 126分钟）" />
+        </div>
+        <div id="newDramaFields">
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">一共几集</label>
+              <input id="newTotalEps" type="number" min="0" max="999" value="24" class="app-input" />
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">现在播到第几集</label>
+              <input id="newAiredEps" type="number" min="0" max="999" value="4" class="app-input" />
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">每次更新几集</label>
+              <input id="newDailyEps" type="number" min="0" max="20" value="2" class="app-input" />
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">更新时间点</label>
+              <input id="newUpdateTime" type="text" value="18:00" class="app-input" />
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">周几更(1-7逗号分隔)</label>
+              <input id="newWeekdays" type="text" value="1,2,3,4,5,6,7" class="app-input" />
+            </div>
+          </div>
+        </div>
+        <div class="card-actions" style="margin-top: 6px;">
+          <button id="confirmAddBtn" type="button" class="btn-action primary whitespace-nowrap">保存并加入我的片单</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Due Reminder Modal -->
+  <div id="dailyRemindModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width: 360px;">
+      <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">今日在追新集提醒</div>
+      <div id="dailyRemindText" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 14px;"></div>
+      <div class="card-actions">
+        <button id="skipRemindBtn" type="button" class="btn-action whitespace-nowrap">今天跳过</button>
+        <button id="goWatchRemindBtn" type="button" class="btn-action primary whitespace-nowrap">去打卡追剧</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1:1 248x248 Square Celebration Modal -->
+  <div id="celebrateModal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="celebrate-square">
+      <div style="font-size: 46px; line-height: 1; margin-bottom: 10px;">🎉</div>
+      <div id="celebrateHeading" style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">观看打卡达成</div>
+      <div id="celebrateTitle" style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px; max-width: 208px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
+      <button id="closeCelebrateBtn" type="button" class="btn-action primary whitespace-nowrap" style="flex: 0 0 auto; width: 136px; height: 34px;">太棒了</button>
+    </div>
+  </div>
+
+  <div id="appToast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const GIST_FILENAME = "dramov-tracker-sync-v1.json";
+      const STORAGE_KEY = "dramov_state_v1";
+      const THEME_KEY = "dramov_theme_v1";
+      const TOKEN_KEY = "dramov_gist_token_v1";
+      const GIST_ID_KEY = "dramov_gist_id_v1";
+      const TMDB_KEY = "dramov_tmdb_key_v1";
+      const DAILY_SHOWN_KEY = "dramov_daily_remind_date_v1";
+
+      const PLATFORM_META = {
+        "全部平台": { color: "#3b82f6", url: "" },
+        "腾讯视频": { color: "#ff6a00", grad: ["#1d4ed8", "#ea580c"], url: "https://v.qq.com/x/search/?q=" },
+        "爱奇艺": { color: "#00be06", grad: ["#047857", "#15803d"], url: "https://so.iqiyi.com/so/q_" },
+        "优酷": { color: "#009bff", grad: ["#0369a1", "#2563eb"], url: "https://so.youku.com/search_video/q_" },
+        "芒果TV": { color: "#ff5f00", grad: ["#c2410c", "#d97706"], url: "https://so.mgtv.com/so?k=" },
+        "哔哩哔哩": { color: "#fb7299", grad: ["#be185d", "#db2777"], url: "https://search.bilibili.com/all?keyword=" },
+        "Netflix": { color: "#e50914", grad: ["#991b1b", "#1e293b"], url: "https://www.netflix.com/search?q=" },
+        "Disney+": { color: "#0ea5e9", grad: ["#1e3a8a", "#0369a1"], url: "https://www.disneyplus.com/" },
+        "HBO Max": { color: "#8b5cf6", grad: ["#4c1d95", "#1e1b4b"], url: "https://www.max.com/" },
+        "Apple TV+": { color: "#64748b", grad: ["#334155", "#0f172a"], url: "https://tv.apple.com/" },
+        "海外其他": { color: "#14b8a6", grad: ["#0f766e", "#1e293b"], url: "https://m.douban.com/search/?query=" }
+      };
+
+      const PLATFORM_ORDER = [
+        "全部平台",
+        "腾讯视频",
+        "爱奇艺",
+        "优酷",
+        "芒果TV",
+        "哔哩哔哩",
+        "Netflix",
+        "Disney+",
+        "HBO Max",
+        "Apple TV+",
+        "海外其他"
+      ];
+
+      // Grounded November 2026 Multi-Platform Dramas & Movies
+      const SEED_CATALOG = [
+        {
+          id: "seed_liangjing15",
+          mediaType: "drama",
+          title: "两京十五日",
+          platform: "爱奇艺",
+          platforms: ["爱奇艺", "CCTV-8"],
+          category: "国产剧",
+          genre: "古装 / 历史悬疑",
+          cast: "张黎执导 · 成毅 / 林更新",
+          premiereDate: "2026-11-20",
+          totalEpisodes: 26,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "19:30",
+          svipExtra: 1,
+          score: "8.7",
+          playUrl: "https://www.iqiyi.com/v_1ewmjgivkm4.html"
+        },
+        {
+          id: "seed_taiyangyu",
+          mediaType: "drama",
+          title: "今天是太阳雨",
+          platform: "芒果TV",
+          platforms: ["芒果TV", "湖南卫视"],
+          category: "国产剧",
+          genre: "青春 / 校园治愈",
+          cast: "猫的树执导 · 杨超越 / 董思成",
+          premiereDate: "2026-11-18",
+          totalEpisodes: 24,
+          firstDayEps: 3,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "20:00",
+          svipExtra: 1,
+          score: "8.0",
+          playUrl: "https://so.mgtv.com/so?k=%E4%BB%8A%E5%A4%A9%E6%98%AF%E5%A4%AA%E9%98%B3%E9%9B%A8"
+        },
+        {
+          id: "seed_shiwan",
+          mediaType: "drama",
+          title: "十万狂花入梦来",
+          platform: "优酷",
+          platforms: ["优酷"],
+          category: "国产剧",
+          genre: "古装 / 奇幻志怪",
+          cast: "李宏毅 / 孙珍妮",
+          premiereDate: "2026-11-16",
+          totalEpisodes: 30,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "12:00",
+          svipExtra: 1,
+          score: "7.7",
+          playUrl: "https://so.youku.com/search_video/q_%E5%8D%81%E4%B8%87%E7%8B%82%E8%8A%B1%E5%85%A5%E6%A2%A6%E6%9D%A5"
+        },
+        {
+          id: "seed_zhuyu",
+          mediaType: "drama",
+          title: "逐玉",
+          platform: "腾讯视频",
+          platforms: ["腾讯视频", "爱奇艺"],
+          category: "国产剧",
+          genre: "古装 / 爱情权谋",
+          cast: "曾庆杰执导 · 张凌赫 / 田曦薇",
+          premiereDate: "2026-11-08",
+          totalEpisodes: 40,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "18:00",
+          svipExtra: 1,
+          score: "8.3",
+          playUrl: "https://v.qq.com/x/search/?q=%E9%80%90%E7%8E%89"
+        },
+        {
+          id: "seed_zishouzhenxiang",
+          mediaType: "drama",
+          title: "自首真相",
+          platform: "爱奇艺",
+          platforms: ["爱奇艺"],
+          category: "国产剧",
+          genre: "悬疑 / 刑侦罪案",
+          cast: "许魏洲 / 肖燕",
+          premiereDate: "2026-11-07",
+          totalEpisodes: 35,
+          firstDayEps: 6,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "18:00",
+          svipExtra: 1,
+          score: "7.9",
+          playUrl: "https://so.iqiyi.com/so/q_%E8%87%AA%E9%A6%96%E7%9C%9F%E7%9B%B8"
+        },
+        {
+          id: "seed_guyu",
+          mediaType: "drama",
+          title: "谷雨",
+          platform: "优酷",
+          platforms: ["优酷", "CCTV-8"],
+          category: "国产剧",
+          genre: "罪案 / 税务稽查",
+          cast: "李路执导 · 井柏然 / 张颂文 / 孙艺洲",
+          premiereDate: "2026-11-05",
+          totalEpisodes: 38,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "19:30",
+          svipExtra: 1,
+          score: "8.5",
+          playUrl: "https://so.youku.com/search_video/q_%E8%B0%B7%E9%9B%A8"
+        },
+        {
+          id: "seed_zheyueliang",
+          mediaType: "drama",
+          title: "折月亮",
+          platform: "爱奇艺",
+          platforms: ["爱奇艺", "江苏卫视"],
+          category: "国产剧",
+          genre: "都市 / 青春救赎",
+          cast: "林一 / 卢昱晓",
+          premiereDate: "2026-11-05",
+          totalEpisodes: 27,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "18:00",
+          svipExtra: 1,
+          score: "8.1",
+          playUrl: "https://so.iqiyi.com/so/q_%E6%8A%98%E6%9C%88%E4%BA%AE"
+        },
+        {
+          id: "seed_zoumashangren",
+          mediaType: "drama",
+          title: "走马上任",
+          platform: "腾讯视频",
+          platforms: ["腾讯视频", "咪咕视频"],
+          category: "国产剧",
+          genre: "民国 / 轻喜剧",
+          cast: "王小利 / 蒋依杉 / 赵本山",
+          premiereDate: "2026-11-02",
+          totalEpisodes: 40,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "12:00",
+          svipExtra: 1,
+          score: "7.8",
+          playUrl: "https://v.qq.com/x/search/?q=%E8%B5%B0%E9%A9%AC%E4%B8%8A%E4%BB%BB"
+        },
+        {
+          id: "seed_xiaochengliangfang",
+          mediaType: "drama",
+          title: "小城良方",
+          platform: "腾讯视频",
+          platforms: ["爱奇艺", "腾讯视频", "CCTV-8"],
+          category: "国产剧",
+          genre: "现实 / 基层医疗",
+          cast: "现实主义医疗剧",
+          premiereDate: "2026-10-28",
+          totalEpisodes: 36,
+          firstDayEps: 4,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [1, 2, 3, 4, 5, 6, 7],
+          updateTime: "19:30",
+          svipExtra: 0,
+          score: "8.6",
+          playUrl: "https://v.qq.com/x/search/?q=%E5%B0%8F%E5%9F%8E%E8%89%AF%E6%96%B9"
+        },
+        {
+          id: "seed_bili_muye",
+          mediaType: "drama",
+          title: "牧神记 年番",
+          platform: "哔哩哔哩",
+          platforms: ["哔哩哔哩"],
+          category: "国创番剧",
+          genre: "玄幻 / 国创热播",
+          cast: "每周日 11:00 更新",
+          premiereDate: "2026-10-04",
+          totalEpisodes: 52,
+          firstDayEps: 2,
+          epsPerUpdateDay: 1,
+          updateWeekdays: [7],
+          updateTime: "11:00",
+          svipExtra: 0,
+          score: "9.6",
+          playUrl: "https://search.bilibili.com/all?keyword=%E7%89%A7%E7%A5%9E%E8%AE%B0"
+        },
+        {
+          id: "seed_netflix_blueroad",
+          mediaType: "drama",
+          title: "罪蓝之路 (The Blue Road)",
+          platform: "Netflix",
+          platforms: ["Netflix"],
+          category: "海外剧集",
+          genre: "犯罪 / 悬疑惊悚",
+          cast: "孙锡久 / 永山瑛太 / 金新绿",
+          premiereDate: "2026-11-20",
+          totalEpisodes: 8,
+          firstDayEps: 8,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [5],
+          updateTime: "16:00",
+          svipExtra: 0,
+          score: "8.2",
+          playUrl: "https://www.netflix.com/"
+        },
+        {
+          id: "seed_netflix_er",
+          mediaType: "drama",
+          title: "急诊室的奇迹",
+          platform: "Netflix",
+          platforms: ["Netflix"],
+          category: "华语影集",
+          genre: "医疗 / 职场剧情",
+          cast: "霍建华 / 杨谨华 / 蔡凡熙",
+          premiereDate: "2026-11-12",
+          totalEpisodes: 8,
+          firstDayEps: 8,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [4],
+          updateTime: "16:00",
+          svipExtra: 0,
+          score: "8.4",
+          playUrl: "https://www.netflix.com/MiraclesoftheER"
+        },
+        {
+          id: "seed_disney_empress",
+          mediaType: "drama",
+          title: "再婚皇后",
+          platform: "Disney+",
+          platforms: ["Disney+"],
+          category: "海外剧集",
+          genre: "宫廷奇幻 / 爱情",
+          cast: "Disney+ 原创韩剧",
+          premiereDate: "2026-11-03",
+          totalEpisodes: 12,
+          firstDayEps: 2,
+          epsPerUpdateDay: 2,
+          updateWeekdays: [2],
+          updateTime: "16:00",
+          svipExtra: 0,
+          score: "8.1",
+          playUrl: "https://www.disneyplus.com/"
+        },
+        {
+          id: "seed_hbo_gilded4",
+          mediaType: "drama",
+          title: "镀金时代 第四季",
+          platform: "HBO Max",
+          platforms: ["HBO Max"],
+          category: "海外剧集",
+          genre: "年代 / 家族剧",
+          cast: "HBO 原创 · 每周一更1集",
+          premiereDate: "2026-11-02",
+          totalEpisodes: 8,
+          firstDayEps: 1,
+          epsPerUpdateDay: 1,
+          updateWeekdays: [1],
+          updateTime: "09:00",
+          svipExtra: 0,
+          score: "8.8",
+          playUrl: "https://www.max.com/"
+        },
+        // Grounded November 2026 Movies (Movie + Drama combined!)
+        {
+          id: "seed_mv_longcanguan",
+          mediaType: "movie",
+          title: "欢迎来龙餐馆",
+          platform: "爱奇艺",
+          platforms: ["爱奇艺", "院线"],
+          category: "电影新片",
+          genre: "剧情 / 喜剧",
+          runtimeText: "片长 129 分钟",
+          premiereDate: "2026-11-14",
+          totalEpisodes: 1,
+          firstDayEps: 1,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [],
+          updateTime: "上线",
+          score: "8.7",
+          playUrl: "https://so.iqiyi.com/so/q_%E6%AC%A2%E8%BF%8E%E6%9D%A5%E9%BE%99%E9%A4%90%E9%A6%86"
+        },
+        {
+          id: "seed_mv_possible_love",
+          mediaType: "movie",
+          title: "可能的爱情 (Possible Love)",
+          platform: "Netflix",
+          platforms: ["Netflix"],
+          category: "电影新片",
+          genre: "剧情 / 李沧东执导",
+          runtimeText: "全道嬿 / 薛景求 / 赵寅成",
+          premiereDate: "2026-11-06",
+          totalEpisodes: 1,
+          firstDayEps: 1,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [],
+          updateTime: "流媒体上线",
+          score: "8.3",
+          playUrl: "https://www.netflix.com/"
+        },
+        {
+          id: "seed_mv_feichi3",
+          mediaType: "movie",
+          title: "飞驰人生3",
+          platform: "芒果TV",
+          platforms: ["芒果TV", "腾讯视频"],
+          category: "电影新片",
+          genre: "喜剧 / 赛车运动",
+          runtimeText: "正片流媒体热播",
+          premiereDate: "2026-11-01",
+          totalEpisodes: 1,
+          firstDayEps: 1,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [],
+          updateTime: "正片上线",
+          score: "8.0",
+          playUrl: "https://www.mgtv.com/"
+        },
+        {
+          id: "seed_mv_baiyi",
+          mediaType: "movie",
+          title: "白衣逆行者",
+          platform: "腾讯视频",
+          platforms: ["院线热映", "腾讯视频"],
+          category: "电影新片",
+          genre: "剧情 / 邱礼涛执导 · 刘德华",
+          runtimeText: "11月6日全国上映",
+          premiereDate: "2026-11-06",
+          totalEpisodes: 1,
+          firstDayEps: 1,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [],
+          updateTime: "院线档期",
+          score: "7.8",
+          playUrl: "https://v.qq.com/x/search/?q=%E7%99%BD%E8%A1%A3%E9%80%86%E8%A1%8C%E8%80%85"
+        },
+        {
+          id: "seed_mv_cliff",
+          mediaType: "movie",
+          title: "后来，有个克里夫",
+          platform: "Netflix",
+          platforms: ["Netflix"],
+          category: "电影新片",
+          genre: "剧情 / 大卫·芬奇 · 布拉德·皮特",
+          runtimeText: "Netflix 原创电影",
+          premiereDate: "2026-11-18",
+          totalEpisodes: 1,
+          firstDayEps: 1,
+          epsPerUpdateDay: 0,
+          updateWeekdays: [],
+          updateTime: "全球上线",
+          score: "8.5",
+          playUrl: "https://www.netflix.com/"
+        }
+      ];
+
+      function defaultState() {
+        return {
+          version: 1,
+          settings: {
+            svipMode: false,
+            dailyPopupEnabled: false,
+            updatedAt: 0
+          },
+          userRecords: {},
+          customDramas: {}
+        };
+      }
+
+      let appState = loadLocalState();
+      let liveItemsMap = new Map();
+      let activeNav = "discover";
+      let activeMediaType = "all"; // "all" | "drama" | "movie"
+      let activePlatform = "全部平台";
+      let activeStateFilter = "all"; // "all" | "today" | "airing" | "finished"
+      let hideTracked = false;
+      let activeWatchTab = "watching";
+      let calOnlyMine = false;
+      let selectedCalDateStr = formatLocalDate(new Date());
+      let currentDetailId = null;
+      let toastTimer = null;
+
+      function loadLocalState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return defaultState();
+          const parsed = JSON.parse(raw);
+          return {
+            version: 1,
+            settings: Object.assign({ svipMode: false, dailyPopupEnabled: false, updatedAt: 0 }, parsed.settings || {}),
+            userRecords: parsed.userRecords || {},
+            customDramas: parsed.customDramas || {}
+          };
+        } catch (e) {
+          return defaultState();
+        }
+      }
+
+      function saveLocalState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        } catch (e) {}
+      }
+
+      function showToast(msg) {
+        const el = document.getElementById("appToast");
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove("show"), 2300);
+      }
+
+      function applyTheme(theme) {
+        const next = theme === "dark" ? "dark" : "light";
+        const bg = next === "dark" ? "#0b1120" : "#eef2f9";
+        document.documentElement.setAttribute("data-theme", next);
+        document.documentElement.style.backgroundColor = bg;
+        if (document.body) document.body.style.backgroundColor = bg;
+        const topbar = document.getElementById("topbar");
+        if (topbar) topbar.style.backgroundColor = bg;
+
+        const metas = document.querySelectorAll('meta[name="theme-color"]');
+        metas.forEach((m) => m.parentNode && m.parentNode.removeChild(m));
+        const freshMeta = document.createElement("meta");
+        freshMeta.setAttribute("name", "theme-color");
+        freshMeta.setAttribute("id", "themeColorMeta");
+        freshMeta.setAttribute("content", bg);
+        document.head.appendChild(freshMeta);
+
+        const icon = document.getElementById("themeIcon");
+        if (icon) icon.textContent = next === "dark" ? "☀️" : "🌙";
+        try {
+          localStorage.setItem(THEME_KEY, next);
+        } catch (e) {}
+      }
+
+      function formatLocalDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+
+      function parseLocalDate(yyyyMmDd) {
+        const parts = String(yyyyMmDd || "").split("-").map(Number);
+        if (parts.length !== 3 || !parts[0]) return null;
+        return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+      }
+
+      function isoWeekday(d) {
+        const w = d.getDay();
+        return w === 0 ? 7 : w;
+      }
+
+      function normalizeTitle(t) {
+        return String(t || "")
+          .toLowerCase()
+          .replace(/[\s·:：()（）《》\-_]/g, "");
+      }
+
+      function mapPlatformBucket(platName) {
+        if (PLATFORM_META[platName]) return platName;
+        const s = String(platName || "").toLowerCase();
+        if (s.includes("腾讯") || s.includes("wetv")) return "腾讯视频";
+        if (s.includes("爱奇艺") || s.includes("iqiyi")) return "爱奇艺";
+        if (s.includes("优酷") || s.includes("youku")) return "优酷";
+        if (s.includes("芒果") || s.includes("mgtv")) return "芒果TV";
+        if (s.includes("哔哩") || s.includes("bilibili") || s.includes("b站")) return "哔哩哔哩";
+        if (s.includes("netflix")) return "Netflix";
+        if (s.includes("disney")) return "Disney+";
+        if (s.includes("hbo") || s === "max") return "HBO Max";
+        if (s.includes("apple")) return "Apple TV+";
+        return "海外其他";
+      }
+
+      function getAllItems() {
+        const merged = [];
+        const seenKeys = new Set();
+
+        Object.values(appState.customDramas || {}).forEach((d) => {
+          if (!d || d.deleted) return;
+          const k = (d.mediaType || "drama") + "_" + normalizeTitle(d.title);
+          seenKeys.add(k);
+          merged.push(Object.assign({ mediaType: "drama" }, d, { isCustom: true }));
+        });
+
+        for (const seed of SEED_CATALOG) {
+          const mType = seed.mediaType || "drama";
+          const k = mType + "_" + normalizeTitle(seed.title);
+          if (seenKeys.has(k)) continue;
+          seenKeys.add(k);
+          const live = liveItemsMap.get(normalizeTitle(seed.title));
+          const copy = Object.assign({ mediaType: mType }, seed);
+          if (live) {
+            if (live.poster && !copy.poster) copy.poster = live.poster;
+            if (mType === "drama" && live.airedEpisodes > 0) copy.liveAiredEpisodes = live.airedEpisodes;
+            if (mType === "drama" && live.totalEpisodes > 0 && !copy.totalEpisodes) copy.totalEpisodes = live.totalEpisodes;
+            if (live.score) copy.score = live.score;
+          }
+          merged.push(copy);
+        }
+
+        liveItemsMap.forEach((live, normT) => {
+          const mType = live.mediaType || "drama";
+          const k = mType + "_" + normT;
+          if (seenKeys.has(k)) return;
+          seenKeys.add(k);
+          merged.push({
+            id: live.extId || "live_" + k,
+            mediaType: mType,
+            title: live.title,
+            platform: mapPlatformBucket(live.platform),
+            platforms: live.platforms || [live.platform || "全网热播"],
+            category: live.category || (mType === "movie" ? "电影新片" : "实时热播"),
+            genre: live.genre || (mType === "movie" ? "电影" : "剧集"),
+            runtimeText: live.runtimeText || "",
+            premiereDate: live.premiereDate || "",
+            totalEpisodes: mType === "movie" ? 1 : (Number(live.totalEpisodes) || 0),
+            liveAiredEpisodes: mType === "movie" ? 1 : (Number(live.airedEpisodes) || 0),
+            firstDayEps: mType === "movie" ? 1 : (Number(live.airedEpisodes) || 1),
+            epsPerUpdateDay: live.updatedToday ? 1 : 0,
+            updateWeekdays: live.updatedToday ? [isoWeekday(new Date())] : [],
+            updateTime: live.updateTime || (mType === "movie" ? "已上线" : "18:00"),
+            svipExtra: 0,
+            isFinishedLive: mType === "movie" ? true : Boolean(live.isFinished),
+            statusTextLive: live.statusText || "",
+            poster: live.poster || "",
+            score: live.score || "",
+            playUrl: live.playUrl || ""
+          });
+        });
+
+        return merged;
+      }
+
+      function computeProgressOnDate(item, targetDate, isTodayView) {
+        const rec = appState.userRecords[item.id] || {};
+        const status = rec.status || "none";
+        const targetDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+        const prem = parseLocalDate(item.premiereDate);
+
+        if (item.mediaType === "movie") {
+          const isReleased = !prem || targetDay >= prem;
+          const droppedToday = Boolean(prem && targetDay.getTime() === prem.getTime());
+          const watchedEp = status === "done" ? 1 : 0;
+          return {
+            isMovie: true,
+            total: 1,
+            aired: isReleased ? 1 : 0,
+            isFinished: isReleased,
+            isUpcoming: !isReleased,
+            watchedEp,
+            status,
+            backlog: 0,
+            epsDroppedOnTargetDate: droppedToday ? 1 : 0,
+            todayDropLabel: droppedToday ? "今日上映/上线" : "",
+            episodeSummary: isReleased
+              ? `电影正片已上线${item.runtimeText ? " · " + item.runtimeText : ""}`
+              : `待上映 · ${item.premiereDate || "近期"}`
+          };
+        }
+
+        const svip = Boolean(appState.settings.svipMode);
+        let total =
+          rec.manualTotal !== undefined && rec.manualTotal !== null && rec.manualTotal !== ""
+            ? Number(rec.manualTotal)
+            : Number(item.totalEpisodes) || 0;
+
+        let calcAired = 0;
+        let epsDroppedOnTargetDate = 0;
+        let startEpOnTargetDate = 0;
+
+        if (prem) {
+          if (targetDay < prem) {
+            calcAired = 0;
+          } else {
+            calcAired = Number(item.firstDayEps) || 1;
+            if (targetDay.getTime() === prem.getTime()) {
+              epsDroppedOnTargetDate = calcAired;
+              startEpOnTargetDate = 1;
+            } else {
+              const cur = new Date(prem.getTime());
+              cur.setDate(cur.getDate() + 1);
+              const wdays = Array.isArray(item.updateWeekdays) ? item.updateWeekdays : [];
+              const step = Number(item.epsPerUpdateDay) || 0;
+              while (cur <= targetDay) {
+                const prevBeforeDay = calcAired;
+                if (step > 0 && wdays.includes(isoWeekday(cur))) {
+                  if (!(total > 0 && calcAired >= total)) {
+                    calcAired = total > 0 ? Math.min(total, calcAired + step) : calcAired + step;
+                    if (cur.getTime() === targetDay.getTime()) {
+                      epsDroppedOnTargetDate = calcAired - prevBeforeDay;
+                      startEpOnTargetDate = prevBeforeDay + 1;
+                    }
+                  }
+                }
+                cur.setDate(cur.getDate() + 1);
+              }
+            }
+          }
+        } else {
+          calcAired = Number(item.liveAiredEpisodes || item.airedEpisodes || item.firstDayEps || 0);
+          if (isTodayView && item.epsPerUpdateDay > 0 && Array.isArray(item.updateWeekdays) && item.updateWeekdays.includes(isoWeekday(targetDay))) {
+            epsDroppedOnTargetDate = Number(item.epsPerUpdateDay) || 1;
+            startEpOnTargetDate = Math.max(1, calcAired - epsDroppedOnTargetDate + 1);
+          }
+        }
+
+        let aired = calcAired;
+        if (isTodayView) {
+          if (Number(item.liveAiredEpisodes) > aired) aired = Number(item.liveAiredEpisodes);
+          if (svip && Number(item.svipExtra) > 0 && (total === 0 || aired < total) && aired > 0) {
+            aired = total > 0 ? Math.min(total, aired + Number(item.svipExtra)) : aired + Number(item.svipExtra);
+          }
+          if (rec.manualAired !== undefined && rec.manualAired !== null && rec.manualAired !== "") {
+            aired = Number(rec.manualAired);
+          }
+        }
+
+        if (total > 0 && aired > total) aired = total;
+
+        const isFinished = Boolean(item.isFinishedLive && !rec.manualAired && total === 0) || (total > 0 && aired >= total && aired > 0);
+        const isUpcoming = aired === 0 && prem && targetDay < prem;
+        const watchedEp = Math.max(0, Number(rec.watchedEp) || 0);
+        const backlog = status === "watching" ? Math.max(0, aired - watchedEp) : 0;
+
+        let episodeSummary = "";
+        if (isUpcoming) {
+          episodeSummary = total > 0 ? `待开播 · 共 ${total} 集` : "即将开播";
+        } else if (isFinished) {
+          episodeSummary = total > 0 ? `已完结 · 全 ${total} 集` : (item.statusTextLive || "已完结");
+        } else if (total > 0 && aired > 0) {
+          episodeSummary = `更新至第 ${aired} 集 / 共 ${total} 集`;
+        } else if (aired > 0) {
+          episodeSummary = `更新至第 ${aired} 集 · 连载中`;
+        } else {
+          episodeSummary = item.statusTextLive || (total > 0 ? `共 ${total} 集` : "热播中");
+        }
+
+        let todayDropLabel = "";
+        if (epsDroppedOnTargetDate > 0) {
+          const endEp = startEpOnTargetDate + epsDroppedOnTargetDate - 1;
+          todayDropLabel =
+            epsDroppedOnTargetDate === 1
+              ? `更第 ${startEpOnTargetDate} 集`
+              : `更第 ${startEpOnTargetDate}-${endEp} 集`;
+        }
+
+        return {
+          isMovie: false,
+          total,
+          aired,
+          isFinished,
+          isUpcoming,
+          watchedEp,
+          status,
+          backlog,
+          epsDroppedOnTargetDate,
+          todayDropLabel,
+          episodeSummary
+        };
+      }
+
+      function escapeHtml(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function getPlayHref(item) {
+        if (item.playUrl && /^https?:\/\//.test(item.playUrl)) return item.playUrl;
+        const bucket = mapPlatformBucket(item.platform);
+        const base = PLATFORM_META[bucket]?.url || "https://m.douban.com/search/?query=";
+        return base + encodeURIComponent(item.title);
+      }
+
+      function buildPosterHtml(item) {
+        const bucket = mapPlatformBucket(item.platform);
+        const meta = PLATFORM_META[bucket] || { color: "#3b82f6", grad: ["#1e293b", "#0f172a"] };
+        const g1 = (meta.grad && meta.grad[0]) || "#1e3a8a";
+        const g2 = (meta.grad && meta.grad[1]) || "#0f172a";
+        const shortTitle = escapeHtml(item.title.slice(0, 10));
+        const typeLabel = item.mediaType === "movie" ? "电影 MOVIE" : escapeHtml((item.genre || "剧集").split("/")[0].trim());
+
+        const fallbackDiv = `
+          <div class="poster-fallback" style="background: linear-gradient(155deg, ${g1} 0%, ${g2} 100%);">
+            <div style="margin-top: 22px; font-size: 13px; font-weight: 700; line-height: 1.3; word-break: break-word;">${shortTitle}</div>
+            <div style="font-size: 10px; color: rgba(241,245,249,0.78); font-weight: 600;">${typeLabel}</div>
+          </div>
+        `;
+
+        if (item.poster) {
+          return `
+            <div class="poster-box">
+              <span class="poster-plat-tag" style="background: ${meta.color};">${escapeHtml(item.platform)}</span>
+              <img src="${escapeHtml(item.poster)}" alt="${escapeHtml(item.title)}" loading="lazy" referrerpolicy="no-referrer"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+              <div class="poster-fallback" style="display: none; background: linear-gradient(155deg, ${g1} 0%, ${g2} 100%);">
+                <div style="margin-top: 22px; font-size: 13px; font-weight: 700; line-height: 1.3;">${shortTitle}</div>
+                <div style="font-size: 10px; color: rgba(241,245,249,0.78);">${typeLabel}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="poster-box">
+            <span class="poster-plat-tag" style="background: ${meta.color};">${escapeHtml(item.platform)}</span>
+            ${fallbackDiv}
+          </div>
+        `;
+      }
+
+      function renderCard(item, dateRef, isCalendarMode) {
+        const now = new Date();
+        const prog = computeProgressOnDate(item, dateRef || now, !isCalendarMode);
+        const allPlats = Array.isArray(item.platforms) && item.platforms.length ? item.platforms.join(" · ") : item.platform;
+
+        if (prog.isMovie) {
+          const mStatusBadge = prog.status === "done"
+            ? `<span class="badge-today-up">已看过</span>`
+            : `<span class="badge-finished">电影</span>`;
+          const mPrimaryBtn = prog.status === "done"
+            ? `<button type="button" class="btn-action whitespace-nowrap" data-act="detail" data-id="${escapeHtml(item.id)}">✓ 已看电影</button>`
+            : prog.status === "wish"
+            ? `<button type="button" class="btn-action watch-plus whitespace-nowrap" data-act="movieDone" data-id="${escapeHtml(item.id)}">标记已看</button>`
+            : `<button type="button" class="btn-action primary whitespace-nowrap" data-act="movieWish" data-id="${escapeHtml(item.id)}">+ 加入想看</button>`;
+
+          const mSecBtn = prog.status !== "done"
+            ? `<button type="button" class="btn-action whitespace-nowrap" data-act="movieDone" data-id="${escapeHtml(item.id)}">看过打卡</button>`
+            : `<button type="button" class="btn-action whitespace-nowrap" data-act="detail" data-id="${escapeHtml(item.id)}">状态管理</button>`;
+
+          return `
+            <article class="glass-card drama-card">
+              <div class="drama-main">
+                ${buildPosterHtml(item)}
+                <div style="flex: 1 1 0%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div class="row-between" style="align-items: flex-start; gap: 6px;">
+                      <div style="font-size: 15.5px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${escapeHtml(item.title)}
+                      </div>
+                      ${mStatusBadge}
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      ${escapeHtml(allPlats)} · ${escapeHtml(item.genre || "电影")}${item.score ? ` · ★ ${escapeHtml(item.score)}` : ""}
+                    </div>
+                  </div>
+
+                  <div class="ep-progress-panel">
+                    <div style="font-size: 12.5px; font-weight: 700; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                      ${escapeHtml(prog.episodeSummary)}
+                    </div>
+                    <div class="ep-bar-track">
+                      <div class="ep-bar-aired" style="width: ${prog.isFinished ? 100 : 25}%;"></div>
+                      ${prog.status === "done" ? `<div class="ep-bar-watched" style="width: 100%;"></div>` : ""}
+                    </div>
+                    <div class="row-between" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; gap: 6px; min-width: 0;">
+                      <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${prog.status === "wish" ? "已在想看片单" : (prog.status === "done" ? "已完成观影打卡" : "单部电影长片")}</span>
+                      <span style="flex-shrink: 0; white-space: nowrap;">${escapeHtml(item.premiereDate ? item.premiereDate.slice(5) + "上映" : "热映")}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-actions">
+                ${mPrimaryBtn}
+                ${mSecBtn}
+                <a href="${escapeHtml(getPlayHref(item))}" target="_blank" rel="noopener noreferrer" class="btn-action whitespace-nowrap">去平台看</a>
+              </div>
+            </article>
+          `;
+        }
+
+        const airedPct = prog.total > 0 ? Math.min(100, Math.round((prog.aired / prog.total) * 100)) : (prog.aired > 0 ? 62 : 0);
+        const watchedPct = prog.total > 0
+          ? Math.min(100, Math.round((prog.watchedEp / prog.total) * 100))
+          : (prog.aired > 0 ? Math.min(100, Math.round((prog.watchedEp / prog.aired) * 100)) : 0);
+
+        const scheduleHint = item.premiereDate
+          ? `${item.premiereDate.slice(5)}播${item.updateTime && !prog.isFinished ? " · " + item.updateTime + "更" : ""}`
+          : (item.updateTime || "实时排播");
+
+        let statusBadge = "";
+        if (isCalendarMode && prog.todayDropLabel) {
+          statusBadge = `<span class="badge-today-up">${escapeHtml(item.updateTime || "当日")} ${escapeHtml(prog.todayDropLabel)}</span>`;
+        } else if (prog.epsDroppedOnTargetDate > 0 && !prog.isFinished) {
+          statusBadge = `<span class="badge-today-up">今日${escapeHtml(prog.todayDropLabel)}</span>`;
+        } else if (prog.isFinished) {
+          statusBadge = `<span class="badge-finished">已完结</span>`;
+        } else if (prog.isUpcoming) {
+          statusBadge = `<span class="badge-finished">待开播</span>`;
+        } else {
+          statusBadge = `<span class="badge-today-up" style="background: var(--accent-soft); color: var(--accent); border-color: transparent;">连载中</span>`;
+        }
+
+        const primaryBtnHtml =
+          prog.status === "watching"
+            ? `<button type="button" class="btn-action watch-plus whitespace-nowrap" data-act="plus1" data-id="${escapeHtml(item.id)}">看过 +1集 (${prog.watchedEp}/${prog.aired || "?"})</button>`
+            : prog.status === "done"
+            ? `<button type="button" class="btn-action whitespace-nowrap" data-act="detail" data-id="${escapeHtml(item.id)}">已看完 · 全${prog.total || prog.watchedEp}集</button>`
+            : `<button type="button" class="btn-action primary whitespace-nowrap" data-act="follow" data-id="${escapeHtml(item.id)}">+ 加入追剧</button>`;
+
+        const subProgressLine =
+          prog.status === "watching"
+            ? `<span style="color: var(--emerald); font-weight: 600;">我看到第 ${prog.watchedEp} 集${prog.backlog > 0 ? `（待看 ${prog.backlog} 集）` : "（已追平）"}</span>`
+            : `<span>${prog.total > 0 ? `全剧共 ${prog.total} 集 · 已播 ${airedPct}%` : "长线连载更新中"}</span>`;
+
+        return `
+          <article class="glass-card drama-card">
+            <div class="drama-main">
+              ${buildPosterHtml(item)}
+              <div style="flex: 1 1 0%; min-width: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <div class="row-between" style="align-items: flex-start; gap: 6px;">
+                    <div style="font-size: 15.5px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      ${escapeHtml(item.title)}
+                    </div>
+                    ${statusBadge}
+                  </div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(allPlats)} · ${escapeHtml(item.genre || item.category || "剧集")}${item.score ? ` · ★ ${escapeHtml(item.score)}` : ""}
+                  </div>
+                </div>
+
+                <div class="ep-progress-panel">
+                  <div class="row-between" style="font-size: 12.5px; font-weight: 700;">
+                    <span style="color: var(--accent);">${escapeHtml(prog.episodeSummary)}</span>
+                  </div>
+                  <div class="ep-bar-track">
+                    <div class="ep-bar-aired" style="width: ${airedPct}%;"></div>
+                    ${prog.watchedEp > 0 ? `<div class="ep-bar-watched" style="width: ${watchedPct}%;"></div>` : ""}
+                  </div>
+                  <div class="row-between" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; gap: 6px; min-width: 0;">
+                    <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${subProgressLine}</span>
+                    <span style="flex-shrink: 0; white-space: nowrap;">${escapeHtml(scheduleHint)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              ${primaryBtnHtml}
+              <button type="button" class="btn-action whitespace-nowrap" data-act="detail" data-id="${escapeHtml(item.id)}">选集进度</button>
+              <a href="${escapeHtml(getPlayHref(item))}" target="_blank" rel="noopener noreferrer" class="btn-action whitespace-nowrap">去平台看</a>
+            </div>
+          </article>
+        `;
+      }
+
+      function renderHeroAndChips() {
+        const now = new Date();
+        const weekdayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+        document.getElementById("heroDateLabel").textContent =
+          `${now.getMonth() + 1}月${now.getDate()}日 ${weekdayNames[now.getDay()]} · Dramov 剧影日历`;
+
+        const svipBtn = document.getElementById("svipQuickBtn");
+        if (svipBtn) {
+          const on = Boolean(appState.settings.svipMode);
+          svipBtn.textContent = on ? "SVIP抢先视角 · 已开" : "普通VIP视角";
+          svipBtn.style.background = on ? "rgba(251, 191, 36, 0.30)" : "rgba(255, 255, 255, 0.10)";
+        }
+
+        const all = getAllItems();
+        let todayCount = 0;
+        let airingCount = 0;
+        let watchingCount = 0;
+        let backlogEps = 0;
+        const platCounts = { "全部平台": 0 };
+        PLATFORM_ORDER.forEach((p) => { if (p !== "全部平台") platCounts[p] = 0; });
+
+        all.forEach((d) => {
+          const p = computeProgressOnDate(d, now, true);
+          if (p.epsDroppedOnTargetDate > 0 && (!p.isFinished || p.isMovie)) todayCount++;
+          if (!p.isUpcoming) airingCount++;
+          if (p.status === "watching" || p.status === "wish") watchingCount++;
+          if (p.status === "watching") backlogEps += p.backlog;
+
+          if (activeMediaType !== "all" && (d.mediaType || "drama") !== activeMediaType) return;
+          platCounts["全部平台"]++;
+          const bucket = mapPlatformBucket(d.platform);
+          platCounts[bucket] = (platCounts[bucket] || 0) + 1;
+          if (Array.isArray(d.platforms)) {
+            d.platforms.forEach((rawP) => {
+              const b2 = mapPlatformBucket(rawP);
+              if (b2 !== bucket && PLATFORM_META[b2]) {
+                platCounts[b2] = (platCounts[b2] || 0) + 1;
+              }
+            });
+          }
+        });
+
+        document.getElementById("kpiTodayCount").textContent = String(todayCount);
+        document.getElementById("kpiAiringCount").textContent = String(airingCount);
+        document.getElementById("kpiWatchingCount").textContent = String(watchingCount);
+        document.getElementById("kpiBacklogEps").textContent = String(backlogEps);
+
+        const strip = document.getElementById("platformChips");
+        strip.innerHTML = PLATFORM_ORDER.map((plat) => {
+          const meta = PLATFORM_META[plat] || { color: "#64748b" };
+          const activeCls = activePlatform === plat ? "active" : "";
+          const dot = plat === "全部平台" ? "" : `<span class="plat-dot" style="background:${meta.color};"></span>`;
+          return `<button type="button" class="filter-chip ${activeCls}" data-plat="${escapeHtml(plat)}">${dot}${escapeHtml(plat)} (${platCounts[plat] || 0})</button>`;
+        }).join("");
+      }
+
+      function renderDiscover() {
+        const now = new Date();
+        const q = document.getElementById("searchInput").value.trim().toLowerCase();
+        const all = getAllItems();
+
+        const filtered = all.filter((d) => {
+          const mType = d.mediaType || "drama";
+          if (activeMediaType !== "all" && mType !== activeMediaType) return false;
+
+          if (activePlatform !== "全部平台") {
+            const matchPrimary = mapPlatformBucket(d.platform) === activePlatform;
+            const matchMulti = Array.isArray(d.platforms) && d.platforms.some((x) => mapPlatformBucket(x) === activePlatform);
+            if (!matchPrimary && !matchMulti) return false;
+          }
+          if (q) {
+            const hay = `${d.title} ${d.platform} ${(d.platforms || []).join(" ")} ${d.genre || ""} ${d.cast || ""} ${d.runtimeText || ""}`.toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          const p = computeProgressOnDate(d, now, true);
+          if (hideTracked && (p.status === "watching" || p.status === "done" || p.status === "wish")) return false;
+          if (activeStateFilter === "today" && p.epsDroppedOnTargetDate <= 0) return false;
+          if (activeStateFilter === "airing" && (p.isFinished || p.isUpcoming || p.isMovie)) return false;
+          if (activeStateFilter === "finished" && !p.isFinished) return false;
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          const pa = computeProgressOnDate(a, now, true);
+          const pb = computeProgressOnDate(b, now, true);
+          if ((pb.epsDroppedOnTargetDate > 0) !== (pa.epsDroppedOnTargetDate > 0)) {
+            return pb.epsDroppedOnTargetDate > 0 ? 1 : -1;
+          }
+          if (pa.isFinished !== pb.isFinished) return pa.isFinished ? 1 : -1;
+          return String(b.premiereDate || "").localeCompare(String(a.premiereDate || ""));
+        });
+
+        const container = document.getElementById("discoverList");
+        if (!filtered.length) {
+          container.innerHTML = `
+            <div class="glass-card" style="padding: 28px 16px; text-align: center; grid-column: 1 / -1;">
+              <div style="font-size: 14.5px; font-weight: 600; margin-bottom: 6px;">当前筛选条件下暂无剧影条目</div>
+              <div style="font-size: 12.5px; color: var(--text-muted);">可点击上方「全网搜片」检索剧集与电影，或点右上角「+ 登记剧影」录入</div>
+            </div>
+          `;
+          return;
+        }
+        container.innerHTML = filtered.map((d) => renderCard(d, now, false)).join("");
+      }
+
+      function renderCalendar() {
+        const now = new Date();
+        const todayStr = formatLocalDate(now);
+        const curIso = isoWeekday(now);
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (curIso - 1));
+        const wLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+        const all = getAllItems();
+
+        const daysHtml = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+          const dStr = formatLocalDate(d);
+          const isSel = dStr === selectedCalDateStr;
+          const isTod = dStr === todayStr;
+          let count = 0;
+          all.forEach((item) => {
+            const p = computeProgressOnDate(item, d, dStr === todayStr);
+            if (calOnlyMine && p.status !== "watching" && p.status !== "wish") return;
+            if (p.epsDroppedOnTargetDate > 0) count++;
+          });
+          daysHtml.push(`
+            <div class="day-pill ${isSel ? "active" : ""}" data-caldate="${dStr}">
+              <div style="font-size: 11px; font-weight: 600;">${isTod ? "今天" : wLabels[i]}</div>
+              <div style="font-size: 13px; font-weight: 700; margin-top: 2px;">${d.getMonth() + 1}/${d.getDate()}</div>
+              <div style="font-size: 10px; opacity: 0.82; margin-top: 2px;">${count}部更</div>
+            </div>
+          `);
+        }
+        document.getElementById("weekStrip").innerHTML = daysHtml.join("");
+
+        const selDate = parseLocalDate(selectedCalDateStr) || now;
+        document.getElementById("calSelectedTitle").textContent =
+          `${selDate.getMonth() + 1}月${selDate.getDate()}日 剧影排播时刻表`;
+
+        const airingThatDay = all.filter((item) => {
+          const p = computeProgressOnDate(item, selDate, selectedCalDateStr === todayStr);
+          if (calOnlyMine && p.status !== "watching" && p.status !== "wish") return false;
+          return p.epsDroppedOnTargetDate > 0;
+        });
+
+        airingThatDay.sort((a, b) => String(a.updateTime || "20:00").localeCompare(String(b.updateTime || "20:00")));
+
+        const calContainer = document.getElementById("calendarList");
+        if (!airingThatDay.length) {
+          calContainer.innerHTML = `
+            <div class="glass-card" style="padding: 26px 16px; text-align: center; grid-column: 1 / -1;">
+              <div style="font-size: 14px; font-weight: 600;">该日暂无符合条件的排播或上映条目</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">可切换其他日期或关闭「仅看我的片单」查看全网更新</div>
+            </div>
+          `;
+          return;
+        }
+        calContainer.innerHTML = airingThatDay.map((d) => renderCard(d, selDate, true)).join("");
+      }
+
+      function renderWatchlist() {
+        const now = new Date();
+        const all = getAllItems();
+        const list = all.filter((d) => {
+          const p = computeProgressOnDate(d, now, true);
+          if (activeWatchTab === "watching") return p.status === "watching";
+          if (activeWatchTab === "unwatched") return p.status === "watching" && p.backlog > 0;
+          if (activeWatchTab === "wish") return p.status === "wish";
+          if (activeWatchTab === "done") return p.status === "done";
+          return false;
+        });
+
+        const box = document.getElementById("watchlistContainer");
+        if (!list.length) {
+          box.innerHTML = `
+            <div class="glass-card" style="padding: 28px 16px; text-align: center; grid-column: 1 / -1;">
+              <div style="font-size: 14.5px; font-weight: 600; margin-bottom: 6px;">当前分组还没有剧集或电影</div>
+              <div style="font-size: 12.5px; color: var(--text-muted);">在「各台上新」点「+ 加入追剧」或「+ 加入想看」即可自动追踪进度</div>
+            </div>
+          `;
+          return;
+        }
+        box.innerHTML = list.map((d) => renderCard(d, now, false)).join("");
+      }
+
+      function renderSettings() {
+        const popBtn = document.getElementById("toggleDailyPopup");
+        const svipBtn = document.getElementById("toggleSvipSetting");
+        popBtn.classList.toggle("on", Boolean(appState.settings.dailyPopupEnabled));
+        popBtn.setAttribute("aria-checked", String(Boolean(appState.settings.dailyPopupEnabled)));
+        svipBtn.classList.toggle("on", Boolean(appState.settings.svipMode));
+        svipBtn.setAttribute("aria-checked", String(Boolean(appState.settings.svipMode)));
+
+        const savedToken = localStorage.getItem(TOKEN_KEY) || "";
+        const tokIn = document.getElementById("gistTokenInput");
+        if (savedToken && !tokIn.value) tokIn.value = savedToken;
+
+        const savedTmdb = localStorage.getItem(TMDB_KEY) || "";
+        const tmdbIn = document.getElementById("tmdbKeyInput");
+        if (savedTmdb && !tmdbIn.value) tmdbIn.value = savedTmdb;
+      }
+
+      function renderAll() {
+        renderHeroAndChips();
+        if (activeNav === "discover") renderDiscover();
+        if (activeNav === "calendar") renderCalendar();
+        if (activeNav === "watchlist") renderWatchlist();
+        if (activeNav === "settings") renderSettings();
+      }
+
+      function updateUserRecord(id, mutator) {
+        const prev = appState.userRecords[id] || {
+          status: "none",
+          watchedEp: 0,
+          manualAired: null,
+          manualTotal: null,
+          updatedAt: 0
+        };
+        const next = Object.assign({}, prev);
+        mutator(next);
+        next.updatedAt = Date.now();
+        appState.userRecords[id] = next;
+        saveLocalState();
+      }
+
+      function showCelebrate(heading, subTitle) {
+        document.getElementById("celebrateHeading").textContent = heading;
+        document.getElementById("celebrateTitle").textContent = subTitle;
+        document.getElementById("celebrateModal").classList.add("open");
+      }
+
+      function maybeCelebrateDrama(item, progAfter) {
+        if (!progAfter.isMovie && progAfter.total > 0 && progAfter.watchedEp >= progAfter.total) {
+          showCelebrate("全剧追完打卡达成", `《${item.title}》全 ${progAfter.total} 集`);
+        }
+      }
+
+      function openDetailModal(id) {
+        const item = getAllItems().find((x) => x.id === id);
+        if (!item) return;
+        currentDetailId = id;
+        const prog = computeProgressOnDate(item, new Date(), true);
+
+        document.getElementById("detailTitle").textContent = item.title;
+        document.getElementById("detailSub").textContent =
+          `${(item.platforms || [item.platform]).join(" · ")} · ${prog.episodeSummary}`;
+        document.getElementById("detailPlayLink").href = getPlayHref(item);
+
+        document.querySelectorAll("#detailStatusBtns [data-setstatus]").forEach((btn) => {
+          btn.classList.toggle("primary", btn.getAttribute("data-setstatus") === prog.status);
+        });
+
+        const epSec = document.getElementById("dramaEpSection");
+        if (prog.isMovie) {
+          epSec.style.display = "none";
+        } else {
+          epSec.style.display = "block";
+          document.getElementById("editAiredInput").value = prog.aired;
+          document.getElementById("editTotalInput").value = prog.total;
+          document.getElementById("editWatchedInput").value = prog.watchedEp;
+
+          const count = Math.min(120, Math.max(prog.total || 0, prog.aired || 0, 12));
+          const cells = [];
+          for (let ep = 1; ep <= count; ep++) {
+            let cls = "unaired";
+            if (ep <= prog.watchedEp) cls = "watched";
+            else if (ep <= prog.aired) cls = "aired";
+            cells.push(`<div class="ep-cell ${cls}" data-ep="${ep}">${ep}</div>`);
+          }
+          document.getElementById("episodeGrid").innerHTML = cells.join("");
+        }
+        document.getElementById("detailModal").classList.add("open");
+      }
+
+      async function refreshLivePlatforms(silent) {
+        const sub = document.getElementById("liveStatusSub");
+        if (!silent && sub) sub.textContent = "正在同步剧影最新排播...";
+        let addedSources = [];
+
+        try {
+          const res =
+            location.protocol === "http:" || location.protocol === "https:"
+              ? await fetch("./api/feed", { cache: "no-store" })
+              : { ok: false };
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.items)) {
+              data.items.forEach((it) => {
+                const k = normalizeTitle(it.title);
+                if (k) liveItemsMap.set(k, it);
+              });
+              if (Array.isArray(data.activeSources) && data.activeSources.length) {
+                addedSources.push(...data.activeSources);
+              }
+            }
+          }
+        } catch (e) {}
+
+        try {
+          const today = formatLocalDate(new Date());
+          const res = await fetch(`https://api.tvmaze.com/schedule/web?date=${today}`);
+          if (res.ok) {
+            const arr = await res.json();
+            if (Array.isArray(arr)) {
+              arr.slice(0, 24).forEach((ep) => {
+                const show = ep._embedded?.show || ep.show || {};
+                if (!show.name) return;
+                const ch = show.webChannel?.name || show.network?.name || "海外其他";
+                const k = normalizeTitle(show.name);
+                if (!liveItemsMap.has(k)) {
+                  liveItemsMap.set(k, {
+                    extId: "tvmaze_" + show.id,
+                    mediaType: "drama",
+                    title: show.name,
+                    platform: mapPlatformBucket(ch),
+                    platforms: [ch],
+                    category: "流媒体剧集",
+                    genre: (show.genres || []).slice(0, 2).join(" / ") || "流媒体排播",
+                    totalEpisodes: 0,
+                    airedEpisodes: Number(ep.number) || 1,
+                    isFinished: show.status === "Ended",
+                    statusText: `更新至第 ${ep.number || 1} 集`,
+                    poster: String(show.image?.medium || "").replace(/^http:/, "https:"),
+                    score: show.rating?.average ? String(show.rating.average) : "",
+                    updateTime: ep.airtime || "今日更新",
+                    playUrl: show.officialSite || show.url || "",
+                    updatedToday: true
+                  });
+                }
+              });
+              if (!addedSources.includes("TVmaze排播")) addedSources.push("TVmaze排播");
+            }
+          }
+        } catch (e) {}
+
+        const tmdbKey = (localStorage.getItem(TMDB_KEY) || "").trim();
+        if (tmdbKey) {
+          try {
+            const isBearer = tmdbKey.length > 45;
+            const headers = isBearer ? { Authorization: `Bearer ${tmdbKey}` } : {};
+            const tvUrl = isBearer
+              ? "https://api.themoviedb.org/3/tv/on_the_air?language=zh-CN&page=1"
+              : `https://api.themoviedb.org/3/tv/on_the_air?api_key=${encodeURIComponent(tmdbKey)}&language=zh-CN&page=1`;
+            const mvUrl = isBearer
+              ? "https://api.themoviedb.org/3/movie/now_playing?language=zh-CN&page=1"
+              : `https://api.themoviedb.org/3/movie/now_playing?api_key=${encodeURIComponent(tmdbKey)}&language=zh-CN&page=1`;
+
+            const [tvR, mvR] = await Promise.allSettled([fetch(tvUrl, { headers }), fetch(mvUrl, { headers })]);
+            if (tvR.status === "fulfilled" && tvR.value.ok) {
+              const data = await tvR.value.json();
+              await Promise.allSettled(
+                (data.results || []).slice(0, 8).map(async (tv) => {
+                  const dUrl = isBearer
+                    ? `https://api.themoviedb.org/3/tv/${tv.id}?language=zh-CN`
+                    : `https://api.themoviedb.org/3/tv/${tv.id}?api_key=${encodeURIComponent(tmdbKey)}&language=zh-CN`;
+                  const r2 = await fetch(dUrl, { headers });
+                  if (!r2.ok) return;
+                  const det = await r2.json();
+                  const netName = det.networks?.[0]?.name || "海外其他";
+                  const lastEp = det.last_episode_to_air?.episode_number || 0;
+                  const seasonTot =
+                    det.seasons?.find((s) => s.season_number === det.number_of_seasons)?.episode_count ||
+                    det.number_of_episodes ||
+                    0;
+                  liveItemsMap.set(normalizeTitle(det.name || tv.name), {
+                    extId: "tmdb_tv_" + det.id,
+                    mediaType: "drama",
+                    title: det.name || tv.name,
+                    platform: mapPlatformBucket(netName),
+                    platforms: [netName],
+                    premiereDate: det.first_air_date || "",
+                    totalEpisodes: seasonTot,
+                    airedEpisodes: lastEp,
+                    isFinished: det.status === "Ended",
+                    poster: det.poster_path ? `https://image.tmdb.org/t/p/w342${det.poster_path}` : "",
+                    score: det.vote_average ? det.vote_average.toFixed(1) : "",
+                    playUrl: det.homepage || ""
+                  });
+                })
+              );
+            }
+            if (mvR.status === "fulfilled" && mvR.value.ok) {
+              const mData = await mvR.value.json();
+              (mData.results || []).slice(0, 8).forEach((mv) => {
+                liveItemsMap.set("mv_" + normalizeTitle(mv.title), {
+                  extId: "tmdb_mv_" + mv.id,
+                  mediaType: "movie",
+                  title: mv.title,
+                  platform: "海外其他",
+                  platforms: ["院线 / 流媒体"],
+                  premiereDate: mv.release_date || "",
+                  totalEpisodes: 1,
+                  airedEpisodes: 1,
+                  isFinished: true,
+                  poster: mv.poster_path ? `https://image.tmdb.org/t/p/w342${mv.poster_path}` : "",
+                  score: mv.vote_average ? mv.vote_average.toFixed(1) : ""
+                });
+              });
+            }
+            addedSources.push("TMDB剧影");
+          } catch (e) {}
+        }
+
+        renderAll();
+        if (sub) {
+          sub.textContent = addedSources.length
+            ? `Movie & Drama · 已连 ${addedSources.slice(0, 2).join("+")}`
+            : "Movie & Drama Tracker";
+        }
+        if (!silent) {
+          showToast(addedSources.length ? `已同步最新剧影进度（${addedSources.join("+")}）` : "已按最新日期刷新剧影进度");
+        }
+      }
+
+      // Live Search across BOTH Dramas (TVmaze) and Movies (Apple iTunes Movie Catalog)
+      async function searchOnlineItems() {
+        const q = document.getElementById("searchInput").value.trim();
+        if (!q) {
+          showToast("请先输入想搜的剧名或电影名");
+          return;
+        }
+        showToast("正在全网检索剧集集数与电影...");
+        let found = 0;
+
+        const [tvJob, mvJob] = await Promise.allSettled([
+          fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`),
+          fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=movie&country=CN&limit=5`)
+        ]);
+
+        if (tvJob.status === "fulfilled" && tvJob.value.ok) {
+          try {
+            const arr = await tvJob.value.json();
+            await Promise.allSettled(
+              arr.slice(0, 5).map(async (entry) => {
+                const show = entry.show;
+                if (!show || !show.id) return;
+                let aired = 0;
+                let total = 0;
+                try {
+                  const epRes = await fetch(`https://api.tvmaze.com/shows/${show.id}/episodes`);
+                  if (epRes.ok) {
+                    const eps = await epRes.json();
+                    total = eps.length;
+                    const nowStr = formatLocalDate(new Date());
+                    aired = eps.filter((e) => e.airdate && e.airdate <= nowStr).length;
+                  }
+                } catch (e) {}
+                const ch = show.webChannel?.name || show.network?.name || "海外其他";
+                liveItemsMap.set(normalizeTitle(show.name), {
+                  extId: "tvmaze_" + show.id,
+                  mediaType: "drama",
+                  title: show.name,
+                  platform: mapPlatformBucket(ch),
+                  platforms: [ch],
+                  genre: (show.genres || []).slice(0, 2).join(" / ") || "剧集",
+                  premiereDate: show.premiered || "",
+                  totalEpisodes: total,
+                  airedEpisodes: aired,
+                  isFinished: show.status === "Ended",
+                  poster: String(show.image?.medium || "").replace(/^http:/, "https:"),
+                  score: show.rating?.average ? String(show.rating.average) : "",
+                  playUrl: show.officialSite || show.url || ""
+                });
+                found++;
+              })
+            );
+          } catch (e) {}
+        }
+
+        if (mvJob.status === "fulfilled" && mvJob.value.ok) {
+          try {
+            const mJson = await mvJob.value.json();
+            (mJson.results || []).forEach((mv) => {
+              if (!mv.trackName) return;
+              const mins = mv.trackTimeMillis ? Math.round(mv.trackTimeMillis / 60000) : 0;
+              liveItemsMap.set("mv_" + normalizeTitle(mv.trackName), {
+                extId: "itunes_mv_" + mv.trackId,
+                mediaType: "movie",
+                title: mv.trackName,
+                platform: "Apple TV+",
+                platforms: ["Apple TV / 流媒体"],
+                genre: mv.primaryGenreName || "电影",
+                runtimeText: mins > 0 ? `片长 ${mins} 分钟` : "电影长片",
+                premiereDate: mv.releaseDate ? mv.releaseDate.slice(0, 10) : "",
+                totalEpisodes: 1,
+                airedEpisodes: 1,
+                isFinished: true,
+                poster: mv.artworkUrl100 ? mv.artworkUrl100.replace("100x100bb", "400x600bb") : "",
+                playUrl: mv.trackViewUrl || ""
+              });
+              found++;
+            });
+          } catch (e) {}
+        }
+
+        activeMediaType = "all";
+        activePlatform = "全部平台";
+        activeStateFilter = "all";
+        renderAll();
+        showToast(found > 0 ? `已从全网检索到 ${found} 部剧集与电影` : "已完成本地片单检索");
+      }
+
+      function mergeStates(remote, local) {
+        const out = defaultState();
+        const rSet = (remote && remote.settings) || {};
+        const lSet = (local && local.settings) || {};
+        out.settings = (Number(rSet.updatedAt) || 0) > (Number(lSet.updatedAt) || 0)
+          ? Object.assign({}, lSet, rSet)
+          : Object.assign({}, rSet, lSet);
+
+        const allRecIds = new Set([
+          ...Object.keys((remote && remote.userRecords) || {}),
+          ...Object.keys((local && local.userRecords) || {})
+        ]);
+        allRecIds.forEach((id) => {
+          const r = remote?.userRecords?.[id];
+          const l = local?.userRecords?.[id];
+          if (r && !l) out.userRecords[id] = r;
+          else if (l && !r) out.userRecords[id] = l;
+          else if (r && l) {
+            out.userRecords[id] = (Number(r.updatedAt) || 0) > (Number(l.updatedAt) || 0) ? r : l;
+          }
+        });
+
+        const allCustomIds = new Set([
+          ...Object.keys((remote && remote.customDramas) || {}),
+          ...Object.keys((local && local.customDramas) || {})
+        ]);
+        allCustomIds.forEach((id) => {
+          const r = remote?.customDramas?.[id];
+          const l = local?.customDramas?.[id];
+          if (r && !l) out.customDramas[id] = r;
+          else if (l && !r) out.customDramas[id] = l;
+          else if (r && l) {
+            out.customDramas[id] = (Number(r.updatedAt) || 0) > (Number(l.updatedAt) || 0) ? r : l;
+          }
+        });
+        return out;
+      }
+
+      async function findIsolatedGist(token) {
+        const headers = {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json"
+        };
+        const cachedId = localStorage.getItem(GIST_ID_KEY);
+        if (cachedId) {
+          const r = await fetch(`https://api.github.com/gists/${cachedId}`, { headers });
+          if (r.ok) {
+            const g = await r.json();
+            if (g.files && g.files[GIST_FILENAME]) return g;
+          }
+        }
+        const listRes = await fetch("https://api.github.com/gists?per_page=100", { headers });
+        if (!listRes.ok) throw new Error("Gist 鉴权失败 (" + listRes.status + ")");
+        const gists = await listRes.json();
+        const matched = gists.find((g) => g.files && g.files[GIST_FILENAME]);
+        if (matched) {
+          localStorage.setItem(GIST_ID_KEY, matched.id);
+          const detailRes = await fetch(`https://api.github.com/gists/${matched.id}`, { headers });
+          if (detailRes.ok) return detailRes.json();
+        }
+        return null;
+      }
+
+      async function syncWithGist(direction) {
+        const token = (document.getElementById("gistTokenInput").value || localStorage.getItem(TOKEN_KEY) || "").trim();
+        if (!token) {
+          showToast("请先填入 GitHub Gist Token");
+          return;
+        }
+        localStorage.setItem(TOKEN_KEY, token);
+        const statusEl = document.getElementById("gistSyncStatus");
+        statusEl.textContent = "正在连接 GitHub 私密 Gist...";
+
+        try {
+          const existing = await findIsolatedGist(token);
+          let merged = appState;
+
+          if (existing && existing.files && existing.files[GIST_FILENAME]?.content) {
+            try {
+              const remoteState = JSON.parse(existing.files[GIST_FILENAME].content);
+              merged = mergeStates(remoteState, appState);
+            } catch (e) {}
+          }
+
+          appState = merged;
+          saveLocalState();
+
+          if (direction === "up" || !existing) {
+            const headers = {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/vnd.github+json",
+              "Content-Type": "application/json"
+            };
+            const body = {
+              description: "Dramov (Movie & Drama Tracker) 专属跨端同步文件",
+              public: false,
+              files: {
+                [GIST_FILENAME]: {
+                  content: JSON.stringify(appState, null, 2)
+                }
+              }
+            };
+            const res = existing
+              ? await fetch(`https://api.github.com/gists/${existing.id}`, {
+                  method: "PATCH",
+                  headers,
+                  body: JSON.stringify({ files: body.files })
+                })
+              : await fetch("https://api.github.com/gists", {
+                  method: "POST",
+                  headers,
+                  body: JSON.stringify(body)
+                });
+            if (!res.ok) throw new Error("上传失败 HTTP " + res.status);
+            const savedGist = await res.json();
+            if (savedGist.id) localStorage.setItem(GIST_ID_KEY, savedGist.id);
+          }
+
+          renderAll();
+          const tStr = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+          statusEl.textContent = `已无损合并同步（${tStr} · ${GIST_FILENAME}）`;
+          showToast("Dramov 云端同步完成");
+        } catch (err) {
+          statusEl.textContent = "同步出错：" + (err.message || "网络异常");
+          showToast("云同步失败，请检查 Token 权限");
+        }
+      }
+
+      function checkDailyAutoReminder() {
+        if (!appState.settings.dailyPopupEnabled) return;
+        const today = formatLocalDate(new Date());
+        if (localStorage.getItem(DAILY_SHOWN_KEY) === today) return;
+
+        const now = new Date();
+        const dueTitles = [];
+        let totalBacklog = 0;
+        getAllItems().forEach((d) => {
+          const p = computeProgressOnDate(d, now, true);
+          if (!p.isMovie && p.status === "watching" && p.backlog > 0) {
+            dueTitles.push(`《${d.title}》（已更至第 ${p.aired} 集）`);
+            totalBacklog += p.backlog;
+          }
+        });
+        if (totalBacklog > 0) {
+          localStorage.setItem(DAILY_SHOWN_KEY, today);
+          document.getElementById("dailyRemindText").textContent =
+            `你在追的 ${dueTitles.slice(0, 3).join("、")} 等共有 ${totalBacklog} 集已播新集待看。`;
+          document.getElementById("dailyRemindModal").classList.add("open");
+        }
+      }
+
+      function bindEvents() {
+        document.getElementById("themeToggleBtn").addEventListener("click", () => {
+          const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+          applyTheme(cur === "dark" ? "light" : "dark");
+        });
+
+        document.querySelectorAll("#bottomNav [data-nav]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            activeNav = btn.getAttribute("data-nav");
+            document.querySelectorAll("#bottomNav .nav-btn").forEach((b) =>
+              b.classList.toggle("active", b === btn)
+            );
+            document.querySelectorAll(".view-section").forEach((sec) =>
+              sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav)
+            );
+            renderAll();
+          });
+        });
+
+        document.getElementById("svipQuickBtn").addEventListener("click", () => {
+          appState.settings.svipMode = !appState.settings.svipMode;
+          appState.settings.updatedAt = Date.now();
+          saveLocalState();
+          renderAll();
+          showToast(appState.settings.svipMode ? "已切换为 SVIP 抢先集数视角" : "已切换为普通 VIP 集数视角");
+        });
+
+        document.getElementById("platformChips").addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-plat]");
+          if (!btn) return;
+          activePlatform = btn.getAttribute("data-plat");
+          renderAll();
+        });
+
+        document.getElementById("mediaTypeChips").addEventListener("click", (e) => {
+          const hideBtn = e.target.closest("#hideTrackedChip");
+          if (hideBtn) {
+            hideTracked = !hideTracked;
+            hideBtn.classList.toggle("active", hideTracked);
+            renderDiscover();
+            return;
+          }
+          const mBtn = e.target.closest("[data-mtype]");
+          if (mBtn) {
+            activeMediaType = mBtn.getAttribute("data-mtype");
+            activeStateFilter = "all";
+            document.querySelectorAll("#mediaTypeChips [data-mtype], #mediaTypeChips [data-state]").forEach((b) =>
+              b.classList.toggle("active", b === mBtn)
+            );
+            renderAll();
+            return;
+          }
+          const sBtn = e.target.closest("[data-state]");
+          if (sBtn) {
+            const nextState = sBtn.getAttribute("data-state");
+            activeStateFilter = activeStateFilter === nextState ? "all" : nextState;
+            document.querySelectorAll("#mediaTypeChips [data-state]").forEach((b) =>
+              b.classList.toggle("active", b.getAttribute("data-state") === activeStateFilter)
+            );
+            renderDiscover();
+          }
+        });
+
+        document.getElementById("searchInput").addEventListener("input", () => renderDiscover());
+        document.getElementById("onlineSearchBtn").addEventListener("click", searchOnlineItems);
+        document.getElementById("refreshLiveBtn").addEventListener("click", () => refreshLivePlatforms(false));
+
+        document.body.addEventListener("click", (e) => {
+          const actBtn = e.target.closest("[data-act]");
+          if (!actBtn) return;
+          const act = actBtn.getAttribute("data-act");
+          const id = actBtn.getAttribute("data-id");
+          const item = getAllItems().find((x) => x.id === id);
+          if (!item) return;
+          const now = new Date();
+          const prog = computeProgressOnDate(item, now, true);
+
+          if (act === "follow") {
+            updateUserRecord(id, (rec) => { rec.status = "watching"; });
+            renderAll();
+            showToast(`已将《${item.title}》加入我的追剧`);
+          } else if (act === "movieWish") {
+            updateUserRecord(id, (rec) => { rec.status = "wish"; });
+            renderAll();
+            showToast(`已将电影《${item.title}》加入想看`);
+          } else if (act === "movieDone") {
+            updateUserRecord(id, (rec) => {
+              rec.status = "done";
+              rec.watchedEp = 1;
+            });
+            renderAll();
+            showCelebrate("电影观影打卡完成", `《${item.title}》`);
+          } else if (act === "plus1") {
+            const cap = prog.total > 0 ? prog.total : 9999;
+            const nextEp = Math.min(cap, prog.watchedEp + 1);
+            updateUserRecord(id, (rec) => {
+              rec.watchedEp = nextEp;
+              rec.status = prog.total > 0 && nextEp >= prog.total ? "done" : "watching";
+            });
+            const after = computeProgressOnDate(item, now, true);
+            renderAll();
+            showToast(`《${item.title}》已记录看到第 ${nextEp} 集`);
+            if (nextEp > prog.watchedEp) maybeCelebrateDrama(item, after);
+          } else if (act === "detail") {
+            openDetailModal(id);
+          }
+        });
+
+        document.getElementById("weekStrip").addEventListener("click", (e) => {
+          const pill = e.target.closest("[data-caldate]");
+          if (!pill) return;
+          selectedCalDateStr = pill.getAttribute("data-caldate");
+          renderCalendar();
+        });
+        document.getElementById("calOnlyMineBtn").addEventListener("click", (e) => {
+          calOnlyMine = !calOnlyMine;
+          e.currentTarget.classList.toggle("active", calOnlyMine);
+          renderCalendar();
+        });
+
+        document.getElementById("watchSubChips").addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-wtab]");
+          if (!btn) return;
+          activeWatchTab = btn.getAttribute("data-wtab");
+          document.querySelectorAll("#watchSubChips [data-wtab]").forEach((b) =>
+            b.classList.toggle("active", b === btn)
+          );
+          renderWatchlist();
+        });
+
+        document.getElementById("closeDetailBtn").addEventListener("click", () => {
+          document.getElementById("detailModal").classList.remove("open");
+        });
+        document.getElementById("detailStatusBtns").addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-setstatus]");
+          if (!btn || !currentDetailId) return;
+          const st = btn.getAttribute("data-setstatus");
+          updateUserRecord(currentDetailId, (rec) => { rec.status = st; });
+          openDetailModal(currentDetailId);
+          renderAll();
+          showToast("片单状态已更新");
+        });
+        document.getElementById("episodeGrid").addEventListener("click", (e) => {
+          const cell = e.target.closest("[data-ep]");
+          if (!cell || !currentDetailId) return;
+          const ep = Number(cell.getAttribute("data-ep")) || 0;
+          const item = getAllItems().find((x) => x.id === currentDetailId);
+          if (!item) return;
+          const progBefore = computeProgressOnDate(item, new Date(), true);
+          const newWatched = progBefore.watchedEp === ep ? ep - 1 : ep;
+          updateUserRecord(currentDetailId, (rec) => {
+            rec.watchedEp = Math.max(0, newWatched);
+            if (progBefore.total > 0 && rec.watchedEp >= progBefore.total) rec.status = "done";
+            else if (rec.status === "none") rec.status = "watching";
+          });
+          const progAfter = computeProgressOnDate(item, new Date(), true);
+          openDetailModal(currentDetailId);
+          renderAll();
+          if (newWatched > progBefore.watchedEp) maybeCelebrateDrama(item, progAfter);
+        });
+        document.getElementById("saveEpAdjustBtn").addEventListener("click", () => {
+          if (!currentDetailId) return;
+          const airedVal = Math.max(0, Number(document.getElementById("editAiredInput").value) || 0);
+          const totalVal = Math.max(0, Number(document.getElementById("editTotalInput").value) || 0);
+          const watchedVal = Math.max(0, Number(document.getElementById("editWatchedInput").value) || 0);
+          updateUserRecord(currentDetailId, (rec) => {
+            rec.manualAired = airedVal;
+            rec.manualTotal = totalVal;
+            rec.watchedEp = watchedVal;
+            if (rec.status === "none" && watchedVal > 0) rec.status = "watching";
+            if (totalVal > 0 && watchedVal >= totalVal) rec.status = "done";
+          });
+          openDetailModal(currentDetailId);
+          renderAll();
+          showToast("已保存集数与观看进度");
+        });
+        document.getElementById("catchUpLatestBtn").addEventListener("click", () => {
+          if (!currentDetailId) return;
+          const item = getAllItems().find((x) => x.id === currentDetailId);
+          if (!item) return;
+          const prog = computeProgressOnDate(item, new Date(), true);
+          updateUserRecord(currentDetailId, (rec) => {
+            rec.watchedEp = prog.aired;
+            rec.status = prog.total > 0 && prog.aired >= prog.total ? "done" : "watching";
+          });
+          const after = computeProgressOnDate(item, new Date(), true);
+          openDetailModal(currentDetailId);
+          renderAll();
+          showToast(`已追平至最新第 ${prog.aired} 集`);
+          maybeCelebrateDrama(item, after);
+        });
+        document.getElementById("resetOverrideBtn").addEventListener("click", () => {
+          if (!currentDetailId) return;
+          updateUserRecord(currentDetailId, (rec) => {
+            rec.manualAired = null;
+            rec.manualTotal = null;
+          });
+          openDetailModal(currentDetailId);
+          renderAll();
+          showToast("已恢复按排播日历自动推算");
+        });
+
+        document.getElementById("newMediaType").addEventListener("change", (e) => {
+          document.getElementById("newDramaFields").style.display =
+            e.target.value === "movie" ? "none" : "block";
+        });
+        document.getElementById("openAddModalBtn").addEventListener("click", () => {
+          document.getElementById("addModal").classList.add("open");
+        });
+        document.getElementById("closeAddBtn").addEventListener("click", () => {
+          document.getElementById("addModal").classList.remove("open");
+        });
+        document.getElementById("confirmAddBtn").addEventListener("click", () => {
+          const title = document.getElementById("newTitle").value.trim();
+          if (!title) {
+            showToast("请填写作品名称");
+            return;
+          }
+          const mType = document.getElementById("newMediaType").value;
+          const plat = document.getElementById("newPlatform").value;
+          const genre = document.getElementById("newGenre").value.trim() || (mType === "movie" ? "电影长片" : "热播剧集");
+          const totalEps = mType === "movie" ? 1 : Math.max(0, Number(document.getElementById("newTotalEps").value) || 0);
+          const airedEps = mType === "movie" ? 1 : Math.max(0, Number(document.getElementById("newAiredEps").value) || 0);
+          const dailyEps = mType === "movie" ? 0 : Math.max(0, Number(document.getElementById("newDailyEps").value) || 0);
+          const upTime = document.getElementById("newUpdateTime").value.trim() || "18:00";
+          const wdays = document.getElementById("newWeekdays").value
+            .split(/[,，\s]+/)
+            .map((n) => parseInt(n, 10))
+            .filter((n) => n >= 1 && n <= 7);
+
+          const id = "custom_" + Date.now();
+          appState.customDramas[id] = {
+            id,
+            mediaType: mType,
+            title,
+            platform: plat,
+            platforms: [plat],
+            category: mType === "movie" ? "自建电影" : "自建追剧",
+            genre,
+            runtimeText: mType === "movie" ? genre : "",
+            premiereDate: formatLocalDate(new Date()),
+            totalEpisodes: totalEps,
+            firstDayEps: airedEps,
+            epsPerUpdateDay: dailyEps,
+            updateWeekdays: mType === "movie" ? [] : (wdays.length ? wdays : [1, 2, 3, 4, 5, 6, 7]),
+            updateTime: mType === "movie" ? "已上线" : upTime,
+            svipExtra: 0,
+            updatedAt: Date.now()
+          };
+          appState.userRecords[id] = {
+            status: mType === "movie" ? "wish" : "watching",
+            watchedEp: 0,
+            manualAired: null,
+            manualTotal: null,
+            updatedAt: Date.now()
+          };
+          saveLocalState();
+          document.getElementById("newTitle").value = "";
+          document.getElementById("addModal").classList.remove("open");
+          renderAll();
+          showToast(`已添加《${title}》至我的片单`);
+        });
+
+        document.getElementById("toggleDailyPopup").addEventListener("click", () => {
+          appState.settings.dailyPopupEnabled = !appState.settings.dailyPopupEnabled;
+          appState.settings.updatedAt = Date.now();
+          saveLocalState();
+          renderSettings();
+          showToast(appState.settings.dailyPopupEnabled ? "每日新集提醒弹窗已开启" : "每日新集提醒弹窗已关闭");
+        });
+        document.getElementById("toggleSvipSetting").addEventListener("click", () => {
+          appState.settings.svipMode = !appState.settings.svipMode;
+          appState.settings.updatedAt = Date.now();
+          saveLocalState();
+          renderAll();
+        });
+        document.getElementById("saveTmdbBtn").addEventListener("click", () => {
+          const val = document.getElementById("tmdbKeyInput").value.trim();
+          localStorage.setItem(TMDB_KEY, val);
+          refreshLivePlatforms(false);
+        });
+        document.getElementById("saveTokenBtn").addEventListener("click", () => {
+          const val = document.getElementById("gistTokenInput").value.trim();
+          localStorage.setItem(TOKEN_KEY, val);
+          showToast("GitHub 同步密钥已保存在本机");
+        });
+        document.getElementById("syncUpBtn").addEventListener("click", () => syncWithGist("up"));
+        document.getElementById("syncDownBtn").addEventListener("click", () => syncWithGist("down"));
+
+        document.getElementById("exportJsonBtn").addEventListener("click", () => {
+          const blob = new Blob([JSON.stringify(appState, null, 2)], { type: "application/json" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `dramov-backup-${formatLocalDate(new Date())}.json`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+          showToast("已导出本地备份文件");
+        });
+        document.getElementById("importJsonBtn").addEventListener("click", () => {
+          document.getElementById("importFileInput").click();
+        });
+        document.getElementById("importFileInput").addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const incoming = JSON.parse(String(reader.result || "{}"));
+              appState = mergeStates(incoming, appState);
+              saveLocalState();
+              renderAll();
+              showToast("备份已无损合并恢复");
+            } catch (err) {
+              showToast("JSON 文件格式有误");
+            }
+          };
+          reader.readAsText(file);
+        });
+
+        ["detailModal", "addModal", "dailyRemindModal", "celebrateModal"].forEach((mid) => {
+          document.getElementById(mid).addEventListener("click", (e) => {
+            if (e.target.id === mid) e.currentTarget.classList.remove("open");
+          });
+        });
+        document.getElementById("skipRemindBtn").addEventListener("click", () => {
+          document.getElementById("dailyRemindModal").classList.remove("open");
+        });
+        document.getElementById("goWatchRemindBtn").addEventListener("click", () => {
+          document.getElementById("dailyRemindModal").classList.remove("open");
+          document.querySelector('#bottomNav [data-nav="watchlist"]').click();
+        });
+        document.getElementById("closeCelebrateBtn").addEventListener("click", () => {
+          document.getElementById("celebrateModal").classList.remove("open");
+        });
+      }
+
+      applyTheme(localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light");
+      bindEvents();
+      renderAll();
+      checkDailyAutoReminder();
+      refreshLivePlatforms(true);
+
+      if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {});
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
