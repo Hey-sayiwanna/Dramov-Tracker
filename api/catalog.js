@@ -224,7 +224,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     }
   }
 
-  const primaryPid = forcedPlatformId || Array.from(providersSet)[0] || "netflix";
+  // 不在任何内置平台上的片（搜索结果常见）归到 "other"，不再冒充 Netflix
+  const primaryPid = forcedPlatformId || Array.from(providersSet)[0] || "other";
   if (!isRegion) providersSet.add(primaryPid);
 
   const imdb = sc.imdbScore ? Number(Number(sc.imdbScore).toFixed(1)) : null;
@@ -315,6 +316,44 @@ module.exports = async (req, res) => {
     const feedType = q.feedType ? String(q.feedType) : "platform"; // 'platform' | 'hot_shows' | 'hot_movies'
     const cursor = q.cursor ? String(q.cursor) : null;
     const country = "US";
+    // =========================================================================
+    // MODE S: 全网搜索（JustWatch 美区 + 台湾区，中文片名也能搜到；不限于内置平台）
+    // =========================================================================
+    if (feedType === "search") {
+      const qs = String(q.q || "").trim().slice(0, 80);
+      if (!qs) return res.status(200).json({ ok: true, feedType: "search", items: [] });
+      const hasCjk = /[\u3400-\u9fff]/.test(qs);
+      const countries = hasCjk ? ["TW", "US"] : ["US", "TW"];
+      const settled = await Promise.allSettled(
+        countries.map((c) =>
+          queryUpstream(CATALOG_PAGE_QUERY, { country: c, first: 12, after: null, filter: { searchQuery: qs, objectTypes: ["SHOW", "MOVIE"] } })
+        )
+      );
+      const byKey = new Map();
+      settled.forEach((st) => {
+        if (st.status !== "fulfilled") return;
+        (st.value?.data?.popularTitles?.edges || []).forEach((e, idx) => {
+          const it = normalizeCatalogNode(e.node, null, idx);
+          if (!it || !it.title) return;
+          const key = it.jwId || (it.enTitle || it.title).toLowerCase();
+          const prev = byKey.get(key);
+          if (!prev) {
+            byKey.set(key, it);
+            return;
+          }
+          // 两个地区都有：合并可看的平台
+          it.providers.forEach((p) => { if (!prev.providers.includes(p)) prev.providers.push(p); });
+          Object.assign(prev.providerLinks, Object.assign({}, it.providerLinks, prev.providerLinks));
+          it.otherOffers.forEach((o) => {
+            if (prev.otherOffers.length < 6 && !prev.otherOffers.some((x) => x.name === o.name)) prev.otherOffers.push(o);
+          });
+          if (prev.platformId === "other" && it.platformId !== "other") prev.platformId = it.platformId;
+        });
+      });
+      res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
+      return res.status(200).json({ ok: true, feedType: "search", items: Array.from(byKey.values()).slice(0, 16) });
+    }
+
     const codeMap = await resolveCodeMap(country);
 
     // =========================================================================

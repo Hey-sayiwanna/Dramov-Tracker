@@ -1255,6 +1255,7 @@
       border-bottom: 1px solid var(--surface-border);
     }
     .ring-row:last-child { border-bottom: none; }
+    #col-ring { content-visibility: visible; }
     .ring-big { background: linear-gradient(90deg, rgba(220, 38, 38, 0.12), transparent 70%); border-radius: 12px; padding-left: 8px; }
     .ring-date { width: 44px; flex-shrink: 0; text-align: center; }
     .ring-day { font-size: 15px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
@@ -1985,18 +1986,47 @@
       // 切換語言後重新載入頁面，不需要處理“還原”
       // =========================================================================
       // 海报加载失败先自动重试一次（网络抖动时常见），再失败才显示占位图
+      // JustWatch 海报有多种尺寸：重试时换一个尺寸（另一个地址），比原地址重试更容易成功
+      function posterRetryUrl(src) {
+        if (/\/s332\//.test(src)) return src.replace("/s332/", "/s718/");
+        if (/\/s718\//.test(src)) return src.replace("/s718/", "/s332/");
+        if (/400x600bb/.test(src)) return src.replace("400x600bb", "600x900bb");
+        return src + (src.includes("?") ? "&" : "?") + "r=1";
+      }
       window.dramovImgErr = function (img, fallback) {
         const src = img.getAttribute("src") || "";
         if (!img.dataset.retried && src && !src.startsWith("data:")) {
           img.dataset.retried = "1";
           setTimeout(() => {
-            img.src = src + (src.includes("?") ? "&" : "?") + "r=1";
-          }, 900);
+            img.src = posterRetryUrl(src);
+          }, 600);
           return;
         }
         img.onerror = null;
         if (fallback) img.src = fallback;
       };
+      // 网络卡住时海报只显示上面一截且迟迟不报错：在屏幕上 8 秒还没加载完的海报换个尺寸重拉一次
+      let stallTimer = null;
+      function checkStalledPosters() {
+        clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => {
+          const vh = window.innerHeight;
+          const vw = window.innerWidth;
+          document.querySelectorAll("img[data-thumbimg]").forEach((img) => {
+            if (img.complete || img.dataset.retried) return;
+            const src = img.getAttribute("src") || "";
+            if (!src || src.startsWith("data:")) return;
+            const r = img.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw || !r.width) return;
+            img.dataset.retried = "1";
+            img.src = posterRetryUrl(src);
+          });
+        }, 8000);
+      }
+      window.addEventListener("scroll", () => checkStalledPosters(), { passive: true });
+      document.addEventListener("scroll", (e) => {
+        if (e.target && e.target !== document) checkStalledPosters();
+      }, { passive: true, capture: true });
 
       const LANG_KEY = "dramov_lang_v1";
       const LANG = (() => {
@@ -2012,9 +2042,11 @@
       const I18N_HANT = {"上传合并至云端": "上傳合併至雲端", "深色沉浸外观（默认开启）": "深色沉浸外觀（預設開啟）", "保存密钥": "儲存金鑰", "》播放链接": "》播放連結", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "流媒體熱播佳作，點選下方對應流媒體圖示即可直達官方正版播放頁。", "导入恢复 .json": "匯入恢復 .json", "保存": "儲存", "查看详情": "查看詳情", "至少保留 1 个显示平台": "至少保留 1 個顯示平台", "正在加载…": "正在載入…", "界面语言": "介面語言", "正在连接 GitHub 私密": "正在連線 GitHub 私密", "正在加载": "正在載入", "上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "上下調換首頁各平台 Top 10 榜單排列順序，關閉開關即可隱藏該平台（首頁頂部全網 8 部新劇巨幅海報也會自動從你開啟的平台中選出）。", "设置": "設定", "网络不太好，稍后再试": "網路不太好，稍後再試", "六大流媒体热度榜运行中": "六大流媒體熱度榜運行中", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 權限）", "治愈": "治癒", "从云端拉取合并": "從雲端拉取合併", "导出备份 .json": "匯出備份 .json", "导入恢复": "匯入恢復", "恢复默认": "恢復預設", "已复制《": "已複製《", "（需 gist 权限）": "（需 gist 權限）", "导出备份": "匯出備份", "搜索片库": "搜尋片庫", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "流媒體熱門影視佳作，點選查看詳情、演員陣容與正版播放源。", "网络异常": "網路異常", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "未在當前快取榜單找到匹配項，請點「全網搜尋」實時查詢", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "已加载": "已載入", "搜索": "搜尋", "已刷新流媒体榜单": "已刷新流媒體榜單", "正在加载更多热门电视剧与电影": "正在載入更多熱門電視劇與電影", "独立读写专属文件": "獨立讀寫專屬檔案", "同步密钥已保存": "同步金鑰已儲存", "每日首次打开「待看剧集」提醒弹窗": "每日首次開啟「待看劇集」提醒彈窗", "流媒体实时热度数据": "流媒體實時熱度資料", "已导出备份": "已匯出備份", "全网搜索": "全網搜尋", "跨设备无损云同步（GitHub 私密 Gist）": "跨裝置無損雲同步（GitHub 私密 Gist）", "云同步失败，请检查密钥": "雲同步失敗，請檢查金鑰", "，同步你的片单进度与首页平台顺序。": "，同步你的片單進度與首頁平台順序。", "分享链接": "分享連結", "正在加载更多热门电视剧与电影…": "正在載入更多熱門電視劇與電影…", "立即刷新热榜": "立即刷新熱榜", "默认开启深邃影院沉浸底色": "預設開啟深邃影院沉浸底色", "分钟": "分鐘"};
       const I18N_EN = {"上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "Reorder the platforms' Top 10 charts on Home, or switch one off to hide it. The new-show posters at the top of Home only come from platforms you keep on.", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "A popular streaming title. Tap a service icon below to open its official page.", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "A popular streaming title. Tap for details, cast and where to watch.", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "Nothing in the loaded charts matches. Tap “Search online” to look it up.", "跨设备无损云同步（GitHub 私密 Gist）": "Cross-device sync (private GitHub Gist)", "搜电影 / 剧集 / 英文名 / 演员...": "Search movies, shows or cast…", "在追剧集有未看集数时，每天提醒一次": "Once a day when a show you're watching has new episodes", "，同步你的片单进度与首页平台顺序。": ", syncing your list, progress and Home platform order.", "独立读写专属文件": "Uses its own file", "每日首次打开「待看剧集」提醒弹窗": "Daily “Up next” reminder", "已同步六大流媒体最新热度榜单": "Charts updated", "正在加载更多热门电视剧与电影…": "Loading more…", "正在加载更多热门电视剧与电影": "Loading more", "正在拉取六大流媒体最新热度榜...": "Fetching the latest charts…", "正在拉取六大流媒体最新热度榜": "Fetching the latest charts", "本地 JSON 备份与恢复": "Local JSON backup & restore", "六大流媒体实时热度已同步": "Live charts synced", "六大流媒体实时热度已就绪": "Live charts ready", "六大流媒体热度榜运行中": "Live charts running", "深色沉浸外观（默认开启）": "Dark appearance (on by default)", "默认开启深邃影院沉浸底色": "Cinema-dark background, on by default", "首页流媒体平台排序与隐藏": "Home platforms: order & visibility", "实时热榜与显示偏好": "Live charts & display", "流媒体实时热度数据": "Live streaming charts", "立即刷新热榜": "Refresh now", "点选集数记录观看进度（绿=已看 · 蓝=已播 · 虚线=未播）": "Tap episodes to track progress (green = watched · blue = aired · dashed = upcoming)", "点进任意影视海报，轻触右下角 ♡ 或 🍿 即可加入你的片单": "Open any title and tap ♡ or 🍿 at the bottom right to add it to your list", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx (needs gist scope)", "尚未执行云端同步": "Not synced yet", "上传合并至云端": "Upload & merge", "从云端拉取合并": "Download & merge", "保存密钥": "Save token", "导出备份 .json": "Export .json", "导入恢复 .json": "Import .json", "恢复默认": "Reset", "已恢复默认六大平台顺序": "Platform order reset", "至少保留 1 个显示平台": "Keep at least one platform visible", "今天的流媒体榜单": "Today's streaming charts", "热播电视剧": "Trending shows", "热播电影": "Trending movies", "热播库": "Library", "片库": "Library", "按实时热度排序": "By live popularity", "精选": "Picks", "最新": "New", "高分": "Top rated", "全部": "All", "全部平台": "All services", "全网搜索": "Search online", "搜索片库": "Search", "我的片单": "My List", "想看 / 在追": "Watching / Want", "已看过 🍿": "Watched 🍿", "已看过": "Watched", "设置": "Settings", "首页": "Home", "搜索": "Search", "片单": "My List", "主导航": "Main navigation", "返回": "Back", "查看详情": "Details", "播放平台": "Where to watch", "演职员": "Cast", "主创团队": "Creators", "剧照与预告片": "Stills & trailer", "剧照": "Still", "观看官方预告片 ↗": "Watch trailer ↗", "观看官方预告片": "Watch trailer", "剧集播放进度": "Episode progress", "一键追平已播集": "Mark all aired as watched", "标记已看过": "Mark as watched", "加入片单": "Add to My List", "分享链接": "Share link", "IMDb 权威评分": "IMDb rating", "烂番茄影评新鲜度": "Rotten Tomatoes score", "爆米花观众好评度": "Audience score", "观影打卡达成": "Watched!", "电影观影打卡达成": "Movie watched!", "剧集追完打卡达成": "Series finished!", "太棒了": "Nice", "云端同步完成": "Cloud sync complete", "云同步失败，请检查密钥": "Sync failed. Check your token.", "同步密钥已保存": "Token saved", "备份已无损恢复": "Backup restored", "已导出备份": "Backup exported", "JSON 格式错误": "Invalid JSON", "请输入想找的电影或剧名": "Type a movie or show name", "正在检索流媒体片库...": "Searching…", "正在检索流媒体片库": "Searching", "已完成检索": "Search finished", "已刷新流媒体榜单": "Charts refreshed", "网络不太好，稍后再试": "Connection problem. Try again later.", "暂无内容": "Nothing here", "正在加载…": "Loading…", "正在加载": "Loading", "已在首页隐藏": "Hidden on Home", "同步出错：": "Sync error: ", "网络异常": "Network error", "请先填入": "Please enter ", "鉴权失败": "Authorization failed", "正在连接 GitHub 私密": "Connecting to private GitHub", "界面语言": "Language", "繁體中文": "繁體中文", "简体中文": "简体中文", "奈飞 Netflix": "Netflix", "迪士尼 Disney+": "Disney+", "派拉蒙 Paramount+": "Paramount+", "电视剧": "Series", "电影": "Movie", "剧集": "Series", "新剧": "New series", "热门": "Popular", "已播": "aired", "已看": "Watched", "未播": "upcoming", "动作": "Action", "冒险": "Adventure", "动作冒险": "Action & Adventure", "动画": "Animation", "儿童": "Kids", "家庭": "Family", "喜剧": "Comedy", "犯罪": "Crime", "纪录片": "Documentary", "剧情": "Drama", "谍战": "Spy", "奇幻": "Fantasy", "历史": "History", "恐怖": "Horror", "法律": "Legal", "医疗": "Medical", "音乐": "Music", "歌舞": "Musical", "悬疑": "Mystery", "爱情": "Romance", "浪漫": "Romantic", "科幻": "Sci-Fi", "科幻奇幻": "Sci-Fi & Fantasy", "体育": "Sports", "运动": "Sports", "超自然": "Supernatural", "惊悚": "Thriller", "战争": "War", "战争政治": "War & Politics", "政治": "Political", "西部": "Western", "真人秀": "Reality", "脱口秀": "Talk", "新闻": "News", "肥皂剧": "Soap", "独立电影": "Indie", "节日": "Holiday", "心理": "Psychological", "赛博朋克": "Cyberpunk", "史诗": "Epic", "黑帮": "Gangster", "英剧": "British", "年代剧": "Period", "职场": "Workplace", "传记": "Biography", "文艺": "Arthouse", "治愈": "Feel-good", "温暖": "Warm", "黑色幽默": "Dark comedy", "讽刺": "Satire", "宫廷": "Court", "权谋": "Intrigue", "末日": "Apocalyptic", "生存": "Survival", "太空": "Space", "平行宇宙": "Multiverse", "硬核": "Hard", "法庭": "Courtroom", "跨国": "International", "豪门": "Family saga", "暗黑": "Dark", "写实": "Realist", "高能": "Intense", "英伦": "British", "影视幕后": "Showbiz", "星际": "Space", "罪案": "Crime", "绿": "green", "蓝": "blue", "虚线": "dashed"};
       // 一字多繁的常用詞（先按詞轉，再逐字轉），用 OpenCC 台灣詞庫生成
-      const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果"};
+      const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果", "分钟": "分鐘", "钟头": "鐘頭", "时钟": "時鐘", "闹钟": "鬧鐘", "钟声": "鐘聲"};
       Object.assign(I18N_EN, {"赛程时区": "Schedule time zone", "擂台的比赛时间按这里换算，默认跟随本机": "Fight times use this time zone; defaults to your device", "本机时区（默认）": "Device time zone (default)", "北京时间": "Beijing", "香港时间": "Hong Kong", "台北时间": "Taipei", "东京时间": "Tokyo", "首尔时间": "Seoul", "新加坡时间": "Singapore", "伦敦时间": "London", "美东时间": "US Eastern", "美中时间": "US Central", "美西时间": "US Pacific", "悉尼时间": "Sydney", "赛程时区已更新": "Time zone updated", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "Times follow Settings › Schedule time zone · Schedules may change"});
       Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
+      Object.assign(I18N_EN, {"其他平台": "Other services", "正在全网搜索…": "Searching online…", "暂未查到正版流媒体平台": "No streaming service found yet", "Apple TV（租借 / 购买）": "Apple TV (rent / buy)"});
+      Object.assign(I18N_HANT, {"正在全网搜索…": "正在全網搜尋…", "暂未查到正版流媒体平台": "暫未查到正版流媒體平台", "Apple TV（租借 / 购买）": "Apple TV（租借 / 購買）"});
       Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
       Object.assign(I18N_HANT, {"日韩": "日韓", "完整赛程": "完整賽程", "未来六周赛程": "未來六週賽程", "时间待定": "時間待定", "大赛": "大賽", "榜单暂时没拿到，稍后下拉刷新": "榜單暫時沒拿到，稍後下拉刷新", "时间已换算为本机时区；节目安排以官方为准": "時間已換算為本機時區；節目安排以官方為準", "ESPN（美国）· Netflix（美国以外）": "ESPN（美國）· Netflix（美國以外）", "港澳台 · 华语出品": "港澳台 · 華語出品", "日韩 · 日剧韩剧动画": "日韓 · 日劇韓劇動畫", "擂台 · WWE / AEW / UFC 赛程": "擂台 · WWE / AEW / UFC 賽程", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏"});
       // 按首字建索引，逐字转换时只比对以该字开头的词
@@ -2304,6 +2336,17 @@
           <text x="32" y="37.5" text-anchor="middle" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-weight="900" font-size="15" font-style="italic">VS</text>
         </svg>`
       });
+
+      // 不在内置平台列表里的片（搜索结果）用的占位“平台”，不出现在首页和设置里
+      PLATFORM_MAP.other = {
+        id: "other", kind: "external", name: "其他平台", cnName: "其他平台", color: "#64748b",
+        bgGrad: ["#334155", "#090d16"], homeUrl: "https://www.justwatch.com/", searchUrl: "https://www.justwatch.com/us/search?q="
+      };
+      BRAND_SVGS.other = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#1e293b"/>
+          <circle cx="32" cy="32" r="17" fill="none" stroke="#94a3b8" stroke-width="3"/>
+          <path d="M28 24 L41 32 L28 40 Z" fill="#e2e8f0"/>
+        </svg>`;
 
       let liveProviderIcons = {};
 
@@ -2918,6 +2961,7 @@
       }
 
       function renderStreamingCharts() {
+        scheduleRingFill();
         renderMixedHotShelves();
         const visibleIds = getVisiblePlatformIds();
         const wrap = document.getElementById("chartsColumnsContainer");
@@ -2939,7 +2983,7 @@
                     <span style="font-size: 15px; line-height: 1;">›</span>
                   </span>
                 </div>
-                <div style="display: flex; flex-direction: column;">${renderRingColumnRows()}</div>
+                <div class="ring-list" style="display: flex; flex-direction: column;">${renderRingColumnRows()}</div>
               </section>`;
             }
             const items = getPlatformItems(pid);
@@ -3193,6 +3237,28 @@
           </div>
         `;
       }
+      // 首页擂台列：按相邻海报榜单的高度尽量排满（每周节目轮换，数量够用）
+      function fillRingColumn() {
+        const col = document.getElementById("col-ring");
+        if (!col) return;
+        const list = col.querySelector(".ring-list");
+        const ref = Array.from(document.querySelectorAll(".platform-chart-col")).find((c) => c.id !== "col-ring" && c.querySelector(".top10-row"));
+        if (!list || !ref) return;
+        const rows = ref.querySelectorAll(".top10-row");
+        const refBottom = rows[rows.length - 1].getBoundingClientRect().bottom - ref.getBoundingClientRect().top;
+        const all = buildRingSchedule(42);
+        let n = list.children.length;
+        const colTop = col.getBoundingClientRect().top;
+        let guard = 0;
+        while (n < all.length && guard++ < 40) {
+          const last = list.lastElementChild;
+          const bottom = last ? last.getBoundingClientRect().bottom - colTop : 0;
+          const avg = last ? last.getBoundingClientRect().height : 70;
+          if (bottom + avg > refBottom + 4) break;
+          list.insertAdjacentHTML("beforeend", ringRowHtml(all[n]));
+          n++;
+        }
+      }
       function renderRingColumnRows() {
         refreshRingRemote(false);
         return buildRingSchedule(21).slice(0, 10).map(ringRowHtml).join("");
@@ -3212,6 +3278,9 @@
       }
 
       // 排名趋势：JustWatch 每日榜给出的升 / 降 / 持平（没有数据就不显示）
+      function scheduleRingFill() {
+        requestAnimationFrame(() => requestAnimationFrame(fillRingColumn));
+      }
       function trendArrowHtml(it) {
         const t = String(it.trend || "").toUpperCase();
         if (t === "UP") return `<span class="trend-arrow up">▲</span>`;
@@ -3268,20 +3337,29 @@
           )
         ].join("");
 
+        const onlineKeys = new Set(q && onlineSearch.q === q ? onlineSearch.keys : []);
         const all = Array.from(getAllKnownItemsMap().values()).filter((it) => {
           if (searchPlatFilter !== "all" && it.platformId !== searchPlatFilter && !(it.providers || []).includes(searchPlatFilter)) {
             return false;
           }
           if (!q) return true;
-          const hay = `${it.title} ${it.enTitle || ""} ${(it.genres || []).join(" ")} ${(it.cast || []).map((c) => c.name + " " + (c.enName || "")).join(" ")}`.toLowerCase();
-          return hay.includes(q);
+          if (onlineKeys.has(itemKey(it))) return true;
+          const hay = `${it.title} ${it.titleZh || ""} ${it.enTitle || ""} ${(it.genres || []).join(" ")} ${(it.cast || []).map((c) => c.name + " " + (c.enName || "")).join(" ")}`.toLowerCase();
+          return hay.includes(q) || (typeof toHans === "function" && toHans(hay).includes(toHans(q)));
         });
-        all.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
+        // 在线搜到的按相关度排在前面，其余按热度
+        const onlineOrder = new Map((q && onlineSearch.q === q ? onlineSearch.keys : []).map((k, i) => [k, i]));
+        all.sort((a, b) => {
+          const oa = onlineOrder.has(itemKey(a)) ? onlineOrder.get(itemKey(a)) : 1e6;
+          const ob = onlineOrder.has(itemKey(b)) ? onlineOrder.get(itemKey(b)) : 1e6;
+          if (oa !== ob) return oa - ob;
+          return (Number(b.heat) || 0) - (Number(a.heat) || 0);
+        });
 
         const grid = document.getElementById("searchResultsGrid");
         grid.innerHTML = all.length
           ? all.map(renderPosterCardTile).join("")
-          : `<div class="surface-card" style="grid-column: 1 / -1; text-align: center; font-size: 13.5px; color: var(--text-muted);">未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询</div>`;
+          : `<div class="surface-card" style="grid-column: 1 / -1; text-align: center; font-size: 13.5px; color: var(--text-muted);">${onlineSearchTimer && q ? "正在全网搜索…" : "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询"}</div>`;
       }
 
       function renderWatchlistView() {
@@ -3352,6 +3430,7 @@
       }
 
       function renderActiveView() {
+        checkStalledPosters();
         if (activeNav === "home") {
           renderHeroCarousel();
           renderStreamingCharts();
@@ -3788,6 +3867,11 @@
                 <span style="font-size: 12px; font-weight: 600;">${escapeHtml(o.name)}</span>
               </a>`)
           .join("");
+
+        if (!document.getElementById("detailProvidersRow").innerHTML.trim()) {
+          document.getElementById("detailProvidersRow").innerHTML =
+            `<div style="font-size: 13px; color: var(--text-muted);">暂未查到正版流媒体平台</div>`;
+        }
 
         const epBox = document.getElementById("detailEpisodeBox");
         if (!itemHasEpisodes(item)) {
@@ -4253,67 +4337,83 @@
         warmMissingPostersQuietly();
       }
 
-      async function runOnlineSearch() {
+      // 全网搜索：先查 JustWatch（美区 + 台湾区，中文名也能搜到，覆盖所有平台），再用 TVmaze / iTunes 补充
+      let onlineSearch = { q: "", keys: [] };
+      let onlineSearchTimer = null;
+      let onlineSearchSeq = 0;
+      async function runOnlineSearch(silent) {
         const q = document.getElementById("searchInput").value.trim();
         if (!q) {
-          showToast("请输入想找的电影或剧名");
+          if (silent !== true) showToast("请输入想找的电影或剧名");
           return;
         }
-        showToast("正在检索流媒体片库...");
-        let added = 0;
+        const seq = ++onlineSearchSeq;
+        if (silent !== true) showToast("正在检索流媒体片库...");
+        const found = [];
+        const add = (it) => {
+          const k = itemKey(it);
+          if (!k || found.some((x) => itemKey(x) === k)) return;
+          found.push(it);
+        };
 
-        const [tvJob, mvJob] = await Promise.allSettled([
+        const jobs = await Promise.allSettled([
+          location.protocol.startsWith("http") ? fetch(`./api/catalog?feedType=search&q=${encodeURIComponent(q)}`) : Promise.reject(new Error("offline")),
           fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`),
           fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=movie&limit=6`)
         ]);
+        if (seq !== onlineSearchSeq) return; // 期间又输入了新的关键词
 
-        if (tvJob.status === "fulfilled" && tvJob.value.ok) {
+        if (jobs[0].status === "fulfilled" && jobs[0].value.ok) {
           try {
-            const arr = await tvJob.value.json();
+            const data = await jobs[0].value.json();
+            (data.items || []).forEach(add);
+          } catch (e) {}
+        }
+        if (jobs[1].status === "fulfilled" && jobs[1].value.ok) {
+          try {
+            const arr = await jobs[1].value.json();
             arr.slice(0, 6).forEach((entry) => {
               const s = entry.show;
               if (!s || !s.name) return;
-              const wc = String(s.webChannel?.name || s.network?.name || "").toLowerCase();
-              let pid = "netflix";
-              if (wc.includes("disney")) pid = "disney";
-              else if (wc.includes("hbo") || wc === "max") pid = "hbo";
-              else if (wc.includes("prime") || wc.includes("amazon")) pid = "prime";
-              else if (wc.includes("paramount")) pid = "paramount";
-              else if (wc.includes("apple")) pid = "apple";
-
-              extraSearchItems.push({
+              const yr = s.premiered ? Number(String(s.premiered).slice(0, 4)) : 0;
+              add({
                 id: "s_tv_" + s.id,
                 title: s.name,
                 enTitle: s.name,
                 mediaType: "show",
-                platformId: pid,
-                providers: [pid],
-                heat: 720,
-                imdb: s.rating?.average || 7.8,
-                genres: s.genres || ["剧集"],
+                platformId: "other",
+                providers: [],
+                otherOffers: s.webChannel?.name || s.network?.name
+                  ? [{ name: s.webChannel?.name || s.network?.name, icon: "", url: s.officialSite || s.url || "" }]
+                  : [],
+                heat: 700,
+                imdb: s.rating?.average || 0,
+                year: yr || "",
+                releaseDate: s.premiered || "",
+                genres: s.genres || [],
                 synopsis: String(s.summary || "").replace(/<[^>]+>/g, ""),
                 posterHd: String(s.image?.original || "").replace(/^http:/, "https:"),
                 posterThumb: String(s.image?.medium || "").replace(/^http:/, "https:")
               });
-              added++;
             });
           } catch (e) {}
         }
-
-        if (mvJob.status === "fulfilled" && mvJob.value.ok) {
+        if (jobs[2].status === "fulfilled" && jobs[2].value.ok) {
           try {
-            const mData = await mvJob.value.json();
+            const mData = await jobs[2].value.json();
             (mData.results || []).forEach((mv) => {
               if (!mv.trackName) return;
-              extraSearchItems.push({
+              add({
                 id: "s_mv_" + mv.trackId,
                 title: mv.trackName,
                 enTitle: mv.trackName,
                 mediaType: "movie",
-                platformId: "apple",
-                providers: ["apple"],
-                heat: 710,
-                imdb: 7.9,
+                platformId: "other",
+                providers: [],
+                otherOffers: mv.trackViewUrl ? [{ name: "Apple TV（租借 / 购买）", icon: "", url: mv.trackViewUrl }] : [],
+                heat: 690,
+                imdb: 0,
+                year: mv.releaseDate ? Number(String(mv.releaseDate).slice(0, 4)) : "",
                 runtime: mv.trackTimeMillis ? Math.round(mv.trackTimeMillis / 60000) : 0,
                 genres: [mv.primaryGenreName || "电影"],
                 synopsis: mv.longDescription || mv.shortDescription || "",
@@ -4321,13 +4421,24 @@
                 posterThumb: mv.artworkUrl100 ? mv.artworkUrl100.replace("100x100bb", "400x600bb") : "",
                 trailerUrl: mv.previewUrl || ""
               });
-              added++;
             });
           } catch (e) {}
         }
 
+        found.forEach((it) => extraSearchItems.push(it));
+        if (extraSearchItems.length > 300) extraSearchItems.splice(0, extraSearchItems.length - 300);
+        // 记住这次在线搜到的条目：即使片名是英文（如 Midnight Diner），也照样显示在“深夜食堂”的结果里
+        onlineSearch = { q: q.toLowerCase(), keys: found.map(itemKey) };
+        onlineSearchTimer = null;
         renderSearchView();
-        showToast(added > 0 ? `已找到 ${added} 部相关影视` : "已完成检索");
+        if (silent !== true) showToast(found.length ? `已找到 ${found.length} 部相关影视` : "已完成检索");
+      }
+      // 输入停顿 0.8 秒后，本地结果不足时自动全网搜索
+      function scheduleOnlineSearch() {
+        clearTimeout(onlineSearchTimer);
+        const q = document.getElementById("searchInput").value.trim();
+        if (q.length < 2) return;
+        onlineSearchTimer = setTimeout(() => runOnlineSearch(true), 800);
       }
 
       function mergeStates(remote, local) {
@@ -4969,8 +5080,21 @@
         document.getElementById("syncDownBtn").addEventListener("click", () => syncWithGist("down"));
 
         // Search & Watchlist Filters
-        document.getElementById("searchInput").addEventListener("input", renderSearchView);
-        document.getElementById("onlineSearchBtn").addEventListener("click", runOnlineSearch);
+        document.getElementById("searchInput").addEventListener("input", () => {
+          renderSearchView();
+          scheduleOnlineSearch();
+        });
+        document.getElementById("searchInput").addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            clearTimeout(onlineSearchTimer);
+            runOnlineSearch();
+            e.target.blur();
+          }
+        });
+        document.getElementById("onlineSearchBtn").addEventListener("click", () => {
+          clearTimeout(onlineSearchTimer);
+          runOnlineSearch();
+        });
         document.getElementById("searchPlatformFilter").addEventListener("click", (e) => {
           const btn = e.target.closest("[data-splat]");
           if (!btn) return;
