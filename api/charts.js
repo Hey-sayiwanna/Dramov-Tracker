@@ -12,7 +12,15 @@ const PLATFORM_DEFS = [
   { id: "hbo", matchNames: ["max", "hbo max"], fallbackCodes: ["mxx", "hbm"] },
   { id: "prime", matchNames: ["amazon prime video", "prime video"], fallbackCodes: ["amp", "prv"] },
   { id: "paramount", matchNames: ["paramount plus", "paramount+"], fallbackCodes: ["pmp"] },
-  { id: "apple", matchNames: ["apple tv+", "apple tv plus", "apple tv"], fallbackCodes: ["atp"] }
+  { id: "apple", matchNames: ["apple tv+", "apple tv plus", "apple tv"], fallbackCodes: ["atp"] },
+  { id: "hulu", matchNames: ["hulu"], fallbackCodes: ["hlu"] },
+  { id: "peacock", matchNames: ["peacock", "peacock premium", "peacock premium plus"], fallbackCodes: ["pct", "pcp"] }
+];
+
+// 地区专区：按出品地区筛选（港澳台用台湾片库，日韩用美区片库）
+const REGION_DEFS = [
+  { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
+  { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
 ];
 
 function withTimeout(promise, ms = 5800) {
@@ -109,6 +117,30 @@ query GetPopularBilingual($country: Country!, $first: Int!, $filter: TitleFilter
 }
 `;
 
+// 在 BILINGUAL 基础上加 JustWatch 每日流媒体榜排名与热度趋势；字段不可用时自动退回 BILINGUAL
+const CHART_FIELDS = `
+        ... on MovieOrShowOrSeason {
+          popularityRank(country: $country) {
+            rank
+            trend
+            trendDifference
+          }
+          streamingCharts(country: $country) {
+            edges {
+              streamingChartInfo {
+                rank
+                trend
+                trendDifference
+                daysInTop10
+              }
+            }
+          }
+        }`;
+const POPULAR_RICH_QUERY = POPULAR_BILINGUAL_QUERY.replace(
+  /(\.\.\. on Show \{\s*totalSeasonCount\s*\})/,
+  "$1" + CHART_FIELDS
+);
+
 const POPULAR_MIN_QUERY = `
 query GetPopularMin($country: Country!, $first: Int!, $filter: TitleFilter) {
   popularTitles(country: $country, first: $first, filter: $filter) {
@@ -186,7 +218,9 @@ function mapShortToPlatformId(shortName = "", clearName = "") {
   if (s === "mxx" || s === "hbm" || c === "max" || c.includes("hbo")) return "hbo";
   if (s === "amp" || s === "prv" || c.includes("prime video")) return "prime";
   if (s === "pmp" || c.includes("paramount")) return "paramount";
-  if (s === "atp" || c.includes("apple tv")) return "apple";
+  if (s === "atp" || c.includes("apple tv+") || c === "apple tv") return "apple";
+  if (s === "hlu" || c === "hulu" || c.startsWith("hulu ")) return "hulu";
+  if (s === "pct" || s === "pcp" || c.startsWith("peacock")) return "peacock";
   return null;
 }
 
@@ -216,6 +250,11 @@ async function resolveProviderMeta(country = "US") {
 async function fetchTitlesWithFilter(filter, count = 10, country = "US") {
   const vars = { country, first: count, filter };
   try {
+    const r0 = await queryUpstream(POPULAR_RICH_QUERY, vars);
+    const edges0 = r0?.data?.popularTitles?.edges || [];
+    if (edges0.length) return edges0;
+  } catch (e) {}
+  try {
     const r1 = await queryUpstream(POPULAR_BILINGUAL_QUERY, vars);
     const edges1 = r1?.data?.popularTitles?.edges || [];
     if (edges1.length) return edges1;
@@ -243,14 +282,30 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
   const providerIcons = {};
   if (defaultPlatformId) providersSet.add(defaultPlatformId);
 
+  const otherOffers = [];
   for (const off of offers) {
     const pid = mapShortToPlatformId(off.package?.shortName, off.package?.clearName);
     if (pid) {
       providersSet.add(pid);
       if (off.standardWebURL && !providerLinks[pid]) providerLinks[pid] = off.standardWebURL;
       if (off.package?.icon && !providerIcons[pid]) providerIcons[pid] = formatImageUrl(off.package.icon, "s100");
+    } else if (
+      off.package?.clearName &&
+      ["FLATRATE", "FREE", "ADS"].includes(off.monetizationType) &&
+      !otherOffers.some((o) => o.name === off.package.clearName) &&
+      otherOffers.length < 4
+    ) {
+      // 不在内置平台列表里的服务（如台湾的 friDay、LINE TV），详情页照样显示
+      otherOffers.push({
+        name: off.package.clearName,
+        icon: off.package.icon ? formatImageUrl(off.package.icon, "s100") : "",
+        url: off.standardWebURL || ""
+      });
     }
   }
+  if (defaultPlatformId && !PLATFORM_DEFS.some((d) => d.id === defaultPlatformId)) providersSet.delete(defaultPlatformId);
+  const chartInfo = node.streamingCharts?.edges?.[0]?.streamingChartInfo || null;
+  const popRank = node.popularityRank || null;
 
   const imdb = sc.imdbScore ? Number(Number(sc.imdbScore).toFixed(1)) : null;
   const imdbVotes = sc.imdbVotes ? Number(sc.imdbVotes) : 0;
@@ -294,6 +349,12 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     providers: Array.from(providersSet),
     providerLinks,
     providerIcons,
+    otherOffers,
+    chartRank: chartInfo && chartInfo.rank ? Number(chartInfo.rank) : null,
+    trend: (chartInfo && chartInfo.trend) || (popRank && popRank.trend) || "",
+    trendDiff: Number((chartInfo && chartInfo.trendDifference) || (popRank && popRank.trendDifference) || 0),
+    popRank: popRank && popRank.rank ? Number(popRank.rank) : null,
+    daysInTop10: chartInfo ? Number(chartInfo.daysInTop10) || 0 : 0,
     heat: Math.round((Number(sc.tmdbPopularity) || (1000 - rankIdx * 35)) * 10) / 10,
     imdb: imdb || tmdbScore || 7.9,
     imdbVotes,
@@ -354,6 +415,18 @@ async function enrichPremiereDateViaTvmaze(item) {
   return item;
 }
 
+// 按 JustWatch 每日流媒体榜排名排序（没上榜的按热度排名，其后保持原有热度顺序）
+function sortByChartRank(list) {
+  return list
+    .map((it, i) => ({ it, i }))
+    .sort((a, b) => {
+      const ra = a.it.chartRank || (a.it.popRank ? 100000 + a.it.popRank : 1e9 + a.i);
+      const rb = b.it.chartRank || (b.it.popRank ? 100000 + b.it.popRank : 1e9 + b.i);
+      return ra - rb;
+    })
+    .map((x) => x.it);
+}
+
 function daysSinceDateStr(dateStr) {
   if (!dateStr) return 9999;
   const ms = Date.parse(dateStr);
@@ -403,15 +476,26 @@ module.exports = async (req, res) => {
         18,
         country
       ),
-      // Tasks 3..8: Per-platform Top 10 (Movies + TV Shows combined, excluding documentaries)
+      // Tasks 3..: Per-platform Top 10 (Movies + TV Shows combined, excluding documentaries)
       ...PLATFORM_DEFS.map((def) =>
         fetchTitlesWithFilter(
           {
             packages: codeMap[def.id],
             objectTypes: ["MOVIE", "SHOW"]
           },
-          14,
+          24,
           country
+        )
+      ),
+      // 地区专区
+      ...REGION_DEFS.map((rg) =>
+        fetchTitlesWithFilter(
+          {
+            productionCountries: rg.productionCountries,
+            objectTypes: ["MOVIE", "SHOW"]
+          },
+          24,
+          rg.country
         )
       )
     ];
@@ -447,12 +531,12 @@ module.exports = async (req, res) => {
 
     const hotShowsTop =
       settled[1].status === "fulfilled"
-        ? settled[1].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc).slice(0, 14)
+        ? sortByChartRank(settled[1].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc)).slice(0, 14)
         : [];
 
     const hotMoviesTop =
       settled[2].status === "fulfilled"
-        ? settled[2].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc).slice(0, 14)
+        ? sortByChartRank(settled[2].value.map((e, i) => normalizeNode(e.node, null, i)).filter((x) => x.title && !x.isDoc)).slice(0, 14)
         : [];
 
     const chartsByPlatform = {};
@@ -460,10 +544,18 @@ module.exports = async (req, res) => {
       const s = settled[idx + 3];
       chartsByPlatform[def.id] =
         s.status === "fulfilled" && s.value.length
-          ? s.value
-              .map((e, rankIdx) => normalizeNode(e.node, def.id, rankIdx))
-              .filter((x) => x.title && !x.isDoc)
-              .slice(0, 10)
+          ? sortByChartRank(
+              s.value.map((e, rankIdx) => normalizeNode(e.node, def.id, rankIdx)).filter((x) => x.title && !x.isDoc)
+            ).slice(0, 10)
+          : [];
+    });
+    REGION_DEFS.forEach((rg, idx) => {
+      const s = settled[PLATFORM_DEFS.length + 3 + idx];
+      chartsByPlatform[rg.id] =
+        s && s.status === "fulfilled" && s.value.length
+          ? sortByChartRank(
+              s.value.map((e, rankIdx) => normalizeNode(e.node, rg.id, rankIdx)).filter((x) => x.title && !x.isDoc)
+            ).slice(0, 10)
           : [];
     });
 

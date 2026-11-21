@@ -98,7 +98,7 @@
 
     body {
       min-height: 100vh;
-      padding-bottom: calc(120px + env(safe-area-inset-bottom, 16px));
+      padding-bottom: calc(84px + env(safe-area-inset-bottom, 16px));
     }
 
     /* =========================================================================
@@ -359,6 +359,8 @@
     /* Solid GPU-friendly surface (NO backdrop-filter during scroll = 120fps!) */
     .platform-chart-col {
       contain: layout style paint;
+      content-visibility: auto;
+      contain-intrinsic-size: 326px 940px;
       flex: 0 0 83vw;
       max-width: 326px;
       min-width: 276px;
@@ -948,7 +950,7 @@
        ========================================================================= */
     #bottomNavWrap {
       --nav-h: 62px;
-      --nav-mini: 56px;
+      --nav-mini: 48px;
       --nav-ease: cubic-bezier(0.32, 0.72, 0, 1);
       --nav-glass-tint: rgba(30, 30, 34, 0.46);
       --nav-glass-sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 55%);
@@ -973,7 +975,7 @@
       left: 20px;
       right: 20px;
       margin: 0 auto;
-      bottom: max(14px, calc(env(safe-area-inset-bottom, 14px) - 6px));
+      bottom: max(10px, calc(env(safe-area-inset-bottom, 14px) - 13px));
       z-index: 50;
       max-width: 420px;
       height: var(--nav-h);
@@ -1144,8 +1146,8 @@
       pointer-events: none;
     }
     #navMiniIcon svg {
-      width: 23px;
-      height: 23px;
+      width: 21px;
+      height: 21px;
       display: block;
     }
 
@@ -1176,8 +1178,8 @@
       transition: opacity 0.22s ease, transform 0.46s var(--nav-ease);
     }
     .mini-glass-orb svg {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       display: block;
       position: relative;
       z-index: 2;
@@ -1228,6 +1230,37 @@
     @media (prefers-reduced-motion: reduce) {
       #bottomNav, .mini-glass-orb, #navMiniIcon, .nav-btn, #navSlidingLens { transition: none !important; }
     }
+
+    /* 排名趋势箭头 */
+    .trend-arrow { font-size: 10.5px; font-weight: 800; flex-shrink: 0; }
+    .trend-arrow.up { color: #22c55e; }
+    .trend-arrow.down { color: #ef4444; }
+    .trend-arrow.flat { color: var(--text-muted); }
+
+    /* 擂台赛程 */
+    .ring-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 2px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+    .ring-row:last-child { border-bottom: none; }
+    .ring-big { background: linear-gradient(90deg, rgba(220, 38, 38, 0.12), transparent 70%); border-radius: 12px; padding-left: 8px; }
+    .ring-date { width: 44px; flex-shrink: 0; text-align: center; }
+    .ring-day { font-size: 15px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+    .ring-wk { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .ring-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .ring-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary); }
+    .ring-org { flex-shrink: 0; font-size: 9.5px; font-weight: 900; letter-spacing: 0.04em; padding: 2px 5px; border-radius: 4px; color: #fff; }
+    .ring-org-wwe { background: #dc2626; }
+    .ring-org-aew { background: #b8860b; }
+    .ring-org-ufc { background: #334155; }
+    .ring-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ring-place { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ring-chip { flex-shrink: 0; align-self: center; font-size: 10.5px; font-weight: 800; color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.5); padding: 2px 6px; border-radius: 6px; }
+    .ring-live { color: #ef4444; font-weight: 900; }
+    .ring-group-head { font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 16px 0 2px; }
 
     /* 首页热播 Top 10：大号描边排名数字半藏在海报后面 */
     .rank-card {
@@ -1861,7 +1894,6 @@
             一键追平已播集
           </button>
         </div>
-        <div style="font-size: 12px; color: #8b9bb4;">点选集数记录观看进度（绿=已看 · 蓝=已播 · 虚线=未播）</div>
         <div id="detailEpGrid" class="ep-grid"></div>
       </div>
 
@@ -1902,7 +1934,7 @@
     (function () {
       "use strict";
 
-      const PLATFORMS = [{"id": "netflix", "name": "Netflix", "cnName": "奈飞 Netflix", "shortCode": "nfx", "badgeText": "N", "color": "#e50914", "bgGrad": ["#991b1b", "#090d16"], "homeUrl": "https://www.netflix.com/", "searchUrl": "https://www.netflix.com/search?q="}, {"id": "disney", "name": "Disney+", "cnName": "迪士尼 Disney+", "shortCode": "dnp", "badgeText": "D+", "color": "#0ea5e9", "bgGrad": ["#0c4a6e", "#090d16"], "homeUrl": "https://www.disneyplus.com/", "searchUrl": "https://www.disneyplus.com/"}, {"id": "hbo", "name": "HBO Max", "cnName": "HBO Max", "shortCode": "mxx", "badgeText": "MAX", "color": "#7c3aed", "bgGrad": ["#3b0764", "#090d16"], "homeUrl": "https://www.max.com/", "searchUrl": "https://www.max.com/"}, {"id": "prime", "name": "Prime Video", "cnName": "Prime Video", "shortCode": "amp", "badgeText": "PV", "color": "#00a8e1", "bgGrad": ["#0369a1", "#090d16"], "homeUrl": "https://www.primevideo.com/", "searchUrl": "https://www.primevideo.com/search/ref=atv_nb_sr?phrase="}, {"id": "paramount", "name": "Paramount+", "cnName": "派拉蒙 Paramount+", "shortCode": "pmp", "badgeText": "P+", "color": "#2563eb", "bgGrad": ["#1e3a8a", "#090d16"], "homeUrl": "https://www.paramountplus.com/", "searchUrl": "https://www.paramountplus.com/"}, {"id": "apple", "name": "Apple TV+", "cnName": "Apple TV+", "shortCode": "atp", "badgeText": "tv+", "color": "#475569", "bgGrad": ["#1e293b", "#090d16"], "homeUrl": "https://tv.apple.com/", "searchUrl": "https://tv.apple.com/us/search?term="}];
+      const PLATFORMS = [{"id": "netflix", "name": "Netflix", "cnName": "奈飞 Netflix", "shortCode": "nfx", "badgeText": "N", "color": "#e50914", "bgGrad": ["#991b1b", "#090d16"], "homeUrl": "https://www.netflix.com/", "searchUrl": "https://www.netflix.com/search?q="}, {"id": "disney", "name": "Disney+", "cnName": "迪士尼 Disney+", "shortCode": "dnp", "badgeText": "D+", "color": "#0ea5e9", "bgGrad": ["#0c4a6e", "#090d16"], "homeUrl": "https://www.disneyplus.com/", "searchUrl": "https://www.disneyplus.com/"}, {"id": "hbo", "name": "HBO Max", "cnName": "HBO Max", "shortCode": "mxx", "badgeText": "MAX", "color": "#7c3aed", "bgGrad": ["#3b0764", "#090d16"], "homeUrl": "https://www.max.com/", "searchUrl": "https://www.max.com/"}, {"id": "prime", "name": "Prime Video", "cnName": "Prime Video", "shortCode": "amp", "badgeText": "PV", "color": "#00a8e1", "bgGrad": ["#0369a1", "#090d16"], "homeUrl": "https://www.primevideo.com/", "searchUrl": "https://www.primevideo.com/search/ref=atv_nb_sr?phrase="}, {"id": "paramount", "name": "Paramount+", "cnName": "派拉蒙 Paramount+", "shortCode": "pmp", "badgeText": "P+", "color": "#2563eb", "bgGrad": ["#1e3a8a", "#090d16"], "homeUrl": "https://www.paramountplus.com/", "searchUrl": "https://www.paramountplus.com/"}, {"id": "apple", "name": "Apple TV+", "cnName": "Apple TV+", "shortCode": "atp", "badgeText": "tv+", "color": "#475569", "bgGrad": ["#1e293b", "#090d16"], "homeUrl": "https://tv.apple.com/", "searchUrl": "https://tv.apple.com/us/search?term="}, {"id": "hulu", "name": "Hulu", "cnName": "Hulu", "shortCode": "hlu", "badgeText": "hulu", "color": "#1ce783", "bgGrad": ["#065f46", "#090d16"], "homeUrl": "https://www.hulu.com/", "searchUrl": "https://www.hulu.com/search?q="}, {"id": "peacock", "name": "Peacock", "cnName": "Peacock", "shortCode": "pct", "badgeText": "P", "color": "#f59e0b", "bgGrad": ["#3f3f46", "#090d16"], "homeUrl": "https://www.peacocktv.com/", "searchUrl": "https://www.peacocktv.com/watch/search?q="}, {"id": "gat", "kind": "region", "name": "港澳台", "cnName": "港澳台 · 华语出品", "shortCode": "gat", "badgeText": "港澳台", "color": "#ef4444", "bgGrad": ["#7f1d1d", "#090d16"], "homeUrl": "https://www.justwatch.com/tw", "searchUrl": "https://www.justwatch.com/tw/search?q="}, {"id": "jk", "kind": "region", "name": "日韩", "cnName": "日韩 · 日剧韩剧动画", "shortCode": "jk", "badgeText": "JK", "color": "#a855f7", "bgGrad": ["#4c1d95", "#090d16"], "homeUrl": "https://www.justwatch.com/us", "searchUrl": "https://www.justwatch.com/us/search?q="}, {"id": "ring", "kind": "schedule", "defaultHidden": true, "name": "擂台", "cnName": "擂台 · WWE / AEW / UFC 赛程", "shortCode": "ring", "badgeText": "VS", "color": "#dc2626", "bgGrad": ["#450a0a", "#090d16"], "homeUrl": "https://www.wwe.com/", "searchUrl": "https://www.google.com/search?q="}];
       const SEED_ITEMS = [{"id": "dnp_visionquest", "title": "幻视征途", "enTitle": "VisionQuest", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 985, "imdb": 7.8, "recommendPct": 82, "year": 2026, "releaseDate": "2026-10-13", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻奇幻", "剧情"], "ageRating": "TV-14", "synopsis": "重启后的幻视隐居避世，试图摆脱将他武器化的人，并通过与体内的多个 AI 人格（包括奥创）交流寻找存在意义。然而高额悬赏打破了平静，他被迫与神秘少年托马斯一同逃亡。", "cast": [{"name": "保罗·贝坦尼", "enName": "Paul Bettany", "role": "Vision"}, {"name": "詹姆斯·斯派德", "enName": "James Spader", "role": "Ultron"}, {"name": "Ruaridh Mollica", "enName": "Ruaridh Mollica", "role": "Thomas"}, {"name": "Todd Stashwick", "enName": "Todd Stashwick", "role": "Paladin"}]}, {"id": "dnp_percy_jackson", "title": "波西·杰克逊", "enTitle": "Percy Jackson and the Olympians", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 912, "imdb": 7.4, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-04", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻", "动作冒险"], "ageRating": "TV-PG", "synopsis": "半神少年波西·杰克逊重返混血营，为拯救好友格罗弗与守护营地结界，踏上深入魔兽之海寻找金羊毛的全新征途。", "cast": [{"name": "沃克·斯科贝尔", "enName": "Walker Scobell", "role": "Percy Jackson"}, {"name": "莉亚·杰弗里斯", "enName": "Leah Sava Jeffries", "role": "Annabeth"}, {"name": "阿利安·西姆哈德里", "enName": "Aryan Simhadri", "role": "Grover"}]}, {"id": "dnp_mandalorian_grogu", "title": "曼达洛人与古古", "enTitle": "The Mandalorian and Grogu", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 890, "imdb": 7.9, "recommendPct": 88, "year": 2026, "releaseDate": "2026-10-28", "runtime": 124, "genres": ["科幻", "太空冒险"], "ageRating": "PG-13", "synopsis": "新共和国崛起之际，丁·贾林与古古受命踏上跨越星际的秘密行动，在帝国残党阴影下守护银河边缘的秩序。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Din Djarin"}, {"name": "西格妮·韦弗", "enName": "Sigourney Weaver", "role": "Colonel Ward"}]}, {"id": "dnp_remarried_empress", "title": "再婚皇后", "enTitle": "The Remarried Empress", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 858, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-11-03", "seasonNumber": 1, "totalEpisodes": 12, "airedEpisodes": 6, "genres": ["宫廷奇幻", "爱情"], "ageRating": "TV-14", "synopsis": "东大帝国完美皇后娜菲尔在皇帝执意迎娶逃奴并要求离婚之际，当庭宣布改嫁西王国王子海因里，掀起两国宫廷风暴。", "cast": [{"name": "申敏儿", "enName": "Shin Min-a", "role": "Navier"}, {"name": "李钟硕", "enName": "Lee Jong-suk", "role": "Heinrey"}]}, {"id": "dnp_toystory5", "title": "玩具总动员5", "enTitle": "Toy Story 5", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 842, "imdb": 7.7, "recommendPct": 84, "year": 2026, "releaseDate": "2026-10-15", "runtime": 106, "genres": ["动画", "家庭喜剧"], "ageRating": "G", "synopsis": "胡迪、巴斯光年与伙伴们面对电子平板时代的新挑战，展开一场守护童年陪伴与想象力的欢乐冒险。", "cast": [{"name": "汤姆·汉克斯", "enName": "Tom Hanks", "role": "Woody"}, {"name": "蒂姆·艾伦", "enName": "Tim Allen", "role": "Buzz Lightyear"}]}, {"id": "dnp_andor", "title": "安多", "enTitle": "Andor", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 815, "imdb": 8.5, "recommendPct": 93, "year": 2025, "releaseDate": "2025-04-22", "seasonNumber": 2, "totalEpisodes": 12, "airedEpisodes": 12, "genres": ["科幻", "谍战惊悚"], "ageRating": "TV-14", "synopsis": "卡西安·安多从独善其身的边缘旅人蜕变为义军同盟核心情报特工，直抵《侠盗一号》爆发前夜。", "cast": [{"name": "迭戈·鲁纳", "enName": "Diego Luna", "role": "Cassian Andor"}, {"name": "斯特兰·斯卡斯加德", "enName": "Stellan Skarsgard", "role": "Luthen Rael"}]}, {"id": "dnp_bear", "title": "大熊餐厅", "enTitle": "The Bear", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 792, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-25", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["剧情", "职场喜剧"], "ageRating": "TV-MA", "synopsis": "卡米与西德尼在米其林星级压力与资金倒计时中全力守住餐厅灵魂。", "cast": [{"name": "杰瑞米·艾伦·怀特", "enName": "Jeremy Allen White", "role": "Carmy"}, {"name": "阿约·艾德维利", "enName": "Ayo Edebiri", "role": "Sydney"}]}, {"id": "dnp_avatar_fire", "title": "阿凡达：火与烬", "enTitle": "Avatar: Fire and Ash", "mediaType": "movie", "platformId": "disney", "providers": ["disney"], "heat": 778, "imdb": 7.8, "recommendPct": 83, "year": 2025, "releaseDate": "2026-06-12", "runtime": 192, "genres": ["科幻", "史诗冒险"], "ageRating": "PG-13", "synopsis": "杰克与奈蒂莉一家遭遇潘多拉火山灰烬部族，揭开纳威族群更深层的冲突与抉择。", "cast": [{"name": "萨姆·沃辛顿", "enName": "Sam Worthington", "role": "Jake Sully"}, {"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Neytiri"}]}, {"id": "dnp_only_murders", "title": "大楼里只有谋杀", "enTitle": "Only Murders in the Building", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 745, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-09-08", "seasonNumber": 5, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["悬疑", "犯罪喜剧"], "ageRating": "TV-MA", "synopsis": "阿科尼亚公寓播客三人组再度卷入扑朔迷离的全新命案线索。", "cast": [{"name": "史蒂夫·马丁", "enName": "Steve Martin", "role": "Charles"}, {"name": "赛琳娜·戈麦斯", "enName": "Selena Gomez", "role": "Mabel"}]}, {"id": "dnp_shogun", "title": "幕府将军", "enTitle": "Shogun", "mediaType": "show", "platformId": "disney", "providers": ["disney"], "heat": 730, "imdb": 8.6, "recommendPct": 96, "year": 2024, "releaseDate": "2024-02-27", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["历史", "战争权谋"], "ageRating": "TV-MA", "synopsis": "战国风云诡谲之际，吉井虎永武将与英国领航员按针在生死棋局中改写时代走向。", "cast": [{"name": "真田广之", "enName": "Hiroyuki Sanada", "role": "Toranaga"}, {"name": "泽井杏奈", "enName": "Anna Sawai", "role": "Mariko"}]}, {"id": "nfx_the_body", "title": "青春共体", "enTitle": "The Body", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 976, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["心理惊悚", "悬疑剧情"], "ageRating": "TV-MA", "synopsis": "2004年圣马可女子中学，风云舞蹈队在废弃修道院举行万圣夜入队仪式时意外酿成秘密，少女们在集体恐慌与权力角力中逐步失控。", "cast": [{"name": "Quinn Shephard", "enName": "Quinn Shephard", "role": "Creator"}, {"name": "Riley Keough", "enName": "Riley Keough", "role": "Producer"}]}, {"id": "nfx_black_doves", "title": "黑鸽", "enTitle": "Black Doves", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 944, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-05", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战", "动作惊悚"], "ageRating": "TV-MA", "synopsis": "潜伏伦敦政坛高层的秘密间谍海伦与老搭档山姆再度联手，在圣诞夜前夕追查牵动地下情报网的致命阴谋。", "cast": [{"name": "凯拉·奈特莉", "enName": "Keira Knightley", "role": "Helen Webb"}, {"name": "本·卫肖", "enName": "Ben Whishaw", "role": "Sam Young"}]}, {"id": "nfx_blue_road", "title": "罪蓝之路", "enTitle": "The Blue Road", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 918, "imdb": 8.2, "recommendPct": 87, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "跨国悬疑"], "ageRating": "TV-MA", "synopsis": "一桩横跨东亚港口的连环失踪悬案将两位性格迥异的刑警卷入深水暗流，全季8集已一次上线。", "cast": [{"name": "孙锡久", "enName": "Son Suk-ku", "role": "Detective"}, {"name": "永山瑛太", "enName": "Eita Nagayama", "role": "Inspector"}]}, {"id": "nfx_miracles_er", "title": "急诊室的奇迹", "enTitle": "Miracles of the ER", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 885, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-12", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["医疗职场", "剧情"], "ageRating": "TV-14", "synopsis": "央大医院急诊医学部主治团队带领三位新晋住院医师，在分秒必争的急救现场与伦理抉择中直面生死考验。", "cast": [{"name": "霍建华", "enName": "Wallace Huo", "role": "周承俊"}, {"name": "杨谨华", "enName": "Cheryl Yang", "role": "何宇华"}, {"name": "蔡凡熙", "enName": "Kent Tsai", "role": "林耿明"}]}, {"id": "nfx_cliff_booth", "title": "克里夫·布兹历险记", "enTitle": "The Adventures of Cliff Booth", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 874, "imdb": 8.3, "recommendPct": 88, "year": 2026, "releaseDate": "2026-11-18", "runtime": 138, "genres": ["犯罪喜剧", "剧情"], "ageRating": "R", "synopsis": "大卫·芬奇执导、昆汀编剧，聚焦好莱坞替身演员兼片场危机调解员克里夫·布兹在70年代洛杉矶的荒诞暗涌往事。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Cliff Booth"}, {"name": "伊丽莎白·德比齐", "enName": "Elizabeth Debicki", "role": "Lead"}]}, {"id": "nfx_possible_love", "title": "可能的爱情", "enTitle": "Possible Love", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 846, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-11-06", "runtime": 132, "genres": ["剧情", "文艺"], "ageRating": "R", "synopsis": "李沧东执导新作，讲述两对生活轨迹截然相反的夫妻在偶然交汇后，平静日常下悄然裂变的情感暗流。", "cast": [{"name": "全道嬿", "enName": "Jeon Do-yeon", "role": "Mi-ok"}, {"name": "薛景求", "enName": "Sol Kyung-gu", "role": "Ho-seok"}, {"name": "赵寅成", "enName": "Zo In-sung", "role": "Sang-woo"}]}, {"id": "nfx_diplomat", "title": "头号外交官", "enTitle": "The Diplomat", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 822, "imdb": 8.0, "recommendPct": 87, "year": 2026, "releaseDate": "2026-10-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["政治惊悚", "剧情"], "ageRating": "TV-MA", "synopsis": "凯特·怀勒大使在国际外交风暴中心周旋，每一句谈判辞令都牵动大国博弈。", "cast": [{"name": "凯丽·拉塞尔", "enName": "Keri Russell", "role": "Kate Wyler"}, {"name": "鲁弗斯·塞维尔", "enName": "Rufus Sewell", "role": "Hal Wyler"}]}, {"id": "nfx_stranger_things", "title": "怪奇物语", "enTitle": "Stranger Things", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 810, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-26", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻惊悚", "奇幻"], "ageRating": "TV-14", "synopsis": "霍金斯小镇迎来最终决战，小十一与伙伴们集结直面颠倒世界的终极威胁。", "cast": [{"name": "米莉·博比·布朗", "enName": "Millie Bobby Brown", "role": "Eleven"}, {"name": "芬恩·伍法德", "enName": "Finn Wolfhard", "role": "Mike"}]}, {"id": "nfx_gentlemen", "title": "绅士们", "enTitle": "The Gentlemen", "mediaType": "show", "platformId": "netflix", "providers": ["netflix"], "heat": 782, "imdb": 8.1, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "英伦黑色幽默"], "ageRating": "TV-MA", "synopsis": "继承公爵庄园的艾迪与苏茜再度扩张地下版图，直面欧洲老牌家族挑战。", "cast": [{"name": "西奥·詹姆斯", "enName": "Theo James", "role": "Eddie Horniman"}, {"name": "卡雅·斯考达里奥", "enName": "Kaya Scodelario", "role": "Susie Glass"}]}, {"id": "nfx_guarding_stars", "title": "守护星辰", "enTitle": "Guarding Stars", "mediaType": "movie", "platformId": "netflix", "providers": ["netflix"], "heat": 765, "imdb": 7.3, "recommendPct": 79, "year": 2026, "releaseDate": "2026-11-18", "runtime": 112, "genres": ["浪漫爱情", "剧情"], "ageRating": "PG-13", "synopsis": "Netflix 11月全球流媒体电影榜热播新作，温暖治愈的冬日都市故事。", "cast": [{"name": "Netflix Original", "enName": "Lead Cast", "role": "Starring"}]}, {"id": "atp_presumed_innocent", "title": "无罪推定", "enTitle": "Presumed Innocent", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 962, "imdb": 7.7, "recommendPct": 85, "year": 2026, "releaseDate": "2026-06-12", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "法庭悬疑"], "ageRating": "TV-MA", "synopsis": "一起震撼检控官办公室的凶杀案让首席副检察官沦为头号嫌疑人，法庭攻防与家庭裂痕层层反转。", "cast": [{"name": "杰克·吉伦哈尔", "enName": "Jake Gyllenhaal", "role": "Rusty Sabich"}, {"name": "露丝·内伽", "enName": "Ruth Negga", "role": "Barbara Sabich"}, {"name": "比尔·坎普", "enName": "Bill Camp", "role": "Raymond Horgan"}]}, {"id": "atp_slow_horses", "title": "流人", "enTitle": "Slow Horses", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 935, "imdb": 8.3, "recommendPct": 97, "year": 2026, "releaseDate": "2026-10-07", "seasonNumber": 6, "totalEpisodes": 6, "airedEpisodes": 6, "genres": ["谍战惊悚", "英剧"], "ageRating": "TV-MA", "synopsis": "杰克逊·兰姆率领斯劳部门一众弃子特工，在毒舌与混乱中再度挫败危及军情五处的致命暗杀。", "cast": [{"name": "加里·奥德曼", "enName": "Gary Oldman", "role": "Jackson Lamb"}, {"name": "杰克·劳登", "enName": "Jack Lowden", "role": "River Cartwright"}, {"name": "克里斯汀·斯科特·托马斯", "enName": "Kristin Scott Thomas", "role": "Diana Taverner"}]}, {"id": "atp_silo", "title": "羊毛战记", "enTitle": "Silo", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 908, "imdb": 8.1, "recommendPct": 90, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 4, "genres": ["科幻", "末日悬疑"], "ageRating": "TV-MA", "synopsis": "朱丽叶深入相邻地堡核心，逐步揭开百座地下筒仓建立之初的惊人真相。", "cast": [{"name": "丽贝卡·弗格森", "enName": "Rebecca Ferguson", "role": "Juliette Nichols"}, {"name": "蒂姆·罗宾斯", "enName": "Tim Robbins", "role": "Bernard Holland"}]}, {"id": "atp_f1_movie", "title": "F1：狂飙飞车", "enTitle": "F1", "mediaType": "movie", "platformId": "apple", "providers": ["apple"], "heat": 888, "imdb": 8.0, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-15", "runtime": 155, "genres": ["运动动作", "剧情"], "ageRating": "PG-13", "synopsis": "退役传奇车手重返一级方程式赛场，搭档天才新秀车手在极限风速中挑战车队逆袭。", "cast": [{"name": "布拉德·皮特", "enName": "Brad Pitt", "role": "Sonny Hayes"}, {"name": "戴姆森·伊德瑞斯", "enName": "Damson Idris", "role": "Joshua Pearce"}]}, {"id": "atp_severance", "title": "人生切割术", "enTitle": "Severance", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 872, "imdb": 8.7, "recommendPct": 96, "year": 2025, "releaseDate": "2025-01-17", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["科幻悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "卢蒙公司宏观数据精检部员工在记忆切割边界内外展开惊心动魄的觉醒追寻。", "cast": [{"name": "亚当·斯科特", "enName": "Adam Scott", "role": "Mark Scout"}, {"name": "布丽特·洛薇尔", "enName": "Britt Lower", "role": "Helly"}]}, {"id": "atp_shrinking", "title": "诊疗中", "enTitle": "Shrinking", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 830, "imdb": 8.1, "recommendPct": 91, "year": 2026, "releaseDate": "2026-10-14", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 7, "genres": ["喜剧", "温暖治愈"], "ageRating": "TV-MA", "synopsis": "心理治疗师吉米打破常规对来访者直言不讳，在与导师保罗的碰撞中彼此治愈。", "cast": [{"name": "杰森·席格尔", "enName": "Jason Segel", "role": "Jimmy"}, {"name": "哈里森·福特", "enName": "Harrison Ford", "role": "Paul"}]}, {"id": "atp_ted_lasso", "title": "足球教练", "enTitle": "Ted Lasso", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 805, "imdb": 8.8, "recommendPct": 93, "year": 2026, "releaseDate": "2026-08-21", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["运动喜剧", "剧情"], "ageRating": "TV-MA", "synopsis": "乐观温暖的教练重返里士满绿茵场，带领球队迎接新赛季挑战。", "cast": [{"name": "杰森·苏戴奇斯", "enName": "Jason Sudeikis", "role": "Ted Lasso"}, {"name": "汉娜·沃丁厄姆", "enName": "Hannah Waddingham", "role": "Rebecca"}]}, {"id": "atp_dark_matter", "title": "人生复本", "enTitle": "Dark Matter", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 780, "imdb": 7.7, "recommendPct": 83, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 9, "airedEpisodes": 9, "genres": ["科幻", "平行宇宙"], "ageRating": "TV-MA", "synopsis": "物理学家穿越无限叠加态平行世界，只为找回真正属于自己的家人与人生。", "cast": [{"name": "乔尔·埃哲顿", "enName": "Joel Edgerton", "role": "Jason Dessen"}, {"name": "詹妮弗·康纳利", "enName": "Jennifer Connelly", "role": "Daniela"}]}, {"id": "atp_the_studio", "title": "片场风云", "enTitle": "The Studio", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 760, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-03-26", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["讽刺喜剧", "影视幕后"], "ageRating": "TV-MA", "synopsis": "新上任的好莱坞传统制片厂掌门人在艺术追求与商业票房夹缝中焦头烂额。", "cast": [{"name": "塞斯·罗根", "enName": "Seth Rogen", "role": "Matt Remick"}, {"name": "凯瑟琳·欧哈拉", "enName": "Catherine O'Hara", "role": "Patty"}]}, {"id": "atp_foundation", "title": "基地", "enTitle": "Foundation", "mediaType": "show", "platformId": "apple", "providers": ["apple"], "heat": 742, "imdb": 7.6, "recommendPct": 82, "year": 2025, "releaseDate": "2025-07-11", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["硬核科幻", "太空歌剧"], "ageRating": "TV-14", "synopsis": "心理史学预言危机降临，银河帝国与基地迎来跨越世纪的正面交锋。", "cast": [{"name": "杰瑞德·哈里斯", "enName": "Jared Harris", "role": "Hari Seldon"}, {"name": "李·佩斯", "enName": "Lee Pace", "role": "Brother Day"}]}, {"id": "hbo_gilded_age", "title": "镀金时代", "enTitle": "The Gilded Age", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 956, "imdb": 8.1, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-01", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["年代剧", "豪门剧情"], "ageRating": "TV-MA", "synopsis": "19世纪末纽约第五大道新贵罗素家族与老钱阶层的社交博弈升级，每周一更新1集。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Bertha Russell"}, {"name": "克里斯汀·芭伦斯基", "enName": "Christine Baranski", "role": "Agnes van Rhijn"}]}, {"id": "hbo_lanterns", "title": "绿灯军团", "enTitle": "Lanterns", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 928, "imdb": 8.4, "recommendPct": 91, "year": 2026, "releaseDate": "2026-09-20", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["科幻罪案", "DC悬疑"], "ageRating": "TV-MA", "synopsis": "传奇绿灯侠哈尔·乔丹与新晋成员约翰·斯图尔特深入美国腹地调查一桩牵连星际黑暗秘密的谋杀案。", "cast": [{"name": "凯尔·钱德勒", "enName": "Kyle Chandler", "role": "Hal Jordan"}, {"name": "亚伦·皮埃尔", "enName": "Aaron Pierre", "role": "John Stewart"}]}, {"id": "hbo_house_dragon", "title": "龙之家族", "enTitle": "House of the Dragon", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 902, "imdb": 8.3, "recommendPct": 87, "year": 2026, "releaseDate": "2026-07-12", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻史诗", "权谋战争"], "ageRating": "TV-MA", "synopsis": "坦格利安血龙狂舞全面开战，黑党与绿党在维斯特洛大陆展开巨龙对决。", "cast": [{"name": "艾玛·达西", "enName": "Emma D'Arcy", "role": "Rhaenyra"}, {"name": "马特·史密斯", "enName": "Matt Smith", "role": "Daemon"}]}, {"id": "hbo_supergirl", "title": "超女：明日之女", "enTitle": "Supergirl", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 878, "imdb": 7.6, "recommendPct": 84, "year": 2026, "releaseDate": "2026-09-25", "runtime": 128, "genres": ["科幻动作", "冒险"], "ageRating": "PG-13", "synopsis": "卡拉·佐-艾尔在星际边缘陪伴少女露丝踏上横跨星系的复仇与救赎之旅。", "cast": [{"name": "米莉·阿尔柯克", "enName": "Milly Alcock", "role": "Kara Zor-El"}, {"name": "杰森·莫玛", "enName": "Jason Momoa", "role": "Lobo"}]}, {"id": "hbo_last_of_us", "title": "最后生还者", "enTitle": "The Last of Us", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 860, "imdb": 8.7, "recommendPct": 94, "year": 2025, "releaseDate": "2025-04-13", "seasonNumber": 2, "totalEpisodes": 7, "airedEpisodes": 7, "genres": ["末日生存", "剧情"], "ageRating": "TV-MA", "synopsis": "杰克逊定居点的平静破碎后，艾莉踏上前往西雅图的残酷旅程。", "cast": [{"name": "佩德罗·帕斯卡", "enName": "Pedro Pascal", "role": "Joel"}, {"name": "贝拉·拉姆齐", "enName": "Bella Ramsey", "role": "Ellie"}]}, {"id": "hbo_white_lotus", "title": "白莲花度假村", "enTitle": "The White Lotus", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 835, "imdb": 8.0, "recommendPct": 90, "year": 2025, "releaseDate": "2025-02-16", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["黑色幽默", "悬疑讽刺"], "ageRating": "TV-MA", "synopsis": "奢华度假村迎来了新一批心怀鬼胎的宾客，热带风光下危机四伏。", "cast": [{"name": "凯莉·库恩", "enName": "Carrie Coon", "role": "Laurie"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "Rick"}]}, {"id": "hbo_penguin", "title": "企鹅人", "enTitle": "The Penguin", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 818, "imdb": 8.6, "recommendPct": 95, "year": 2024, "releaseDate": "2024-09-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["犯罪", "暗黑黑帮"], "ageRating": "TV-MA", "synopsis": "奥兹·科伯在哥谭地下世界权力真空期步步为营，登顶黑帮帝国王座。", "cast": [{"name": "科林·法瑞尔", "enName": "Colin Farrell", "role": "Oz Cobb"}, {"name": "克里斯汀·米利欧缇", "enName": "Cristin Milioti", "role": "Sofia Falcone"}]}, {"id": "hbo_pitt", "title": "匹兹堡医护前线", "enTitle": "The Pitt", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 798, "imdb": 8.7, "recommendPct": 95, "year": 2026, "releaseDate": "2026-01-08", "seasonNumber": 2, "totalEpisodes": 15, "airedEpisodes": 15, "genres": ["医疗写实", "高能剧情"], "ageRating": "TV-MA", "synopsis": "以一集一小时实时视角直击创伤急救中心15小时轮班的生死博弈。", "cast": [{"name": "诺亚·怀尔", "enName": "Noah Wyle", "role": "Dr. Robby"}]}, {"id": "hbo_dune_prophecy", "title": "沙丘：预言", "enTitle": "Dune: Prophecy", "mediaType": "show", "platformId": "hbo", "providers": ["hbo"], "heat": 772, "imdb": 7.4, "recommendPct": 78, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 2, "totalEpisodes": 6, "airedEpisodes": 2, "genres": ["科幻", "星际权谋"], "ageRating": "TV-MA", "synopsis": "哈克南姐妹创立贝尼·杰瑟里特姐妹会，在帝国王座背后编织跨越万年的命运网络。", "cast": [{"name": "艾米丽·沃森", "enName": "Emily Watson", "role": "Valya Harkonnen"}, {"name": "奥莉维亚·威廉姆斯", "enName": "Olivia Williams", "role": "Tula Harkonnen"}]}, {"id": "hbo_dune2", "title": "沙丘2", "enTitle": "Dune: Part Two", "mediaType": "movie", "platformId": "hbo", "providers": ["hbo"], "heat": 755, "imdb": 8.5, "recommendPct": 92, "year": 2024, "releaseDate": "2024-03-01", "runtime": 166, "genres": ["科幻史诗", "冒险"], "ageRating": "PG-13", "synopsis": "保罗·厄崔迪融入弗雷曼人，踏上改写已知宇宙命运的沙漠圣战。", "cast": [{"name": "蒂莫西·柴勒梅德", "enName": "Timothee Chalamet", "role": "Paul Atreides"}, {"name": "赞达亚", "enName": "Zendaya", "role": "Chani"}]}, {"id": "amp_rings_of_power", "title": "指环王：力量之戒", "enTitle": "The Lord of the Rings: The Rings of Power", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 968, "imdb": 7.1, "recommendPct": 83, "year": 2026, "releaseDate": "2026-11-11", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 4, "genres": ["奇幻史诗", "冒险"], "ageRating": "TV-14", "synopsis": "第三季于11月11日回归，索伦铸造至尊魔戒的阴谋逼近中土核心，精灵与矮人防线迎来大战。", "cast": [{"name": "莫菲德·克拉克", "enName": "Morfydd Clark", "role": "Galadriel"}, {"name": "查理·维卡斯", "enName": "Charlie Vickers", "role": "Sauron"}]}, {"id": "amp_blade_runner_2099", "title": "银翼杀手 2099", "enTitle": "Blade Runner 2099", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 932, "imdb": 8.4, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-20", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["赛博朋克", "科幻惊悚"], "ageRating": "TV-MA", "synopsis": "设定于《银翼杀手2049》五十年后的雨夜洛杉矶，老牌复制人与伪装身份的逃亡少女卷入颠覆城市的秘密。", "cast": [{"name": "杨紫琼", "enName": "Michelle Yeoh", "role": "Olwen"}, {"name": "亨特·莎弗", "enName": "Hunter Schafer", "role": "Cora"}]}, {"id": "amp_project_hail_mary", "title": "挽救计划", "enTitle": "Project Hail Mary", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 904, "imdb": 8.5, "recommendPct": 93, "year": 2026, "releaseDate": "2026-09-10", "runtime": 146, "genres": ["硬核科幻", "太空救援"], "ageRating": "PG-13", "synopsis": "中学科学老师在距地球数光年的飞船上独自苏醒，凭借科学推理与意外结识的外星伙伴拯救太阳危机。", "cast": [{"name": "瑞恩·高斯林", "enName": "Ryan Gosling", "role": "Ryland Grace"}, {"name": "桑德拉·惠勒", "enName": "Sandra Huller", "role": "Eva Stratt"}]}, {"id": "amp_madden", "title": "麦登传奇", "enTitle": "Madden", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 864, "imdb": 7.5, "recommendPct": 81, "year": 2026, "releaseDate": "2026-11-19", "runtime": 126, "genres": ["传记剧情", "体育"], "ageRating": "PG-13", "synopsis": "尼古拉斯·凯奇化身传奇教练约翰·麦登，讲述他从赛场隐退到缔造现象级橄榄球游戏帝国的热血历程。", "cast": [{"name": "尼古拉斯·凯奇", "enName": "Nicolas Cage", "role": "John Madden"}, {"name": "克里斯蒂安·贝尔", "enName": "Christian Bale", "role": "Al Davis"}]}, {"id": "amp_reacher", "title": "侠探杰克", "enTitle": "Reacher", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 848, "imdb": 8.0, "recommendPct": 88, "year": 2026, "releaseDate": "2026-08-14", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["动作犯罪", "硬汉悬疑"], "ageRating": "TV-MA", "synopsis": "流浪前宪兵调查官杰克·雷彻独自深入敌营，用精密推理与铁拳瓦解跨州走私集团。", "cast": [{"name": "阿兰·里奇森", "enName": "Alan Ritchson", "role": "Jack Reacher"}]}, {"id": "amp_fallout", "title": "辐射", "enTitle": "Fallout", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 832, "imdb": 8.4, "recommendPct": 93, "year": 2026, "releaseDate": "2026-04-10", "seasonNumber": 2, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["废土科幻", "动作冒险"], "ageRating": "TV-MA", "synopsis": "露西与尸鬼踏入新维加斯荒漠，揭开避难所科技高层的战前阴谋。", "cast": [{"name": "艾拉·珀内尔", "enName": "Ella Purnell", "role": "Lucy"}, {"name": "沃尔顿·戈金斯", "enName": "Walton Goggins", "role": "The Ghoul"}]}, {"id": "amp_the_boys", "title": "黑袍纠察队", "enTitle": "The Boys", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 816, "imdb": 8.7, "recommendPct": 91, "year": 2026, "releaseDate": "2026-06-18", "seasonNumber": 5, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["反超英", "暗黑动作"], "ageRating": "TV-MA", "synopsis": "布彻尔与休伊迎来对抗祖国人极权统治的终局之战。", "cast": [{"name": "卡尔·厄本", "enName": "Karl Urban", "role": "Billy Butcher"}, {"name": "安东尼·斯塔尔", "enName": "Antony Starr", "role": "Homelander"}]}, {"id": "amp_mighty_nein", "title": "强力九人组", "enTitle": "The Mighty Nein", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 786, "imdb": 8.4, "recommendPct": 94, "year": 2025, "releaseDate": "2025-11-19", "seasonNumber": 1, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["奇幻动画", "跑团冒险"], "ageRating": "TV-MA", "synopsis": "一群性格乖张的边缘冒险者意外结成小队，阻止足以撕裂大陆的远古圣物落入恶徒之手。", "cast": [{"name": "劳拉·贝利", "enName": "Laura Bailey", "role": "Jester"}, {"name": "马修·麦瑟", "enName": "Matthew Mercer", "role": "Essek"}]}, {"id": "amp_accountant2", "title": "会计刺客2", "enTitle": "The Accountant 2", "mediaType": "movie", "platformId": "prime", "providers": ["prime"], "heat": 758, "imdb": 7.3, "recommendPct": 80, "year": 2025, "releaseDate": "2025-08-12", "runtime": 125, "genres": ["动作惊悚", "犯罪"], "ageRating": "R", "synopsis": "天才数学会计师克里斯蒂安与弟弟联手追查财政部老友遇刺背后的杀手网络。", "cast": [{"name": "本·阿弗莱克", "enName": "Ben Affleck", "role": "Christian Wolff"}, {"name": "乔恩·伯恩瑟尔", "enName": "Jon Bernthal", "role": "Brax"}]}, {"id": "amp_invincible", "title": "无敌少侠", "enTitle": "Invincible", "mediaType": "show", "platformId": "prime", "providers": ["prime"], "heat": 740, "imdb": 8.7, "recommendPct": 96, "year": 2026, "releaseDate": "2026-03-12", "seasonNumber": 4, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["热血动画", "科幻动作"], "ageRating": "TV-MA", "synopsis": "马克在维尔图姆帝国大军压境之际扛起守护地球的重担。", "cast": [{"name": "史蒂文·元", "enName": "Steven Yeun", "role": "Mark Grayson"}, {"name": "J·K·西蒙斯", "enName": "J.K. Simmons", "role": "Omni-Man"}]}, {"id": "pmp_mobland", "title": "黑帮领地", "enTitle": "MobLand", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 948, "imdb": 8.4, "recommendPct": 90, "year": 2026, "releaseDate": "2026-09-18", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 10, "genres": ["黑帮犯罪", "惊悚"], "ageRating": "TV-MA", "synopsis": "伦敦两大犯罪家族战火重燃，忠诚冷峻的家族清道夫哈里在枪火与背叛间力保帝国不倒，11月20日迎来第二季收官。", "cast": [{"name": "汤姆·哈迪", "enName": "Tom Hardy", "role": "Harry Da Souza"}, {"name": "皮尔斯·布鲁斯南", "enName": "Pierce Brosnan", "role": "Conrad Harrigan"}, {"name": "海伦·米伦", "enName": "Helen Mirren", "role": "Maeve Harrigan"}]}, {"id": "pmp_tulsa_king", "title": "塔尔萨之王", "enTitle": "Tulsa King", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 922, "imdb": 8.0, "recommendPct": 86, "year": 2026, "releaseDate": "2026-10-18", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 6, "genres": ["犯罪剧情", "动作"], "ageRating": "TV-MA", "synopsis": "黑帮老将德怀特·曼弗雷迪在俄克拉荷马州继续扩张商业版图，迎战来自堪萨斯与纽约的双重围剿。", "cast": [{"name": "西尔维斯特·史泰龙", "enName": "Sylvester Stallone", "role": "Dwight Manfredi"}]}, {"id": "pmp_landman", "title": "石油天王", "enTitle": "Landman", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 896, "imdb": 8.3, "recommendPct": 89, "year": 2026, "releaseDate": "2026-11-15", "seasonNumber": 3, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["商战剧情", "西部硬派"], "ageRating": "TV-MA", "synopsis": "西德克萨斯油田繁荣背后暗流汹涌，危机处理专家汤米在资本大鳄与油井险情间孤身斡旋。", "cast": [{"name": "比利·鲍伯·松顿", "enName": "Billy Bob Thornton", "role": "Tommy Norris"}, {"name": "黛米·摩尔", "enName": "Demi Moore", "role": "Cami Miller"}]}, {"id": "pmp_dexter_res", "title": "嗜血法医：复活", "enTitle": "Dexter: Resurrection", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 870, "imdb": 8.5, "recommendPct": 91, "year": 2026, "releaseDate": "2026-11-06", "seasonNumber": 2, "totalEpisodes": 10, "airedEpisodes": 3, "genres": ["犯罪悬疑", "心理惊悚"], "ageRating": "TV-MA", "synopsis": "死里逃生的德克斯特·摩根隐匿于大都会暗夜，一面追寻儿子哈里森的下落，一面面对旧案猎犬的步步紧逼。", "cast": [{"name": "迈克尔·C·豪尔", "enName": "Michael C. Hall", "role": "Dexter Morgan"}]}, {"id": "pmp_lioness", "title": "特别行动：母狮", "enTitle": "Lioness", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 840, "imdb": 7.9, "recommendPct": 85, "year": 2026, "releaseDate": "2026-09-27", "seasonNumber": 3, "totalEpisodes": 8, "airedEpisodes": 8, "genres": ["特种作战", "谍战惊悚"], "ageRating": "TV-MA", "synopsis": "乔率领母狮秘密外勤小队执行高危渗透行动，在国家任务与家庭破碎边缘承受极限压力。", "cast": [{"name": "佐伊·索尔达娜", "enName": "Zoe Saldana", "role": "Joe"}, {"name": "妮可·基德曼", "enName": "Nicole Kidman", "role": "Kaitlyn Meade"}]}, {"id": "pmp_gladiator2", "title": "角斗士2", "enTitle": "Gladiator II", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 812, "imdb": 7.0, "recommendPct": 76, "year": 2024, "releaseDate": "2025-01-21", "runtime": 148, "genres": ["历史动作", "史诗"], "ageRating": "R", "synopsis": "卢修斯被迫踏入罗马斗兽场，在暴君统治下为恢复罗马昔日荣光挥剑奋战。", "cast": [{"name": "保罗·麦斯卡", "enName": "Paul Mescal", "role": "Lucius"}, {"name": "丹泽尔·华盛顿", "enName": "Denzel Washington", "role": "Macrinus"}]}, {"id": "pmp_mi8", "title": "碟中谍8：最终清算", "enTitle": "Mission: Impossible - The Final Reckoning", "mediaType": "movie", "platformId": "paramount", "providers": ["paramount"], "heat": 796, "imdb": 7.9, "recommendPct": 88, "year": 2025, "releaseDate": "2025-10-10", "runtime": 169, "genres": ["特工动作", "冒险"], "ageRating": "PG-13", "synopsis": "伊森·亨特与 IMF 小队深入深海潜艇残骸与万米高空，终结失控人工智能智体的全球危机。", "cast": [{"name": "汤姆·克鲁斯", "enName": "Tom Cruise", "role": "Ethan Hunt"}, {"name": "海莉·阿特维尔", "enName": "Hayley Atwell", "role": "Grace"}]}, {"id": "pmp_yellowjackets", "title": "黄蜂", "enTitle": "Yellowjackets", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 774, "imdb": 7.8, "recommendPct": 84, "year": 2026, "releaseDate": "2026-11-13", "seasonNumber": 4, "totalEpisodes": 10, "airedEpisodes": 2, "genres": ["悬疑惊悚", "荒野求生"], "ageRating": "TV-MA", "synopsis": "高中女子足球队空难幸存者跨越二十五年的荒野秘密再度浮出水面。", "cast": [{"name": "梅兰妮·林斯基", "enName": "Melanie Lynskey", "role": "Shauna"}, {"name": "克里斯蒂娜·里奇", "enName": "Christina Ricci", "role": "Misty"}]}, {"id": "pmp_marshals", "title": "联邦法警", "enTitle": "Marshals", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 752, "imdb": 7.7, "recommendPct": 81, "year": 2026, "releaseDate": "2026-10-25", "seasonNumber": 1, "totalEpisodes": 10, "airedEpisodes": 5, "genres": ["西部犯罪", "动作"], "ageRating": "TV-MA", "synopsis": "黄石宇宙衍生新作，聚焦蒙大拿州边境联邦法警追缉亡命重犯的硬派故事。", "cast": [{"name": "卢克·葛莱姆斯", "enName": "Luke Grimes", "role": "Kayce Dutton"}]}, {"id": "pmp_yellowstone", "title": "黄石", "enTitle": "Yellowstone", "mediaType": "show", "platformId": "paramount", "providers": ["paramount"], "heat": 738, "imdb": 8.7, "recommendPct": 90, "year": 2024, "releaseDate": "2024-11-10", "seasonNumber": 5, "totalEpisodes": 14, "airedEpisodes": 14, "genres": ["现代西部", "家族剧情"], "ageRating": "TV-MA", "synopsis": "达顿家族为守护广袤牧场与各方势力展开终极较量。", "cast": [{"name": "凯莉·蕾莉", "enName": "Kelly Reilly", "role": "Beth Dutton"}, {"name": "科尔·豪瑟", "enName": "Cole Hauser", "role": "Rip Wheeler"}]}];
 
       const GIST_FILENAME = "dramov-tracker-sync-v1.json";
@@ -1918,6 +1950,20 @@
       // - English：界面用詞典翻譯；片名、簡介、類型、演員直接用英文資料
       // 切換語言後重新載入頁面，不需要處理“還原”
       // =========================================================================
+      // 海报加载失败先自动重试一次（网络抖动时常见），再失败才显示占位图
+      window.dramovImgErr = function (img, fallback) {
+        const src = img.getAttribute("src") || "";
+        if (!img.dataset.retried && src && !src.startsWith("data:")) {
+          img.dataset.retried = "1";
+          setTimeout(() => {
+            img.src = src + (src.includes("?") ? "&" : "?") + "r=1";
+          }, 900);
+          return;
+        }
+        img.onerror = null;
+        if (fallback) img.src = fallback;
+      };
+
       const LANG_KEY = "dramov_lang_v1";
       const LANG = (() => {
         try {
@@ -1933,7 +1979,16 @@
       const I18N_EN = {"上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。": "Reorder the platforms' Top 10 charts on Home, or switch one off to hide it. The new-show posters at the top of Home only come from platforms you keep on.", "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。": "A popular streaming title. Tap a service icon below to open its official page.", "流媒体热门影视佳作，点击查看详情、演员阵容与正版播放源。": "A popular streaming title. Tap for details, cast and where to watch.", "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询": "Nothing in the loaded charts matches. Tap “Search online” to look it up.", "跨设备无损云同步（GitHub 私密 Gist）": "Cross-device sync (private GitHub Gist)", "搜电影 / 剧集 / 英文名 / 演员...": "Search movies, shows or cast…", "在追剧集有未看集数时，每天提醒一次": "Once a day when a show you're watching has new episodes", "，同步你的片单进度与首页平台顺序。": ", syncing your list, progress and Home platform order.", "独立读写专属文件": "Uses its own file", "每日首次打开「待看剧集」提醒弹窗": "Daily “Up next” reminder", "已同步六大流媒体最新热度榜单": "Charts updated", "正在加载更多热门电视剧与电影…": "Loading more…", "正在加载更多热门电视剧与电影": "Loading more", "正在拉取六大流媒体最新热度榜...": "Fetching the latest charts…", "正在拉取六大流媒体最新热度榜": "Fetching the latest charts", "本地 JSON 备份与恢复": "Local JSON backup & restore", "六大流媒体实时热度已同步": "Live charts synced", "六大流媒体实时热度已就绪": "Live charts ready", "六大流媒体热度榜运行中": "Live charts running", "深色沉浸外观（默认开启）": "Dark appearance (on by default)", "默认开启深邃影院沉浸底色": "Cinema-dark background, on by default", "首页流媒体平台排序与隐藏": "Home platforms: order & visibility", "实时热榜与显示偏好": "Live charts & display", "流媒体实时热度数据": "Live streaming charts", "立即刷新热榜": "Refresh now", "点选集数记录观看进度（绿=已看 · 蓝=已播 · 虚线=未播）": "Tap episodes to track progress (green = watched · blue = aired · dashed = upcoming)", "点进任意影视海报，轻触右下角 ♡ 或 🍿 即可加入你的片单": "Open any title and tap ♡ or 🍿 at the bottom right to add it to your list", "ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）": "ghp_xxxxxxxxxxxxxxxxxxxx (needs gist scope)", "尚未执行云端同步": "Not synced yet", "上传合并至云端": "Upload & merge", "从云端拉取合并": "Download & merge", "保存密钥": "Save token", "导出备份 .json": "Export .json", "导入恢复 .json": "Import .json", "恢复默认": "Reset", "已恢复默认六大平台顺序": "Platform order reset", "至少保留 1 个显示平台": "Keep at least one platform visible", "今天的流媒体榜单": "Today's streaming charts", "热播电视剧": "Trending shows", "热播电影": "Trending movies", "热播库": "Library", "片库": "Library", "按实时热度排序": "By live popularity", "精选": "Picks", "最新": "New", "高分": "Top rated", "全部": "All", "全部平台": "All services", "全网搜索": "Search online", "搜索片库": "Search", "我的片单": "My List", "想看 / 在追": "Watching / Want", "已看过 🍿": "Watched 🍿", "已看过": "Watched", "设置": "Settings", "首页": "Home", "搜索": "Search", "片单": "My List", "主导航": "Main navigation", "返回": "Back", "查看详情": "Details", "播放平台": "Where to watch", "演职员": "Cast", "主创团队": "Creators", "剧照与预告片": "Stills & trailer", "剧照": "Still", "观看官方预告片 ↗": "Watch trailer ↗", "观看官方预告片": "Watch trailer", "剧集播放进度": "Episode progress", "一键追平已播集": "Mark all aired as watched", "标记已看过": "Mark as watched", "加入片单": "Add to My List", "分享链接": "Share link", "IMDb 权威评分": "IMDb rating", "烂番茄影评新鲜度": "Rotten Tomatoes score", "爆米花观众好评度": "Audience score", "观影打卡达成": "Watched!", "电影观影打卡达成": "Movie watched!", "剧集追完打卡达成": "Series finished!", "太棒了": "Nice", "云端同步完成": "Cloud sync complete", "云同步失败，请检查密钥": "Sync failed. Check your token.", "同步密钥已保存": "Token saved", "备份已无损恢复": "Backup restored", "已导出备份": "Backup exported", "JSON 格式错误": "Invalid JSON", "请输入想找的电影或剧名": "Type a movie or show name", "正在检索流媒体片库...": "Searching…", "正在检索流媒体片库": "Searching", "已完成检索": "Search finished", "已刷新流媒体榜单": "Charts refreshed", "网络不太好，稍后再试": "Connection problem. Try again later.", "暂无内容": "Nothing here", "正在加载…": "Loading…", "正在加载": "Loading", "已在首页隐藏": "Hidden on Home", "同步出错：": "Sync error: ", "网络异常": "Network error", "请先填入": "Please enter ", "鉴权失败": "Authorization failed", "正在连接 GitHub 私密": "Connecting to private GitHub", "界面语言": "Language", "繁體中文": "繁體中文", "简体中文": "简体中文", "奈飞 Netflix": "Netflix", "迪士尼 Disney+": "Disney+", "派拉蒙 Paramount+": "Paramount+", "电视剧": "Series", "电影": "Movie", "剧集": "Series", "新剧": "New series", "热门": "Popular", "已播": "aired", "已看": "Watched", "未播": "upcoming", "动作": "Action", "冒险": "Adventure", "动作冒险": "Action & Adventure", "动画": "Animation", "儿童": "Kids", "家庭": "Family", "喜剧": "Comedy", "犯罪": "Crime", "纪录片": "Documentary", "剧情": "Drama", "谍战": "Spy", "奇幻": "Fantasy", "历史": "History", "恐怖": "Horror", "法律": "Legal", "医疗": "Medical", "音乐": "Music", "歌舞": "Musical", "悬疑": "Mystery", "爱情": "Romance", "浪漫": "Romantic", "科幻": "Sci-Fi", "科幻奇幻": "Sci-Fi & Fantasy", "体育": "Sports", "运动": "Sports", "超自然": "Supernatural", "惊悚": "Thriller", "战争": "War", "战争政治": "War & Politics", "政治": "Political", "西部": "Western", "真人秀": "Reality", "脱口秀": "Talk", "新闻": "News", "肥皂剧": "Soap", "独立电影": "Indie", "节日": "Holiday", "心理": "Psychological", "赛博朋克": "Cyberpunk", "史诗": "Epic", "黑帮": "Gangster", "英剧": "British", "年代剧": "Period", "职场": "Workplace", "传记": "Biography", "文艺": "Arthouse", "治愈": "Feel-good", "温暖": "Warm", "黑色幽默": "Dark comedy", "讽刺": "Satire", "宫廷": "Court", "权谋": "Intrigue", "末日": "Apocalyptic", "生存": "Survival", "太空": "Space", "平行宇宙": "Multiverse", "硬核": "Hard", "法庭": "Courtroom", "跨国": "International", "豪门": "Family saga", "暗黑": "Dark", "写实": "Realist", "高能": "Intense", "英伦": "British", "影视幕后": "Showbiz", "星际": "Space", "罪案": "Crime", "绿": "green", "蓝": "blue", "虚线": "dashed"};
       // 一字多繁的常用詞（先按詞轉，再逐字轉），用 OpenCC 台灣詞庫生成
       const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果"};
-      const I18N_HANT_PHRASE_KEYS = Object.keys(I18N_HANT_PHRASES).sort((a, b) => b.length - a.length);
+      Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
+      Object.assign(I18N_HANT, {"日韩": "日韓", "完整赛程": "完整賽程", "未来六周赛程": "未來六週賽程", "时间待定": "時間待定", "大赛": "大賽", "榜单暂时没拿到，稍后下拉刷新": "榜單暫時沒拿到，稍後下拉刷新", "时间已换算为本机时区；节目安排以官方为准": "時間已換算為本機時區；節目安排以官方為準", "ESPN（美国）· Netflix（美国以外）": "ESPN（美國）· Netflix（美國以外）", "港澳台 · 华语出品": "港澳台 · 華語出品", "日韩 · 日剧韩剧动画": "日韓 · 日劇韓劇動畫", "擂台 · WWE / AEW / UFC 赛程": "擂台 · WWE / AEW / UFC 賽程", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏"});
+      // 按首字建索引，逐字转换时只比对以该字开头的词
+      const I18N_HANT_PHRASE_INDEX = new Map();
+      Object.keys(I18N_HANT_PHRASES)
+        .sort((a, b) => b.length - a.length)
+        .forEach((k) => {
+          if (!I18N_HANT_PHRASE_INDEX.has(k[0])) I18N_HANT_PHRASE_INDEX.set(k[0], []);
+          I18N_HANT_PHRASE_INDEX.get(k[0]).push(k);
+        });
       const GENRE_CODE_EN = { act: "Action", drm: "Drama", cmy: "Comedy", scf: "Sci-Fi", trl: "Thriller", crm: "Crime", fnt: "Fantasy", hrr: "Horror", rma: "Romance", ani: "Animation", doc: "Documentary", hst: "History", war: "War", mys: "Mystery", fml: "Family", fmly: "Family", wsn: "Western", msc: "Music", spt: "Sports", rly: "Reality", eur: "European" };
       const I18N_EN_RULES = [
         [/已将《(.+?)》加入我的片单/, "Added “$1” to My List"],
@@ -1983,7 +2038,8 @@
         let out = "";
         let i = 0;
         while (i < str.length) {
-          const key = CJK_RE.test(str[i]) ? I18N_HANT_PHRASE_KEYS.find((k) => str.startsWith(k, i)) : null;
+          const cands = I18N_HANT_PHRASE_INDEX.get(str[i]);
+          const key = cands ? cands.find((k) => str.startsWith(k, i)) : null;
           if (key) {
             out += I18N_HANT_PHRASES[key];
             i += key.length;
@@ -2040,8 +2096,17 @@
         if (ok) return out.replace(/\s{2,}/g, " ");
         return ruled ? s : str;
       }
+      const i18nMemo = new Map();
       function translateText(str) {
         if (!str || !CJK_RE.test(str)) return str;
+        const hit = i18nMemo.get(str);
+        if (hit !== undefined) return hit;
+        const out = translateTextRaw(str);
+        if (i18nMemo.size > 4000) i18nMemo.clear();
+        i18nMemo.set(str, out);
+        return out;
+      }
+      function translateTextRaw(str) {
         if (LANG === "zh-Hant") return toHant(str);
         if (LANG === "zh-Hans") return toHans(str);
         return toEn(str);
@@ -2050,7 +2115,7 @@
       const i18nDone = new WeakMap();
       const I18N_ATTRS = ["placeholder", "aria-label", "title", "alt"];
       function i18nSkip(el) {
-        return !el || el.closest("script, style, [data-i18n-skip]");
+        return !el || el.closest("script, style, svg, [data-i18n-skip]");
       }
       function translateTextNode(n) {
         const v = n.nodeValue;
@@ -2172,6 +2237,38 @@
         </svg>`
       };
 
+      Object.assign(BRAND_SVGS, {
+        hulu: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#0b0c0f"/>
+          <text x="32" y="39" text-anchor="middle" fill="#1ce783" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-weight="800" font-size="19" letter-spacing="-0.6">hulu</text>
+        </svg>`,
+        peacock: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#000000"/>
+          <circle cx="20" cy="20" r="4" fill="#fbbf24"/><circle cx="32" cy="16" r="4" fill="#f97316"/><circle cx="44" cy="20" r="4" fill="#ef4444"/>
+          <circle cx="16" cy="31" r="4" fill="#22c55e"/><circle cx="48" cy="31" r="4" fill="#a855f7"/><circle cx="32" cy="27" r="4" fill="#3b82f6"/>
+          <text x="32" y="52" text-anchor="middle" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-weight="800" font-size="11" letter-spacing="-0.2">peacock</text>
+        </svg>`,
+        gat: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#7f1d1d"/>
+          <circle cx="50" cy="12" r="26" fill="#ef4444" fill-opacity="0.45"/>
+          <text x="32" y="30" text-anchor="middle" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,'PingFang TC',sans-serif" font-weight="900" font-size="14">港澳台</text>
+          <text x="32" y="47" text-anchor="middle" fill="#fecaca" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-weight="800" font-size="10" letter-spacing="1">HK·MO·TW</text>
+        </svg>`,
+        jk: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#3b0764"/>
+          <circle cx="22" cy="32" r="13" fill="#ffffff"/><circle cx="22" cy="32" r="6" fill="#dc2626"/>
+          <circle cx="44" cy="32" r="13" fill="#ffffff"/>
+          <path d="M44 19 A13 13 0 0 1 44 45 A6.5 6.5 0 0 1 44 32 A6.5 6.5 0 0 0 44 19 Z" fill="#dc2626"/>
+          <path d="M44 19 A13 13 0 0 0 44 45 A6.5 6.5 0 0 0 44 32 A6.5 6.5 0 0 1 44 19 Z" fill="#1d4ed8"/>
+        </svg>`,
+        ring: `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#1c0606"/>
+          <path d="M10 22 H54 M10 32 H54 M10 42 H54" stroke="#dc2626" stroke-width="2.4"/>
+          <path d="M10 18 V46 M54 18 V46" stroke="#e5e7eb" stroke-width="3.4" stroke-linecap="round"/>
+          <text x="32" y="37.5" text-anchor="middle" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,Arial,sans-serif" font-weight="900" font-size="15" font-style="italic">VS</text>
+        </svg>`
+      });
+
       let liveProviderIcons = {};
 
       function renderBrandIconHtml(pid, cls = "brand-icon-wrap") {
@@ -2179,7 +2276,7 @@
         const svg = BRAND_SVGS[pid] || BRAND_SVGS.netflix;
         if (liveIc) {
           const svgData = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-          return `<span class="${cls}"><img src="${escapeHtml(liveIc)}" alt="${escapeHtml(pid)}" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${svgData}';" /></span>`;
+          return `<span class="${cls}"><img src="${escapeHtml(liveIc)}" alt="${escapeHtml(pid)}" decoding="async" referrerpolicy="no-referrer" onerror="dramovImgErr(this,'${svgData}')\" /></span>`;
         }
         return `<span class="${cls}">${svg}</span>`;
       }
@@ -2189,7 +2286,8 @@
           version: 2,
           settings: {
             platformOrder: PLATFORMS.map((p) => p.id),
-            hiddenPlatforms: [],
+            hiddenPlatforms: PLATFORMS.filter((p) => p.defaultHidden).map((p) => p.id),
+            seenSections: PLATFORMS.map((p) => p.id),
             dailyPopupEnabled: false,
             updatedAt: 0
           },
@@ -2233,11 +2331,23 @@
           PLATFORMS.forEach((pl) => {
             if (!cleanOrder.includes(pl.id)) cleanOrder.push(pl.id);
           });
+          // 新增的频道：第一次出现时按默认开关处理（擂台默认关闭），之后尊重用户自己的选择
+          const hiddenSet = new Set(Array.isArray(p.settings?.hiddenPlatforms) ? p.settings.hiddenPlatforms : []);
+          const seen = Array.isArray(p.settings?.seenSections)
+            ? [...p.settings.seenSections]
+            : ["netflix", "disney", "hbo", "prime", "paramount", "apple"];
+          PLATFORMS.forEach((pl) => {
+            if (!seen.includes(pl.id)) {
+              if (pl.defaultHidden) hiddenSet.add(pl.id);
+              seen.push(pl.id);
+            }
+          });
           return {
             version: 2,
             settings: {
               platformOrder: cleanOrder,
-              hiddenPlatforms: Array.isArray(p.settings?.hiddenPlatforms) ? p.settings.hiddenPlatforms : [],
+              hiddenPlatforms: Array.from(hiddenSet),
+              seenSections: seen,
               dailyPopupEnabled: Boolean(p.settings?.dailyPopupEnabled),
               updatedAt: Number(p.settings?.updatedAt) || 0
             },
@@ -2461,11 +2571,12 @@
             merged.cast = cached.cast;
           } else {
             merged.cast = merged.cast.map((c, idx) => {
+              // 只按名字配照片（以前名字对不上时按位置硬配，导致照片和人对不上）
               const match = cached.cast.find(
                 (cc) =>
                   (c.enName && cc.name && cc.name.toLowerCase() === c.enName.toLowerCase()) ||
                   cc.name === c.name
-              ) || cached.cast[idx];
+              );
               return Object.assign({}, c, match && match.photo ? { photo: match.photo } : {});
             });
           }
@@ -2495,34 +2606,18 @@
         return String(s || "").toLowerCase().replace(/\s+/g, "");
       }
 
+      // 平台 / 专区的 Top 10：直接用服务器按 JustWatch 每日流媒体榜排好的顺序，不再按 TMDB 热度重排、
+      // 也不再把内置示例数据混进真实数据里。只有完全拿不到实时数据时才用内置示例兜底。
       function getPlatformItems(platformId) {
+        const pm = PLATFORM_MAP[platformId];
+        if (pm && pm.kind === "schedule") return [];
         const liveArr = liveChartsByPlatform[platformId];
-        let base = [];
-        if (Array.isArray(liveArr) && liveArr.length >= 5) {
-          base = liveArr.map((lv) => {
-            const seedMatch = SEED_ITEMS.find(
-              (s) => itemKey(s) === itemKey(lv) || normalizeSimple(s.title) === normalizeSimple(lv.title)
-            );
-            if (seedMatch) {
-              return Object.assign({}, seedMatch, lv, {
-                title: lv.title || seedMatch.title,
-                enTitle: lv.enTitle || seedMatch.enTitle,
-                totalEpisodes: lv.totalEpisodes || seedMatch.totalEpisodes || 0,
-                airedEpisodes: lv.airedEpisodes || seedMatch.airedEpisodes || 0,
-                synopsis: lv.synopsis || seedMatch.synopsis || "",
-                cast: lv.cast && lv.cast.length ? lv.cast : seedMatch.cast
-              });
-            }
-            return lv;
-          });
-        } else {
-          base = SEED_ITEMS.filter((x) => x.platformId === platformId);
-        }
-
-        // Always Movies + TV Shows combined sorted by heat!
-        const list = base.map(getEnrichedItem);
-        list.sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0));
-        return list.slice(0, 10);
+        if (Array.isArray(liveArr) && liveArr.length) return liveArr.slice(0, 10).map(getEnrichedItem);
+        if (Object.keys(liveChartsByPlatform).length) return [];
+        return SEED_ITEMS.filter((x) => x.platformId === platformId)
+          .map(getEnrichedItem)
+          .sort((a, b) => (Number(b.heat) || 0) - (Number(a.heat) || 0))
+          .slice(0, 10);
       }
 
       function getDaysSinceRelease(item) {
@@ -2557,7 +2652,9 @@
         // 2. Per-platform items & seed new dramas on enabled platforms
         getVisiblePlatformIds().forEach((pid) => {
           getPlatformItems(pid).forEach(addCandidate);
-          SEED_ITEMS.filter((s) => s.platformId === pid && s.mediaType === "show").forEach(addCandidate);
+          if (!liveHeroNewShows.length) {
+            SEED_ITEMS.filter((s) => s.platformId === pid && s.mediaType === "show").forEach(addCandidate);
+          }
         });
 
         const allCandidates = Array.from(poolMap.values());
@@ -2639,7 +2736,7 @@
           <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}">
             <img class="hero-slide-img" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
               alt="${escapeHtml(cur.title)}" ${prioAttr} decoding="async" referrerpolicy="no-referrer"
-              onerror="this.onerror=null;this.src='${fallbackSvg}';" />
+              onerror="dramovImgErr(this,'${fallbackSvg}')\" />
             <div class="hero-slide-fade"></div>
 
             <div class="hero-slide-caption">
@@ -2766,7 +2863,7 @@
                     <div class="mixed-poster-box">
                       <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
                         loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                        onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                        onerror="dramovImgErr(this,'${fallbackSrc}')\" />
                       <div class="mixed-plat-corner">
                         ${renderBrandIconHtml(it.platformId, "brand-icon-full")}
                       </div>
@@ -2792,8 +2889,27 @@
         wrap.innerHTML = visibleIds
           .map((pid) => {
             const pm = PLATFORM_MAP[pid];
+            if (pm.kind === "schedule") {
+              return `
+              <section class="platform-chart-col" id="col-${pid}">
+                <div class="row-between" data-openplat="${pid}" role="button" tabindex="0"
+                  style="padding-bottom: 10px; border-bottom: 1px solid var(--surface-border); cursor: pointer;">
+                  <div class="row-center">
+                    ${renderBrandIconHtml(pid, "brand-icon-wrap")}
+                    <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.03em;">${escapeHtml(pm.name)}</span>
+                  </div>
+                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
+                    <span style="white-space:nowrap;">完整赛程</span>
+                    <span style="font-size: 15px; line-height: 1;">›</span>
+                  </span>
+                </div>
+                <div style="display: flex; flex-direction: column;">${renderRingColumnRows()}</div>
+              </section>`;
+            }
             const items = getPlatformItems(pid);
-            const rowsHtml = items
+            const rowsHtml = !items.length
+              ? `<div style="padding: 28px 4px; text-align: center; font-size: 12.5px; color: var(--text-muted);">榜单暂时没拿到，稍后下拉刷新</div>`
+              : items
               .map((it, rIdx) => {
                 const k = itemKey(it);
                 const posterSrc = getPosterUrl(it, false, true);
@@ -2804,12 +2920,12 @@
                     <div class="top10-poster">
                       <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
                         loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                        onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                        onerror="dramovImgErr(this,'${fallbackSrc}')\" />
                     </div>
                     <div class="top10-rank-num">${rIdx + 1}</div>
                     <div style="flex: 1 1 0%; min-width: 0;">
                       <div style="display: flex; align-items: center; gap: 5px; min-width: 0;">
-                        <span style="color: #22c55e; font-size: 10.5px; font-weight: 800; flex-shrink: 0;">▲</span>
+                        ${trendArrowHtml(it)}
                         <span style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                           ${escapeHtml(it.title)}
                         </span>
@@ -2845,43 +2961,171 @@
           .join("");
       }
 
-      function getAllKnownItemsMap() {
-        const m = new Map();
-        SEED_ITEMS.forEach((it) => m.set(itemKey(it), getEnrichedItem(it)));
-        Object.values(liveChartsByPlatform).flat().forEach((it) => {
-          const k = itemKey(it);
-          const prev = m.get(k);
-          m.set(
-            k,
-            getEnrichedItem(
-              prev
-                ? Object.assign({}, prev, it, {
-                    totalEpisodes: it.totalEpisodes || prev.totalEpisodes || 0,
-                    airedEpisodes: it.airedEpisodes || prev.airedEpisodes || 0
-                  })
-                : it
-            )
-          );
-        });
-        liveGlobalTop.forEach((it) => {
-          const k = itemKey(it);
-          if (!m.has(k)) m.set(k, getEnrichedItem(it));
-        });
-        // 首页横排、二级页加载过的条目也要能点开（之前漏了，导致部分条目点不进去）
-        [...liveHeroNewShows, ...liveHotShowsTop, ...liveHotMoviesTop].forEach((it) => {
-          const k = itemKey(it);
-          if (!m.has(k)) m.set(k, getEnrichedItem(it));
-        });
-        Object.values(platformCatalogPools).forEach((pool) => {
-          (pool.allLoaded || []).forEach((it) => {
-            const k = itemKey(it);
-            if (!m.has(k)) m.set(k, getEnrichedItem(it));
+      // =========================================================================
+      // 擂台：WWE / AEW / UFC 赛程
+      // - 每周固定节目按美东时间规则自动生成（不需要联网）
+      // - 大型赛事（PLE / PPV / UFC）为内置清单，随 App 更新
+      // - 全部换算成手机所在时区显示
+      // =========================================================================
+      const RING_TZ = "America/New_York";
+      const RING_WEEKLY = [
+        { id: "raw", org: "WWE", name: "WWE Raw", dow: 1, et: "20:00", dur: 180, watch: "Netflix" },
+        { id: "nxt", org: "WWE", name: "WWE NXT", dow: 2, et: "20:00", dur: 120, watch: "The CW" },
+        { id: "dynamite", org: "AEW", name: "AEW Dynamite", dow: 3, et: "20:00", dur: 120, watch: "TBS · HBO Max" },
+        { id: "smackdown", org: "WWE", name: "WWE SmackDown", dow: 5, et: "20:00", dur: 120, watch: "USA Network" },
+        { id: "collision", org: "AEW", name: "AEW Collision", dow: 6, et: "20:00", dur: 120, watch: "TNT · HBO Max" }
+      ];
+      // 已公布场馆的周播节目（键：美东日期|节目）
+      const RING_VENUES = {
+        "2026-11-23|raw": { venue: "Intrust Bank Arena", city: "Wichita, KS" },
+        "2026-12-16|dynamite": { venue: "OG&E Coliseum", city: "Oklahoma City, OK", note: "Dynamite / Collision" },
+        "2026-12-23|dynamite": { venue: "Wintrust Arena", city: "Chicago, IL", note: "Holiday Bash" },
+        "2027-01-25|raw": { venue: "3Arena", city: "Dublin, Ireland" },
+        "2027-01-29|smackdown": { venue: "Moda Center", city: "Portland, OR" },
+        "2027-02-01|raw": { venue: "Climate Pledge Arena", city: "Seattle, WA" }
+      };
+      // 大型赛事（time 为美东时间，没有则显示“时间待定”）
+      const RING_EVENTS = [
+        { org: "UFC", name: "UFC Fight Night: Procházka vs Stirling", date: "2026-11-21", time: "13:00", dur: 180, venue: "ABHA Arena", city: "Doha, Qatar", watch: "Paramount+" },
+        { org: "WWE", name: "WWE Survivor Series: WarGames", date: "2026-11-28", venue: "Daikin Park", city: "Houston, TX", watch: "ESPN（美国）· Netflix（美国以外）" },
+        { org: "UFC", name: "UFC Fight Night: Adesanya vs Magomedov", date: "2026-12-05", time: "13:00", dur: 180, venue: "The Venue", city: "Riyadh, Saudi Arabia", watch: "Paramount+" },
+        { org: "UFC", name: "UFC 335: Oliveira vs Lopes", date: "2026-12-12", time: "21:00", dur: 180, venue: "T-Mobile Arena", city: "Las Vegas, NV", watch: "Paramount+" },
+        { org: "WWE", name: "WWE Wrestlepalooza: Perth", date: "2026-12-12", venue: "RAC Arena", city: "Perth, Australia", watch: "ESPN（美国）· Netflix（美国以外）" },
+        { org: "AEW", name: "AEW Worlds End", date: "2026-12-19", venue: "Target Center", city: "Minneapolis, MN", watch: "PPV · HBO Max" },
+        { org: "UFC", name: "UFC Fight Night", date: "2027-01-16", time: "20:00", dur: 180, watch: "Paramount+" },
+        { org: "WWE", name: "WWE Royal Rumble", date: "2027-02-06", venue: "State Farm Stadium", city: "Glendale, AZ", watch: "ESPN（美国）· Netflix（美国以外）" }
+      ];
+
+      const ringEtFmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: RING_TZ, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short"
+      });
+      function ringEtParts(date) {
+        const o = {};
+        ringEtFmt.formatToParts(date).forEach((p) => { o[p.type] = p.value; });
+        return o;
+      }
+      function ringEtDateStr(date) {
+        const o = ringEtParts(date);
+        return `${o.year}-${o.month}-${o.day}`;
+      }
+      // 美东“日期 + 时间” → 真实时间点（自动处理夏令时）
+      function ringEtToDate(dateStr, timeStr) {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        const [hh, mm] = String(timeStr || "12:00").split(":").map(Number);
+        const want = Date.UTC(y, m - 1, d, hh, mm);
+        let t = want + 5 * 3600000;
+        for (let i = 0; i < 2; i++) {
+          const o = ringEtParts(new Date(t));
+          const shown = Date.UTC(Number(o.year), Number(o.month) - 1, Number(o.day), Number(o.hour) % 24, Number(o.minute));
+          t += want - shown;
+        }
+        return new Date(t);
+      }
+
+      let ringCache = { at: 0, list: [] };
+      function buildRingSchedule(days = 42) {
+        const now = Date.now();
+        if (now - ringCache.at < 60000 && ringCache.list.length) return ringCache.list;
+        const out = [];
+        const dowMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        const seenDays = new Set();
+        for (let i = -1; i <= days; i++) {
+          const probe = new Date(now + i * 86400000);
+          const ds = ringEtDateStr(probe);
+          if (seenDays.has(ds)) continue;
+          seenDays.add(ds);
+          const dow = dowMap[ringEtParts(probe).weekday];
+          RING_WEEKLY.filter((w) => w.dow === dow).forEach((w) => {
+            const start = ringEtToDate(ds, w.et);
+            const v = RING_VENUES[`${ds}|${w.id}`] || {};
+            out.push({ kind: "weekly", org: w.org, name: v.note ? `${w.name} · ${v.note}` : w.name, start, end: new Date(start.getTime() + w.dur * 60000), watch: w.watch, venue: v.venue || "", city: v.city || "", tbd: false });
+          });
+        }
+        RING_EVENTS.forEach((e) => {
+          const start = ringEtToDate(e.date, e.time || "12:00");
+          const [ey, em, ed] = e.date.split("-").map(Number);
+          out.push({
+            kind: "event", org: e.org, name: e.name, start, end: new Date(start.getTime() + (e.dur || 240) * 60000),
+            watch: e.watch || "", venue: e.venue || "", city: e.city || "", tbd: !e.time,
+            // 没公布时间的赛事按美国当地日期显示，避免换算时区后跳到第二天
+            display: e.time ? null : new Date(ey, em - 1, ed, 12)
           });
         });
-        extraSearchItems.forEach((it) => m.set(itemKey(it), getEnrichedItem(it)));
-        Object.entries(appState.userRecords || {}).forEach(([k, rec]) => {
-          if (!m.has(k) && rec.snapshot) m.set(k, getEnrichedItem(rec.snapshot));
+        const list = out
+          .filter((x) => (x.tbd ? ringEtDateStr(x.start) >= ringEtDateStr(new Date(now)) : x.end.getTime() >= now))
+          .sort((a, b) => (a.display || a.start) - (b.display || b.start));
+        ringCache = { at: now, list };
+        return list;
+      }
+
+      function ringLocale() {
+        return LANG === "en" ? "en-US" : LANG === "zh-Hans" ? "zh-CN" : "zh-TW";
+      }
+      function ringRowHtml(ev) {
+        const loc = ringLocale();
+        const shown = ev.display || ev.start;
+        const dayTxt = new Intl.DateTimeFormat(loc, { month: "numeric", day: "numeric" }).format(shown);
+        const wkTxt = new Intl.DateTimeFormat(loc, { weekday: "short" }).format(shown);
+        const timeTxt = ev.tbd ? "时间待定" : new Intl.DateTimeFormat(loc, { hour: "2-digit", minute: "2-digit", hour12: false }).format(ev.start);
+        const live = !ev.tbd && ev.start.getTime() <= Date.now() && ev.end.getTime() >= Date.now();
+        const place = [ev.venue, ev.city].filter(Boolean).join(" · ");
+        return `
+          <div class="ring-row ${ev.kind === "event" ? "ring-big" : ""}">
+            <div class="ring-date">
+              <div class="ring-day">${escapeHtml(dayTxt)}</div>
+              <div class="ring-wk">${escapeHtml(wkTxt)}</div>
+            </div>
+            <div style="flex: 1 1 0%; min-width: 0;">
+              <div class="ring-title">
+                <span class="ring-org ring-org-${ev.org.toLowerCase()}">${escapeHtml(ev.org)}</span>
+                <span class="ring-name">${escapeHtml(ev.name.replace(/^(WWE|AEW) /, ""))}</span>
+              </div>
+              <div class="ring-sub">${live ? `<span class="ring-live">LIVE</span> ` : ""}${escapeHtml(timeTxt)}${ev.watch ? ` · ${escapeHtml(ev.watch)}` : ""}</div>
+              ${place ? `<div class="ring-place">${escapeHtml(place)}</div>` : ""}
+            </div>
+            ${ev.kind === "event" ? `<span class="ring-chip">大赛</span>` : ""}
+          </div>
+        `;
+      }
+      function renderRingColumnRows() {
+        return buildRingSchedule(21).slice(0, 10).map(ringRowHtml).join("");
+      }
+      function renderRingPageHtml() {
+        const loc = ringLocale();
+        const groups = [];
+        buildRingSchedule(42).forEach((ev) => {
+          const key = new Intl.DateTimeFormat(loc, { month: "long", day: "numeric", weekday: "long" }).format(ev.display || ev.start);
+          const g = groups[groups.length - 1];
+          if (g && g.key === key) g.items.push(ev);
+          else groups.push({ key, items: [ev] });
         });
+        return groups
+          .map((g) => `<div class="ring-group-head">${escapeHtml(g.key)}</div>${g.items.map(ringRowHtml).join("")}`)
+          .join("");
+      }
+
+      // 排名趋势：JustWatch 每日榜给出的升 / 降 / 持平（没有数据就不显示）
+      function trendArrowHtml(it) {
+        const t = String(it.trend || "").toUpperCase();
+        if (t === "UP") return `<span class="trend-arrow up">▲</span>`;
+        if (t === "DOWN") return `<span class="trend-arrow down">▼</span>`;
+        if (t === "STABLE") return `<span class="trend-arrow flat">–</span>`;
+        return "";
+      }
+
+      function getAllKnownItemsMap() {
+        const m = new Map();
+        const put = (it) => {
+          const k = itemKey(it);
+          if (k && !m.has(k)) m.set(k, getEnrichedItem(it));
+        };
+        // 实时数据优先；内置示例只补缺（不再把示例的集数、简介混进真实条目）
+        Object.values(liveChartsByPlatform).flat().forEach(put);
+        [...liveHeroNewShows, ...liveHotShowsTop, ...liveHotMoviesTop, ...liveGlobalTop].forEach(put);
+        Object.values(platformCatalogPools).forEach((pool) => (pool.allLoaded || []).forEach(put));
+        extraSearchItems.forEach(put);
+        Object.values(appState.userRecords || {}).forEach((rec) => rec && rec.snapshot && put(rec.snapshot));
+        SEED_ITEMS.forEach(put);
         return m;
       }
 
@@ -2899,7 +3143,7 @@
               <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(it.title)}"
                 loading="lazy" decoding="async" referrerpolicy="no-referrer"
                 style="width:100%;height:100%;object-fit:cover;display:block;"
-                onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                onerror="dramovImgErr(this,'${fallbackSrc}')\" />
             </div>
             <div style="font-size: 13px; font-weight: 700; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(it.title)}</div>
             <div style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(formatItemShortProgress(it))}</div>
@@ -2911,7 +3155,7 @@
         const q = document.getElementById("searchInput").value.trim().toLowerCase();
         document.getElementById("searchPlatformFilter").innerHTML = [
           `<button type="button" class="filter-chip ${searchPlatFilter === "all" ? "active" : ""}" data-splat="all">全部平台</button>`,
-          ...PLATFORMS.map(
+          ...PLATFORMS.filter((p) => p.kind !== "schedule").map(
             (p) =>
               `<button type="button" class="filter-chip ${searchPlatFilter === p.id ? "active" : ""}" data-splat="${p.id}">${escapeHtml(p.name)}</button>`
           )
@@ -3073,7 +3317,7 @@
             <div class="plat-catalog-poster">
               <img data-thumbimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}" alt="${escapeHtml(cur.title)}"
                 loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                onerror="this.onerror=null;this.src='${fallbackSrc}';" />
+                onerror="dramovImgErr(this,'${fallbackSrc}')\" />
               ${showPlatformBadge ? `<div class="mixed-plat-corner" style="width:20px;height:20px;top:5px;left:5px;border-radius:5px;">${renderBrandIconHtml(cur.platformId, "brand-icon-full")}</div>` : ""}
             </div>
             <div style="flex: 1 1 0%; min-width: 0;">
@@ -3154,6 +3398,7 @@
       }
 
       async function fetchMoreSecondaryCatalog(feedKey) {
+        if (PLATFORM_MAP[feedKey] && PLATFORM_MAP[feedKey].kind === "schedule") return;
         const st = ensureSecondaryPool(feedKey);
         const sentinel = document.getElementById("platformLoadSentinel");
         if (st.fetching) return;
@@ -3226,6 +3471,7 @@
       }
 
       function appendNextSecondaryChunk(feedKey, chunkSize = 20) {
+        if (PLATFORM_MAP[feedKey] && PLATFORM_MAP[feedKey].kind === "schedule") return;
         const st = ensureSecondaryPool(feedKey);
         const listEl = document.getElementById("platformAcclaimedList");
         const sentinel = document.getElementById("platformLoadSentinel");
@@ -3233,7 +3479,8 @@
 
         const slice = st.buffer.slice(st.renderedCount, st.renderedCount + chunkSize);
         if (slice.length > 0) {
-          const fragHtml = slice.map((it) => buildSecondaryCatalogCardHtml(it, st.isMixedPopular)).join("");
+          const isRegion = PLATFORM_MAP[feedKey] && PLATFORM_MAP[feedKey].kind === "region";
+          const fragHtml = slice.map((it) => buildSecondaryCatalogCardHtml(it, st.isMixedPopular || isRegion)).join("");
           listEl.insertAdjacentHTML("beforeend", fragHtml);
           st.renderedCount += slice.length;
           // 只为缺海报的条目补图（接口数据一般自带海报）
@@ -3297,7 +3544,12 @@
           hbo: "linear-gradient(180deg, rgba(49, 46, 129, 0.65) 0%, rgba(5, 7, 13, 1) 100%)",
           prime: "linear-gradient(180deg, rgba(3, 105, 161, 0.58) 0%, rgba(5, 7, 13, 1) 100%)",
           paramount: "linear-gradient(180deg, rgba(29, 78, 216, 0.58) 0%, rgba(5, 7, 13, 1) 100%)",
-          apple: "linear-gradient(180deg, rgba(63, 63, 70, 0.55) 0%, rgba(5, 7, 13, 1) 100%)"
+          apple: "linear-gradient(180deg, rgba(63, 63, 70, 0.55) 0%, rgba(5, 7, 13, 1) 100%)",
+          hulu: "linear-gradient(180deg, rgba(6, 95, 70, 0.6) 0%, rgba(5, 7, 13, 1) 100%)",
+          peacock: "linear-gradient(180deg, rgba(82, 82, 91, 0.6) 0%, rgba(5, 7, 13, 1) 100%)",
+          gat: "linear-gradient(180deg, rgba(127, 29, 29, 0.62) 0%, rgba(5, 7, 13, 1) 100%)",
+          jk: "linear-gradient(180deg, rgba(76, 29, 149, 0.62) 0%, rgba(5, 7, 13, 1) 100%)",
+          ring: "linear-gradient(180deg, rgba(127, 29, 29, 0.7) 0%, rgba(5, 7, 13, 1) 100%)"
         };
 
         document.getElementById("platformHeroBanner").style.background = bannerBgMap[feedKey] || bannerBgMap.netflix;
@@ -3317,11 +3569,19 @@
         }
         renderPlatformSortSeg(feedKey);
 
+        if (pm && pm.kind === "schedule") {
+          // 擂台：直接显示未来六周赛程，不走片库接口
+          document.getElementById("platformListHeading").textContent = "未来六周赛程";
+          document.getElementById("platformSortSeg").style.display = "none";
+          document.getElementById("platformAcclaimedList").innerHTML = renderRingPageHtml();
+          document.getElementById("platformLoadSentinel").textContent = "时间已换算为本机时区；节目安排以官方为准";
+        } else {
         const st = ensureSecondaryPool(feedKey);
         st.renderedCount = 0;
 
         document.getElementById("platformAcclaimedList").innerHTML = "";
         appendNextSecondaryChunk(feedKey, 18);
+        }
 
         const shell = document.getElementById("platformShell");
         const scroller = document.getElementById("platformScroller");
@@ -3336,7 +3596,7 @@
         scrim.classList.add("open");
         shell.classList.add("open");
 
-        fetchMoreSecondaryCatalog(feedKey);
+        if (!(pm && pm.kind === "schedule")) fetchMoreSecondaryCatalog(feedKey);
       }
 
       function closePlatformPage() {
@@ -3390,7 +3650,7 @@
           item.synopsis || "流媒体热播佳作，点击下方对应流媒体图标即可直达官方正版播放页。";
 
         // Streaming Watch Providers with Real Brand Logos!
-        const provIds = Array.from(new Set([item.platformId, ...(item.providers || [])])).filter((id) => PLATFORM_MAP[id]);
+        const provIds = Array.from(new Set([item.platformId, ...(item.providers || [])])).filter((id) => PLATFORM_MAP[id] && !PLATFORM_MAP[id].kind);
         document.getElementById("detailProvidersRow").innerHTML = provIds
           .map((pid) => {
             const pm = PLATFORM_MAP[pid];
@@ -3404,6 +3664,15 @@
               </a>
             `;
           })
+          .join("") + (item.otherOffers || [])
+          .filter((o) => o && o.name)
+          .map((o) => `
+              <a href="${escapeHtml(o.url || "#")}" target="_blank" rel="noopener noreferrer" class="provider-tile">
+                <span class="provider-icon-lg">${o.icon
+                  ? `<img src="${escapeHtml(o.icon)}" alt="${escapeHtml(o.name)}" decoding="async" referrerpolicy="no-referrer" />`
+                  : `<span style="display:grid;place-items:center;width:100%;height:100%;font-weight:800;">${escapeHtml(o.name.slice(0, 2))}</span>`}</span>
+                <span style="font-size: 12px; font-weight: 600;">${escapeHtml(o.name)}</span>
+              </a>`)
           .join("");
 
         const epBox = document.getElementById("detailEpisodeBox");
@@ -3502,7 +3771,7 @@
               <div class="cast-card">
                 <div class="cast-avatar">
                   <img src="${escapeHtml(src)}" alt="${escapeHtml(c.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                    onerror="this.onerror=null;this.src='${fallbackAv}';" />
+                    onerror="dramovImgErr(this,'${fallbackAv}')\" />
                 </div>
                 <div style="font-size: 12px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.name)}</div>
                 <div style="font-size: 11px; color: #8b9bb4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.role || "")}</div>
@@ -3522,7 +3791,7 @@
               (st) => `
               <div class="still-card">
                 <img src="${escapeHtml(st)}" alt="剧照" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                  onerror="this.onerror=null;this.src='${wideFallback}';" />
+                  onerror="dramovImgErr(this,'${wideFallback}')\" />
               </div>
             `
             )
@@ -3958,6 +4227,14 @@
           out.settings.platformOrder = clean;
         }
         if (Array.isArray(chosenSet.hiddenPlatforms)) out.settings.hiddenPlatforms = chosenSet.hiddenPlatforms;
+        {
+          // 云端来自旧版本时，新频道按默认开关处理
+          const chosenSeen = Array.isArray(chosenSet.seenSections) ? chosenSet.seenSections : ["netflix", "disney", "hbo", "prime", "paramount", "apple"];
+          const hid = new Set(out.settings.hiddenPlatforms || []);
+          PLATFORMS.forEach((pl) => { if (!chosenSeen.includes(pl.id) && pl.defaultHidden) hid.add(pl.id); });
+          out.settings.hiddenPlatforms = Array.from(hid);
+          out.settings.seenSections = PLATFORMS.map((pl) => pl.id);
+        }
         out.settings.dailyPopupEnabled = Boolean(chosenSet.dailyPopupEnabled);
         out.settings.updatedAt = Math.max(Number(rSet.updatedAt) || 0, Number(lSet.updatedAt) || 0);
 

@@ -13,7 +13,15 @@ const PLATFORM_DEFS = {
   hbo: { id: "hbo", matchNames: ["max", "hbo max"], fallbackCodes: ["mxx", "hbm"] },
   prime: { id: "prime", matchNames: ["amazon prime video", "prime video"], fallbackCodes: ["amp", "prv"] },
   paramount: { id: "paramount", matchNames: ["paramount plus", "paramount+"], fallbackCodes: ["pmp"] },
-  apple: { id: "apple", matchNames: ["apple tv+", "apple tv plus", "apple tv"], fallbackCodes: ["atp"] }
+  apple: { id: "apple", matchNames: ["apple tv+", "apple tv plus", "apple tv"], fallbackCodes: ["atp"] },
+  hulu: { id: "hulu", matchNames: ["hulu"], fallbackCodes: ["hlu"] },
+  peacock: { id: "peacock", matchNames: ["peacock", "peacock premium", "peacock premium plus"], fallbackCodes: ["pct", "pcp"] }
+};
+
+// 地区专区（与 charts.js 保持一致）
+const REGION_DEFS = {
+  gat: { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
+  jk: { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
 };
 
 const SCORE_BANDS = [
@@ -125,6 +133,7 @@ query GetPlatformCatalog($country: Country!, $first: Int!, $after: String, $filt
         }
         ... on MovieOrShowOrSeasonOrEpisode {
           offers(country: $country, platform: WEB) {
+            monetizationType
             standardWebURL
             package {
               clearName
@@ -153,7 +162,9 @@ function mapShortToPlatformId(shortName = "", clearName = "") {
   if (s === "mxx" || s === "hbm" || c === "max" || c.includes("hbo")) return "hbo";
   if (s === "amp" || s === "prv" || c.includes("prime video")) return "prime";
   if (s === "pmp" || c.includes("paramount")) return "paramount";
-  if (s === "atp" || c.includes("apple tv")) return "apple";
+  if (s === "atp" || c.includes("apple tv+") || c === "apple tv") return "apple";
+  if (s === "hlu" || c === "hulu" || c.startsWith("hulu ")) return "hulu";
+  if (s === "pct" || s === "pcp" || c.startsWith("peacock")) return "peacock";
   return null;
 }
 
@@ -190,18 +201,31 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
   const offers = Array.isArray(node.offers) ? node.offers : [];
   const providersSet = new Set();
   const providerLinks = {};
-  if (forcedPlatformId) providersSet.add(forcedPlatformId);
+  const isRegion = Boolean(forcedPlatformId && REGION_DEFS[forcedPlatformId]);
+  if (forcedPlatformId && !isRegion) providersSet.add(forcedPlatformId);
 
+  const otherOffers = [];
   for (const off of offers) {
     const pid = mapShortToPlatformId(off.package?.shortName, off.package?.clearName);
     if (pid) {
       providersSet.add(pid);
       if (off.standardWebURL && !providerLinks[pid]) providerLinks[pid] = off.standardWebURL;
+    } else if (
+      off.package?.clearName &&
+      (!off.monetizationType || ["FLATRATE", "FREE", "ADS"].includes(off.monetizationType)) &&
+      !otherOffers.some((o) => o.name === off.package.clearName) &&
+      otherOffers.length < 4
+    ) {
+      otherOffers.push({
+        name: off.package.clearName,
+        icon: off.package.icon ? formatImageUrl(off.package.icon, "s100") : "",
+        url: off.standardWebURL || ""
+      });
     }
   }
 
   const primaryPid = forcedPlatformId || Array.from(providersSet)[0] || "netflix";
-  providersSet.add(primaryPid);
+  if (!isRegion) providersSet.add(primaryPid);
 
   const imdb = sc.imdbScore ? Number(Number(sc.imdbScore).toFixed(1)) : null;
   const tmdbScore = sc.tmdbScore ? Number(Number(sc.tmdbScore).toFixed(1)) : null;
@@ -243,6 +267,7 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     platformId: primaryPid,
     providers: Array.from(providersSet),
     providerLinks,
+    otherOffers,
     heat: Math.round((Number(sc.tmdbPopularity) || Math.max(50, 1000 - rankOrder * 8)) * 10) / 10,
     imdb: finalScore,
     imdbVotes: sc.imdbVotes ? Number(sc.imdbVotes) : 0,
@@ -328,20 +353,23 @@ module.exports = async (req, res) => {
     // =========================================================================
     // MODE B: Single-Platform '热播库' (Sorted by Score Desc -> Year Desc!)
     // =========================================================================
-    const platformId = PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
+    const region = REGION_DEFS[q.platform] || null;
+    const platformId = region ? region.id : PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
+    const scopeCountry = region ? region.country : country;
+    // 平台按上架服务筛，地区按出品国家筛
+    const scopeFilter = region ? { productionCountries: region.productionCountries } : null;
     const bandIdx = Math.max(0, Math.min(SCORE_BANDS.length - 1, Number(q.band) || 0));
     const mode = q.mode ? String(q.mode) : "auto";
     const packages = codeMap[platformId] || PLATFORM_DEFS.netflix.fallbackCodes;
+    const scope = (extra) => Object.assign(scopeFilter || { packages }, { objectTypes: ["SHOW", "MOVIE"] }, extra || {});
     const sort = ["curated", "new", "score"].includes(String(q.sort)) ? String(q.sort) : "score";
 
     // 精选：平台上正热门、且 IMDb ≥ 7.0 的片子，页内按“评分 + 新片加分”排序
     // 最新：近两年上线的新片新剧（剧集按首播年份），页内按上线日期从新到旧
     if (sort === "curated" || sort === "new") {
       const curYear = new Date().getUTCFullYear();
-      const filter = { packages, objectTypes: ["SHOW", "MOVIE"] };
-      if (sort === "curated") filter.imdbScore = { min: 7.0 };
-      else filter.releaseYear = { min: curYear - 1 };
-      const rSort = await queryUpstream(CATALOG_PAGE_QUERY, { country, first: 40, after: cursor, filter }).catch(() => null);
+      const filter = scope(sort === "curated" ? { imdbScore: { min: 7.0 } } : { releaseYear: { min: curYear - 1 } });
+      const rSort = await queryUpstream(CATALOG_PAGE_QUERY, { country: scopeCountry, first: 40, after: cursor, filter }).catch(() => null);
       const sConn = rSort?.data?.popularTitles;
       if (sConn && Array.isArray(sConn.edges)) {
         const nowMs = Date.now();
@@ -374,14 +402,10 @@ module.exports = async (req, res) => {
     if (mode !== "deep") {
       const band = SCORE_BANDS[bandIdx];
       const rBand = await queryUpstream(CATALOG_PAGE_QUERY, {
-        country,
+        country: scopeCountry,
         first: 60,
         after: cursor,
-        filter: {
-          packages,
-          objectTypes: ["SHOW", "MOVIE"],
-          imdbScore: { min: band.min, max: band.max }
-        }
+        filter: scope({ imdbScore: { min: band.min, max: band.max } })
       }).catch(() => null);
 
       const conn = rBand?.data?.popularTitles;
@@ -413,13 +437,10 @@ module.exports = async (req, res) => {
     const collected = [];
     for (let step = 0; step < 3 && hasNext; step++) {
       const rDeep = await queryUpstream(CATALOG_PAGE_QUERY, {
-        country,
+        country: scopeCountry,
         first: 65,
         after: curAfter,
-        filter: {
-          packages,
-          objectTypes: ["SHOW", "MOVIE"]
-        }
+        filter: scope()
       });
       const dConn = rDeep?.data?.popularTitles;
       if (!dConn || !Array.isArray(dConn.edges) || !dConn.edges.length) {
