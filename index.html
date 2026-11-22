@@ -798,7 +798,8 @@
     .detail-body {
       max-width: 700px;
       margin: 0 auto;
-      padding: 6px 18px 28px 18px;
+      /* 底部不再额外留白：滑到底时最后一块内容刚好停在 ♡ 🍿 按钮上方 */
+      padding: 6px 18px 0 18px;
     }
 
     /* Single-Row Authoritative Rating Strip (Ordered Left -> Right by Authority: IMDb -> 🍅 -> 🍿 -> Age) */
@@ -2816,7 +2817,18 @@
 
       function loadEnrichCache() {
         try {
-          return JSON.parse(localStorage.getItem(POSTER_CACHE_KEY) || "{}");
+          const c = JSON.parse(localStorage.getItem(POSTER_CACHE_KEY) || "{}");
+          // v23：季信息的匹配规则更严格了，旧的分季缓存清掉重拉一次（海报等其他信息保留）
+          if (localStorage.getItem("dramov_seasons_rev") !== "23") {
+            Object.keys(c).forEach((k) => {
+              const e = c[k];
+              if (!e || typeof e !== "object") return;
+              ["seasons", "seasonsAt", "seasonsFull", "seasonsMerged", "seasonsMissAt", "seasonsSource"].forEach((f) => delete e[f]);
+            });
+            localStorage.setItem("dramov_seasons_rev", "23");
+            localStorage.setItem(POSTER_CACHE_KEY, JSON.stringify(c));
+          }
+          return c;
         } catch (e) {
           return {};
         }
@@ -3093,14 +3105,10 @@
         const jwCount = Number(item.seasonNumber) || 0;
         const allS = Array.isArray(c.seasons) ? c.seasons : [];
         const started = allS.filter((x) => x[3] && x[3] <= today);
-        // 已官宣但还没开播的季（有定档日期就显示日期，没有就写待定档）
+        // 还没开播的季：只显示已经明确定档（有具体开播日期）的；只说「续订」「在拍」没有日期的一概不写
         const upcoming = allS
-          .filter((x) => !(x[3] && x[3] <= today))
-          .map((x) => ({ n: x[0], total: x[1], aired: 0, start: x[3] || "", end: "", upcoming: true }));
-        const maxKnown = allS.reduce((m, x) => Math.max(m, x[0]), 0);
-        if (allS.length && jwCount > maxKnown) {
-          for (let n = maxKnown + 1; n <= jwCount; n++) upcoming.push({ n, total: 0, aired: 0, start: "", end: "", upcoming: true });
-        }
+          .filter((x) => x[3] && x[3] > today)
+          .map((x) => ({ n: x[0], total: x[1], aired: 0, start: x[3], end: "", upcoming: true }));
         const firstYearOf = (d) => Number(String(d || "").slice(0, 4)) || 0;
         if (!started.length) {
           const n = Math.max(1, jwCount);
@@ -3187,19 +3195,41 @@
           const data = await r.json();
           const want = normalizeSimple(name);
           const year = Number(item.year) || 0;
-          const byN = new Map();
+          // 同名的剧可能有好几部（翻拍、同名新剧），按 iTunes 的剧集编号分组，只认首季年份对得上的那一部
+          const groups = new Map();
           (data.results || []).forEach((x) => {
             if (normalizeSimple(x.artistName || "") !== want) return;
-            const m = String(x.collectionName || "").match(/Season\s+(\d+)/i);
+            const m = String(x.collectionName || "").match(/Season\s+(\d+)\s*$/i) || String(x.collectionName || "").match(/Season\s+(\d+)(?![\d\w])/i);
             if (!m) return;
+            if (/bonus|extras|special|preview|trailer/i.test(x.collectionName || "")) return;
             const n = Number(m[1]);
             const st = String(x.releaseDate || "").slice(0, 10);
-            if (n === 1 && year && st && Math.abs(Number(st.slice(0, 4)) - year) > 1) return; // 年份对不上：不是同一部
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(st)) return; // 没有明确日期的不要
+            const gid = x.artistId || x.artistName;
+            if (!groups.has(gid)) groups.set(gid, new Map());
+            const byN = groups.get(gid);
             const tot = Number(x.trackCount) || 0;
             const prev = byN.get(n);
-            if (!prev || tot > prev[1]) byN.set(n, [n, tot, st && st <= todayIso() ? tot : 0, st, ""]);
+            if (!prev || tot > prev[1]) byN.set(n, [n, tot, st <= todayIso() ? tot : 0, st, ""]);
           });
-          return Array.from(byN.values()).sort((a, b) => a[0] - b[0]);
+          let best = null;
+          let bestScore = -1;
+          groups.forEach((byN) => {
+            const list = Array.from(byN.values()).sort((a, b) => a[0] - b[0]);
+            const firstYear = Number(list[0][3].slice(0, 4)) || 0;
+            // 首季年份差太多：不是同一部
+            if (year && list[0][0] === 1 && Math.abs(firstYear - year) > 1) return;
+            if (year && list[0][0] !== 1 && firstYear < year - 1) return;
+            // 季号和开播日期要按顺序递增，乱序的说明混进了别的剧
+            const ordered = list.every((x, i) => i === 0 || x[3] >= list[i - 1][3]);
+            if (!ordered) return;
+            const score = list.length + (list[0][0] === 1 ? 5 : 0);
+            if (score > bestScore) {
+              bestScore = score;
+              best = list;
+            }
+          });
+          return best || [];
         } catch (e) {
           return [];
         }
@@ -4765,7 +4795,7 @@
         }
         const yr = seasonYearText(info, item.year);
         const nx = (info.upcoming || [])[0];
-        const nextStr = nx ? ` · 第${nx.n}季${nx.start ? ` ${fmtPremiere(nx.start)} 开播` : "待定档"}` : "";
+        const nextStr = nx && nx.start ? ` · 第${nx.n}季 ${fmtPremiere(nx.start)} 开播` : "";
         const el = document.getElementById("detailSubMeta");
         el.innerHTML =
           `${escapeHtml(`剧集 · ${genres} · ${epStr}${yr ? ` · ${yr}` : ""}${nextStr}`)}` +
@@ -4793,7 +4823,7 @@
             let sub;
             if (x.upcoming) {
               const [, m, d] = String(x.start || "").split("-").map(Number);
-              sub = x.start ? `${m}/${d} 开播` : "待定档";
+              sub = `${m}/${d} 开播`;
             } else {
               sub = x.aired >= 0 && x.total && x.aired < x.total ? `更至${x.aired}/${x.total}` : (x.total ? `${x.total}集` : "");
             }
@@ -4827,9 +4857,7 @@
         if (upSel) {
           // 选中的是还没开播的季：显示定档日期；有官宣集数就画出未播的格子
           renderSeasonChips(info, chipsAll, upSel.n, appState.userRecords[k]);
-          document.getElementById("detailEpHeader").textContent = upSel.start
-            ? `第 ${upSel.n} 季 · ${fmtPremiere(upSel.start)} 开播`
-            : `第 ${upSel.n} 季 · 尚未定档`;
+          document.getElementById("detailEpHeader").textContent = `第 ${upSel.n} 季 · ${fmtPremiere(upSel.start)} 开播`;
           catchBtn.style.display = "none";
           detailSeasonCtx = { n: upSel.n, latest: info.latest, tot: upSel.total || 0, aired: 0, multi: true };
           const grid = document.getElementById("detailEpGrid");
@@ -6282,7 +6310,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v22";
+      const APP_BUILD = "dramov-pwa-v23";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
