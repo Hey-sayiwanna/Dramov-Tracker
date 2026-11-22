@@ -1,4 +1,4 @@
-const CACHE_NAME = "dramov-pwa-v26";
+const CACHE_NAME = "dramov-pwa-v27";
 // 海报 / 剧照 / 平台图标的本机缓存：跨版本保留，打开 App 时图片直接从手机里读，不用每次重新下载
 const IMG_CACHE = "dramov-img-v1";
 const IMG_MAX = 400;

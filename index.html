@@ -156,6 +156,10 @@
     }
 
     .hero-slide {
+      background-color: #05070d;
+      background-size: cover;
+      background-position: center 10%;
+      background-repeat: no-repeat;
       flex: 0 0 100%;
       width: 100%;
       height: 100%;
@@ -175,6 +179,8 @@
       object-position: center 10%;
       display: block;
     }
+
+    .hero-slide-img:not([src]) { visibility: hidden; }
 
     .hero-slide-fade {
       position: absolute;
@@ -3457,10 +3463,11 @@
 
       let heroLoopCount = 0;
       let heroTopList = [];
+      let lastHeroSig = "";
       let heroLoopResetTimer = null;
       let isHeroTeleporting = false;
 
-      function buildSingleHeroSlideHtml(cur, realIdx, isClone) {
+      function buildSingleHeroSlideHtml(cur, realIdx, isClone, eager = true) {
         const k = itemKey(cur);
         const fallbackSvg = makeEditorialPosterSvg(cur, true, false);
         const heroPick = heroImageFor(cur);
@@ -3469,11 +3476,18 @@
         const genreStr = zhGenres(cur.genres).slice(0, 2).join(" · ") || "热门";
         const ageStr = cur.ageRating || (cur.mediaType === "movie" ? "PG-13" : "TV-MA");
         const showEn = cur.enTitle && normalizeSimple(cur.enTitle) !== normalizeSimple(cur.title);
-        const prioAttr = !isClone && realIdx === 0 ? 'fetchpriority="high"' : "";
+        const prioAttr = eager ? 'fetchpriority="high"' : "";
+        // 大图没下载完之前，先用首页卡片同款的小图垫底（体积小、往往已经在手机里），不会一片黑
+        const thumb = heroPick.wide ? "" : getPosterUrl(cur, false, false);
+        const thumbStyle = thumb && !thumb.startsWith("data:") && thumb !== posterSrc
+          ? ` style="background-image:url(&quot;${escapeHtml(thumb)}&quot;)"`
+          : "";
+        // 只有当前这一张马上下载；其余几张等它出来后再依次下载，不和它抢网速
+        const srcAttr = eager ? `src="${escapeHtml(posterSrc)}"` : `data-src="${escapeHtml(posterSrc)}"`;
 
         return `
-          <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}">
-            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
+          <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}"${thumbStyle}>
+            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" ${srcAttr}
               alt="${escapeHtml(cur.title)}" ${prioAttr} decoding="async" referrerpolicy="no-referrer"
               onerror="dramovImgErr(this,'${fallbackSvg}')\" />
             <div class="hero-slide-fade"></div>
@@ -3510,7 +3524,14 @@
         if (!n) return;
         if (heroIdx >= n || heroIdx < 0) heroIdx = 0;
 
-        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join("");
+        // 榜单刷新后内容没变：不重画，正在显示 / 已下载好的大海报原样保留
+        const heroSig = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false, true)).join("");
+        if (heroSig === lastHeroSig && track.children.length === n) {
+          if (!isDetailOpen && activeNav === "home" && topList[heroIdx || 0]) syncAmbientTopBarForItem(topList[heroIdx || 0]);
+          return;
+        }
+        lastHeroSig = heroSig;
+        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false, idx === heroIdx)).join("");
 
         dots.innerHTML = topList
           .map(
@@ -3519,20 +3540,46 @@
           )
           .join("");
 
-        // 大海报提前在后台解码：滑到下一张时不用临时解码大图（以前偶尔卡一下的原因之一）
-        setTimeout(() => {
-          const imgs = Array.from(track.querySelectorAll('.hero-slide[data-clone="0"] img.hero-slide-img'));
-          const order = imgs.slice(heroIdx).concat(imgs.slice(0, heroIdx));
+        // 当前这张下载好后，再按“下一张、下下张……”的顺序依次下载并提前解码（滑过去时不用临时解码）
+        const imgs = Array.from(track.querySelectorAll('.hero-slide[data-clone="0"] img.hero-slide-img'));
+        const order = imgs.slice(heroIdx).concat(imgs.slice(0, heroIdx));
+        const first = order[0];
+        let started = false;
+        const startRest = () => {
+          if (started || track.firstElementChild !== imgs[0].parentElement) return;
+          started = true;
           let i = 0;
           const next = () => {
             const im = order[i++];
             if (!im) return;
-            const go = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => setTimeout(next, 60));
+            if (!im.getAttribute("src") && im.dataset.src) im.setAttribute("src", im.dataset.src);
+            let moved = false;
+            const go = () => {
+              if (moved) return;
+              moved = true;
+              (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => setTimeout(next, 60));
+            };
             if (im.complete) go();
-            else im.addEventListener("load", go, { once: true });
+            else {
+              im.addEventListener("load", go, { once: true });
+              im.addEventListener("error", go, { once: true });
+              setTimeout(go, 6000); // 某张一直下不来也别卡住后面的
+            }
           };
           next();
-        }, 400);
+        };
+        if (first && first.complete) setTimeout(startRest, 200);
+        else if (first) {
+          first.addEventListener("load", () => setTimeout(startRest, 200), { once: true });
+          first.addEventListener("error", startRest, { once: true });
+        }
+        setTimeout(startRest, 2500);
+        // 用户一碰大海报就把剩下的全部开始下载，滑到哪张都不会是空的
+        track.addEventListener("touchstart", () => {
+          imgs.forEach((im) => {
+            if (!im.getAttribute("src") && im.dataset.src) im.setAttribute("src", im.dataset.src);
+          });
+        }, { once: true, passive: true });
 
         // 停在当前这一张
         requestAnimationFrame(() => {
@@ -6300,7 +6347,7 @@
       refreshLiveStreamingCharts(true);
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v26";
+      const APP_BUILD = "dramov-pwa-v27";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
