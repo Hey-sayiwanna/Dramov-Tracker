@@ -87,6 +87,9 @@ query GetPopularBilingual($country: Country!, $first: Int!, $filter: TitleFilter
           genres {
             shortName
           }
+          externalIds {
+            imdbId
+          }
           scoring {
             imdbScore
             imdbVotes
@@ -162,6 +165,9 @@ query GetPopularMin($country: Country!, $first: Int!, $filter: TitleFilter) {
           originalReleaseDate
           shortDescription
           posterUrl
+          externalIds {
+            imdbId
+          }
           scoring {
             imdbScore
             tmdbScore
@@ -347,6 +353,7 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     jwId: node.id || "",
     title: zh.title || en.title || "Untitled",
     enTitle: en.title || zh.title || "",
+    imdbId: (en.externalIds && en.externalIds.imdbId) || "",
     mediaType: isShow ? "show" : "movie",
     isDoc: rawGenres.some((g) => g.shortName === "doc"),
     hasEpisodes: isShow,
@@ -386,14 +393,37 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
 async function enrichPremiereDateViaTvmaze(item) {
   if (item.mediaType !== "show" || !item.enTitle) return item;
   try {
-    const res = await withTimeout(
-      fetch(`https://api.tvmaze.com/singlesearch/shows?q=${encodeURIComponent(item.enTitle)}&embed=episodes`, {
-        headers: { Accept: "application/json" }
-      }),
-      2200
-    );
-    if (!res.ok) return item;
-    const show = await res.json();
+    // 有 IMDb 编号就按编号找（不会配错剧）；否则按片名找，但首播年份差超过 1 年就不认
+    let show = null;
+    if (item.imdbId) {
+      const lr = await withTimeout(
+        fetch(`https://api.tvmaze.com/lookup/shows?imdb=${encodeURIComponent(item.imdbId)}`, { headers: { Accept: "application/json" } }),
+        2200
+      );
+      if (lr && lr.ok) {
+        const base = await lr.json();
+        if (base && base.id) {
+          const er = await withTimeout(
+            fetch(`https://api.tvmaze.com/shows/${base.id}?embed=episodes`, { headers: { Accept: "application/json" } }),
+            2200
+          );
+          if (er && er.ok) show = await er.json();
+        }
+      }
+    }
+    if (!show) {
+      const res = await withTimeout(
+        fetch(`https://api.tvmaze.com/singlesearch/shows?q=${encodeURIComponent(item.enTitle)}&embed=episodes`, {
+          headers: { Accept: "application/json" }
+        }),
+        2200
+      );
+      if (!res.ok) return item;
+      show = await res.json();
+      const py = Number(String((show && show.premiered) || "").slice(0, 4)) || 0;
+      if (show && item.year && py && Math.abs(py - Number(item.year)) > 1) return item;
+      if (show && item.imdbId && show.externals && show.externals.imdb && show.externals.imdb !== item.imdbId) return item;
+    }
     if (!show) return item;
     const eps = Array.isArray(show._embedded?.episodes) ? show._embedded.episodes : [];
     const nowMs = Date.now();

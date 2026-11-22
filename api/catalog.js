@@ -115,6 +115,9 @@ query GetPlatformCatalog($country: Country!, $first: Int!, $after: String, $filt
           genres {
             shortName
           }
+          externalIds {
+            imdbId
+          }
           scoring {
             imdbScore
             imdbVotes
@@ -263,6 +266,7 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     jwId: node.id || "",
     title: zh.title || en.title || "",
     enTitle: en.title || zh.title || "",
+    imdbId: (en.externalIds && en.externalIds.imdbId) || "",
     mediaType: isShow ? "show" : "movie",
     hasEpisodes: isShow,
     platformId: primaryPid,

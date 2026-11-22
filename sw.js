@@ -1,4 +1,4 @@
-const CACHE_NAME = "dramov-pwa-v21";
+const CACHE_NAME = "dramov-pwa-v22";
 const CORE_ASSETS = [
   "./",
   "./index.html",

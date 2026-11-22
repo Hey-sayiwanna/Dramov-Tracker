@@ -2,6 +2,56 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
+  <!-- 启动时先画深色底 + 图标（在大段样式和脚本之前，第一帧就是深色，不会白屏） -->
+  <style>
+    html, body { background: #05070d; }
+    #launchSplash {
+      position: fixed; inset: 0; z-index: 2147483000;
+      display: flex; align-items: center; justify-content: center;
+      background: #05070d;
+      transition: opacity 0.38s ease;
+    }
+    #launchSplash img {
+      width: 104px; height: 104px; border-radius: 22.37%;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+    @media (min-width: 700px) and (min-height: 700px) {
+      #launchSplash img { width: 128px; height: 128px; }
+    }
+    #launchSplash.hide { opacity: 0; pointer-events: none; }
+  </style>
+  <!-- iOS 主屏幕启动图：页面还没开始画之前系统先显示它（深色底 + 图标），各机型尺寸各一张 -->
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1320x2868.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1260x2736.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1206x2622.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1290x2796.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1284x2778.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1170x2532.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1125x2436.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1242x2688.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-828x1792.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="./splash/launch-1242x2208.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-750x1334.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-640x1136.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-2064x2752.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2752x2064.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-2048x2732.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2732x2048.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1210px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1668x2420.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1210px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2420x1668.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1668x2388.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2388x1668.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1640x2360.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2360x1640.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1668x2224.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2224x1668.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1620x2160.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2160x1620.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1488x2266.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2266x1488.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="./splash/launch-1536x2048.png">
+  <link rel="apple-touch-startup-image" media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="./splash/launch-2048x1536.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dramov</title>
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -1846,6 +1896,11 @@
   </style>
 </head>
 <body class="pager-mode">
+  <div id="launchSplash" aria-hidden="true"><img src="./icon-512.png?v=10" alt="" /></div>
+  <script>
+    // 保险：不管加载过程中出了什么问题，4 秒后一定撤掉启动遮罩
+    setTimeout(function () { var e = document.getElementById("launchSplash"); if (e) e.remove(); }, 4000);
+  </script>
   <div id="mainViewsWrap">
   <!-- 首页 / 搜索 / 片单 / 设置：原生横向分页（左右滑动切换，系统滚动驱动；首页上的横滑榜单自己滚，不会带着翻页） -->
   <div id="tabPager">
@@ -1900,22 +1955,6 @@
     </div>
   </section>
 
-  <!-- =========================================================================
-       TAB 2: SEARCH & EXPLORE
-       ========================================================================= -->
-  <section id="view-search" class="view-section" data-view="search">
-    <div class="subpage-shell">
-      <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px;">搜索片库</div>
-      <div class="row-center" style="margin-bottom: 12px;">
-        <input id="searchInput" type="search" class="app-input" placeholder="搜电影 / 剧集 / 英文名 / 演员..." />
-        <button id="onlineSearchBtn" type="button" class="btn-action primary whitespace-nowrap" style="flex: 0 0 auto; height: 38px; padding: 0 15px;">
-          全网搜索
-        </button>
-      </div>
-      <div id="searchPlatformFilter" class="chip-scroll" style="margin-bottom: 14px;"></div>
-      <div id="searchResultsGrid" class="watchlist-grid"></div>
-    </div>
-  </section>
 
   <!-- =========================================================================
        TAB 3: MY WATCHLIST
@@ -2068,6 +2107,23 @@
       </div>
     </div>
   </section>
+
+  <!-- =========================================================================
+       TAB 2: SEARCH & EXPLORE
+       ========================================================================= -->
+  <section id="view-search" class="view-section" data-view="search">
+    <div class="subpage-shell">
+      <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px;">搜索片库</div>
+      <div class="row-center" style="margin-bottom: 12px;">
+        <input id="searchInput" type="search" class="app-input" placeholder="搜电影 / 剧集 / 英文名 / 演员..." />
+        <button id="onlineSearchBtn" type="button" class="btn-action primary whitespace-nowrap" style="flex: 0 0 auto; height: 38px; padding: 0 15px;">
+          全网搜索
+        </button>
+      </div>
+      <div id="searchPlatformFilter" class="chip-scroll" style="margin-bottom: 14px;"></div>
+      <div id="searchResultsGrid" class="watchlist-grid"></div>
+    </div>
+  </section>
   </div><!-- /#tabPager -->
 
   <!-- Floating Capsule Bottom Navigation -->
@@ -2083,25 +2139,25 @@
         </svg>
         <span>首页</span>
       </button>
-      <button type="button" class="nav-btn" data-nav="search" data-navidx="1">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"/>
-          <path d="m20 20-3.8-3.8"/>
-        </svg>
-        <span>搜索</span>
-      </button>
-      <button type="button" class="nav-btn" data-nav="watchlist" data-navidx="2">
+      <button type="button" class="nav-btn" data-nav="watchlist" data-navidx="1">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M5.5 3.75A2.75 2.75 0 0 0 2.75 6.5v11A2.75 2.75 0 0 0 5.5 20.25h13a2.75 2.75 0 0 0 2.75-2.75v-11A2.75 2.75 0 0 0 18.5 3.75h-13Zm4.75 4.9a.75.75 0 0 1 1.13-.65l4.5 2.75a.75.75 0 0 1 0 1.3l-4.5 2.75a.75.75 0 0 1-1.13-.65v-5.5Z"/>
         </svg>
         <span>片单</span>
       </button>
-      <button type="button" class="nav-btn" data-nav="settings" data-navidx="3">
+      <button type="button" class="nav-btn" data-nav="settings" data-navidx="2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3.2"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
         </svg>
         <span>设置</span>
+      </button>
+      <button type="button" class="nav-btn" data-nav="search" data-navidx="3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="m20 20-3.8-3.8"/>
+        </svg>
+        <span>搜索</span>
       </button>
     </nav>
 
@@ -2245,7 +2301,8 @@
       const GIST_FILENAME = "dramov-tracker-sync-v1.json";
       const STORAGE_KEY = "dramov_state_v2";
       const THEME_KEY = "dramov_theme_v3";
-      const POSTER_CACHE_KEY = "dramov_media_enrich_v3";
+      const POSTER_CACHE_KEY = "dramov_enrich_v2"; // v2：改用 IMDb 编号匹配，旧缓存里可能有配错的剧
+      try { localStorage.removeItem("dramov_media_enrich_v3"); } catch (e) {}
       const TOKEN_KEY = "dramov_gist_token_v1";
       const GIST_ID_KEY = "dramov_gist_id_v1";
       // =========================================================================
@@ -2694,7 +2751,7 @@
 
       let activeNav = "home";
       // 分页里的各页：数据或设置变了先记下来，滑到 / 切到那页时再重画
-      const PAGER_TABS = ["home", "search", "watchlist", "settings"];
+      const PAGER_TABS = ["home", "watchlist", "settings", "search"];
       const pagerDirty = new Set();
       let heroIdx = 0;
       let searchPlatFilter = "all";
@@ -3103,12 +3160,49 @@
       }
       async function findTvmazeId(item, entry) {
         if (entry.tvmazeId) return entry.tvmazeId;
+        // 有 IMDb 编号：直接按编号查，一定是同一部
+        if (item.imdbId) {
+          try {
+            const lr = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${encodeURIComponent(item.imdbId)}`);
+            if (lr.ok) {
+              const sh = await lr.json();
+              if (sh && sh.id) return sh.id;
+            }
+          } catch (e) {}
+        }
         const q = item.enTitle || item.title;
         if (!q) return 0;
         const sr = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`);
         if (!sr.ok) return 0;
         const picked = pickBestTvmazeShow(await sr.json(), item);
         return picked && picked.id ? picked.id : 0;
+      }
+      // 第二个数据源：苹果 iTunes 的剧集季列表（每季上架日期、集数）。TVmaze 查不到或季数对不上时用来补齐 / 交叉核对。
+      async function fetchItunesSeasons(item) {
+        const name = item.enTitle || "";
+        if (!name) return [];
+        try {
+          const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&media=tvShow&entity=tvSeason&limit=50&country=US`);
+          if (!r.ok) return [];
+          const data = await r.json();
+          const want = normalizeSimple(name);
+          const year = Number(item.year) || 0;
+          const byN = new Map();
+          (data.results || []).forEach((x) => {
+            if (normalizeSimple(x.artistName || "") !== want) return;
+            const m = String(x.collectionName || "").match(/Season\s+(\d+)/i);
+            if (!m) return;
+            const n = Number(m[1]);
+            const st = String(x.releaseDate || "").slice(0, 10);
+            if (n === 1 && year && st && Math.abs(Number(st.slice(0, 4)) - year) > 1) return; // 年份对不上：不是同一部
+            const tot = Number(x.trackCount) || 0;
+            const prev = byN.get(n);
+            if (!prev || tot > prev[1]) byN.set(n, [n, tot, st && st <= todayIso() ? tot : 0, st, ""]);
+          });
+          return Array.from(byN.values()).sort((a, b) => a[0] - b[0]);
+        } catch (e) {
+          return [];
+        }
       }
       // withEpisodes=true（详情页）：拉全部分集，算出每季已播几集；false（首页角标）：只拉季列表，更轻
       async function ensureSeasonInfo(item, withEpisodes) {
@@ -3121,6 +3215,19 @@
         try {
           const id = await findTvmazeId(item, entry);
           if (!id) {
+            // TVmaze 没有可靠的匹配：改用 iTunes 的季列表
+            const it = withEpisodes ? await fetchItunesSeasons(item) : [];
+            if (it.length) {
+              entry.seasons = it;
+              entry.seasonsAt = Date.now();
+              entry.seasonsFull = true;
+              entry.seasonsMerged = true;
+              entry.seasonsSource = "itunes";
+              if (it[0][3]) entry.premiereYear = Number(it[0][3].slice(0, 4)) || entry.premiereYear;
+              enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+              saveEnrichCache();
+              return true;
+            }
             entry.seasonsMissAt = Date.now();
             enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
             saveEnrichCache();
@@ -3146,6 +3253,17 @@
             seasons = Array.from(byN.values()).sort((a, b) => a[0] - b[0]);
           } else {
             seasons = listed;
+          }
+          // 交叉核对：JustWatch 说的季数比 TVmaze 多时，再问一下 iTunes，把已经上架的季补上
+          const jwCount = Number(item.seasonNumber) || 0;
+          const tvMax = (seasons || []).reduce((m, x) => Math.max(m, x[0]), 0);
+          if (withEpisodes && jwCount > tvMax) {
+            const it = await fetchItunesSeasons(item);
+            const have = new Set((seasons || []).map((x) => x[0]));
+            it.forEach((x) => {
+              if (!have.has(x[0])) (seasons = seasons || []).push(x);
+            });
+            if (seasons) seasons.sort((a, b) => a[0] - b[0]);
           }
           if (!seasons || !seasons.length) return false;
           entry.seasons = seasons;
@@ -3893,7 +4011,8 @@
           if (searchPlatFilter !== "all" && it.platformId !== searchPlatFilter && !(it.providers || []).includes(searchPlatFilter)) {
             return false;
           }
-          if (!q) return true;
+          // 没输入搜索词时，只列有真实海报的（内置示例数据没有海报，会显示成占位色块）
+          if (!q) return !!getEnrichedItem(it).posterHd;
           if (onlineKeys.has(itemKey(it))) return true;
           const hay = `${it.title} ${it.titleZh || ""} ${it.enTitle || ""} ${(it.genres || []).join(" ")} ${(it.cast || []).map((c) => c.name + " " + (c.enName || "")).join(" ")}`.toLowerCase();
           return hay.includes(q) || (typeof toHans === "function" && toHans(hay).includes(toHans(q)));
@@ -3911,6 +4030,18 @@
         grid.innerHTML = all.length
           ? all.map(renderPosterCardTile).join("")
           : `<div class="surface-card" style="grid-column: 1 / -1; text-align: center; font-size: 13.5px; color: var(--text-muted);">${onlineSearchTimer && q ? "正在全网搜索…" : "未在当前缓存榜单找到匹配项，请点「全网搜索」实时查询"}</div>`;
+        warmSearchPosters(all.slice(0, 24));
+      }
+      // 搜索结果里没海报的：补前 12 部（每次 3 部并行），补到就原地换图；同一批不重复补
+      let searchWarmSig = "";
+      async function warmSearchPosters(list) {
+        const missing = list.filter((it) => !getEnrichedItem(it).posterHd).slice(0, 12);
+        const sig = missing.map(itemKey).join("|");
+        if (!missing.length || sig === searchWarmSig) return;
+        searchWarmSig = sig;
+        for (let i = 0; i < missing.length; i += 3) {
+          await Promise.allSettled(missing.slice(i, i + 3).map((it) => enrichSingleItemMedia(it)));
+        }
       }
 
       function renderWatchlistView() {
@@ -4903,14 +5034,29 @@
       };
       const POSTER_RETRY_MS = 6 * 60 * 60 * 1000;
 
+      // 从 TVmaze 搜索结果里挑「确定是同一部」的剧：
+      // 1) 有 IMDb 编号就只认编号一致的；2) 否则片名要对上、首播年份差不超过 1 年；都不满足宁可不配。
+      // 以前只按相似度挑最高分，《梦魇绝镇 From》这种短片名会配到别的同名剧上。
       function pickBestTvmazeShow(results, item) {
+        const imdb = item.imdbId || "";
+        if (imdb) {
+          const exact = (results || []).find((r) => r && r.show && r.show.externals && r.show.externals.imdb === imdb);
+          if (exact) return exact.show;
+        }
         const want = normalizeSimple(item.enTitle || item.title);
+        const year = Number(item.year) || 0;
         const hints = TVMAZE_CHANNEL_HINTS[item.platformId] || [];
         let best = null;
         let bestScore = -Infinity;
         (results || []).forEach((r) => {
           const show = r && r.show;
           if (!show) return;
+          const nm = normalizeSimple(show.name);
+          const nameOk = nm === want || (want.length >= 5 && nm.length >= 5 && (nm.includes(want) || want.includes(nm)));
+          if (!nameOk) return;
+          const py = Number(String(show.premiered || "").slice(0, 4)) || 0;
+          if (year && py && Math.abs(py - year) > 1) return;
+          if (imdb && show.externals && show.externals.imdb && show.externals.imdb !== imdb) return;
           const channel = `${show.webChannel?.name || ""} ${show.network?.name || ""}`.toLowerCase();
           let sc = Number(r.score) || 0;
           if (normalizeSimple(show.name) === want) sc += 2;
@@ -4953,15 +5099,12 @@
           if (item.mediaType === "show") {
             // 先搜索候选，按“同名 + 同平台 + 有海报”挑出正确的剧，再取详情
             let show = null;
-            const sr = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(queryName)}`);
-            if (sr.ok) {
-              const picked = pickBestTvmazeShow(await sr.json(), item);
-              if (picked?.id) {
-                const dr = await fetch(
-                  `https://api.tvmaze.com/shows/${picked.id}?embed[]=cast&embed[]=images&embed[]=episodes`
-                );
-                if (dr.ok) show = await dr.json();
-              }
+            const pickedId = await findTvmazeId(item, entry);
+            if (pickedId) {
+              const dr = await fetch(
+                `https://api.tvmaze.com/shows/${pickedId}?embed[]=cast&embed[]=images&embed[]=episodes`
+              );
+              if (dr.ok) show = await dr.json();
             }
             if (show) {
               if (show.image?.original && !item.posterHd && !entry.posterHd) {
@@ -5379,7 +5522,7 @@
       }
 
       function bindEvents() {
-        const NAV_ORDER = ["home", "search", "watchlist", "settings"];
+        const NAV_ORDER = ["home", "watchlist", "settings", "search"]; // 底栏顺序：首页、片单、设定、搜索
 
         function positionSlidingLensToTab(tabName) {
           const idx = Math.max(0, NAV_ORDER.indexOf(tabName));
@@ -6117,9 +6260,29 @@
       if (loadCachedLiveCharts()) preloadFirstScreenPosters();
       renderActiveView();
       refreshLiveStreamingCharts(true);
+      // 首屏画好、首张大海报加载完（最多等 1.6 秒）后，启动遮罩淡出
+      (function hideLaunchSplash() {
+        const el = document.getElementById("launchSplash");
+        if (!el) return;
+        let done = false;
+        const go = () => {
+          if (done) return;
+          done = true;
+          el.classList.add("hide");
+          setTimeout(() => el.remove(), 450);
+        };
+        const img = document.querySelector(".hero-slide-img");
+        if (img && !img.complete) {
+          img.addEventListener("load", () => requestAnimationFrame(go), { once: true });
+          img.addEventListener("error", go, { once: true });
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(go));
+        }
+        setTimeout(go, 1600);
+      })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v21";
+      const APP_BUILD = "dramov-pwa-v22";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
