@@ -274,6 +274,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     providerLinks,
     otherOffers,
     heat: Math.round((Number(sc.tmdbPopularity) || Math.max(50, 1000 - rankOrder * 8)) * 10) / 10,
+    _pop: Number(sc.tmdbPopularity) || 0,
+    _imdbRaw: imdb || 0,
     imdb: finalScore,
     imdbVotes: sc.imdbVotes ? Number(sc.imdbVotes) : 0,
     tomatoPct: tomato,
@@ -294,6 +296,61 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     backdrops,
     cast: actors
   };
+}
+
+// ---------------------------------------------------------------------------
+// 排序打分：口碑（按投票数修正过的 IMDb 分）+ 人气（投票数、TMDB 热度、平台内热门名次）+ 新片加分
+// 投票很少的“高分冷门片”会被拉回平均分，不会压过《纸牌屋》《浴血黑帮》这种公认的口碑大剧
+// ---------------------------------------------------------------------------
+const RANK_PROFILES = {
+  curated: { m: 30000, C: 6.9, wVotes: 0.4, wPop: 0.18, wRank: 0.45, recency: [[365, 0.2]] },
+  new: { m: 3000, C: 6.8, wVotes: 0.25, wPop: 0.3, wRank: 0.55, recency: [[45, 0.5], [120, 0.3], [240, 0.15]] },
+  score: { m: 15000, C: 7.0, wVotes: 0.12, wPop: 0, wRank: 0, recency: [] }
+};
+function rankValue(it, profile, nowMs) {
+  const P = RANK_PROFILES[profile];
+  const R = Number(it._imdbRaw) || Number(it.imdb) || P.C;
+  const v = Math.max(0, Number(it.imdbVotes) || 0);
+  const wr = (v / (v + P.m)) * R + (P.m / (v + P.m)) * P.C;
+  const votesTerm = P.wVotes * (Math.log10(Math.max(v, 300)) - 4);
+  const popTerm = P.wPop * Math.log10(1 + (Number(it._pop) || 0));
+  const rankTerm = P.wRank * Math.max(0, 1 - (Number(it._streamIdx) || 0) / 60);
+  const days = (nowMs - (Date.parse(it.releaseDate || "") || 0)) / 86400000;
+  let rec = 0;
+  for (const [d, b] of P.recency) {
+    if (days >= -7 && days <= d) {
+      rec = b;
+      break;
+    }
+  }
+  return wr + votesTerm + popTerm + rankTerm + rec;
+}
+function rankItems(items, profile) {
+  const nowMs = Date.now();
+  items.forEach((it) => { it._rank = rankValue(it, profile, nowMs); });
+  return items.sort((a, b) => b._rank - a._rank);
+}
+function stripPrivate(items) {
+  return items.map((it) => {
+    const o = Object.assign({}, it);
+    delete o._pop;
+    delete o._imdbRaw;
+    delete o._streamIdx;
+    delete o._rank;
+    return o;
+  });
+}
+// 多路并行翻页：每一路是一个筛选条件，游标里记着每一路翻到哪了
+function encodeMultiCursor(list) {
+  return "M" + Buffer.from(JSON.stringify(list)).toString("base64url");
+}
+function decodeMultiCursor(cur, n) {
+  if (!cur || cur[0] !== "M") return new Array(n).fill("");
+  try {
+    const arr = JSON.parse(Buffer.from(cur.slice(1), "base64url").toString("utf8"));
+    if (Array.isArray(arr) && arr.length === n) return arr;
+  } catch (e) {}
+  return new Array(n).fill("");
 }
 
 function sortScoreThenYearDesc(items) {
@@ -355,7 +412,7 @@ module.exports = async (req, res) => {
         });
       });
       res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
-      return res.status(200).json({ ok: true, feedType: "search", items: Array.from(byKey.values()).slice(0, 16) });
+      return res.status(200).json({ ok: true, feedType: "search", items: stripPrivate(Array.from(byKey.values()).slice(0, 16)) });
     }
 
     const codeMap = await resolveCodeMap(country);
@@ -389,7 +446,7 @@ module.exports = async (req, res) => {
         nextBand: 0,
         nextCursor: hasMore ? conn.pageInfo.endCursor : "",
         hasMore,
-        items
+        items: stripPrivate(items)
       });
     }
 
@@ -407,26 +464,49 @@ module.exports = async (req, res) => {
     const scope = (extra) => Object.assign(scopeFilter || { packages }, { objectTypes: ["SHOW", "MOVIE"] }, extra || {});
     const sort = ["curated", "new", "score"].includes(String(q.sort)) ? String(q.sort) : "score";
 
-    // 精选：平台上正热门、且 IMDb ≥ 7.0 的片子，页内按“评分 + 新片加分”排序
-    // 最新：近两年上线的新片新剧（剧集按首播年份），页内按上线日期从新到旧
+    // 精选：人气 + 口碑。三路并行（高分 / 中高分 / 合格分各取平台内最热门的一批），合在一起按口碑 + 人气打分
+    //       ——《纸牌屋》《浴血黑帮》《鱿鱼游戏》这种公认的大剧会排在最前面
+    // 最新：今年 + 去年上线的新片新剧两路并行，按“口碑 + 人气 + 越新越加分”排，而不是单纯按日期
     if (sort === "curated" || sort === "new") {
       const curYear = new Date().getUTCFullYear();
-      const filter = scope(sort === "curated" ? { imdbScore: { min: 7.0 } } : { releaseYear: { min: curYear - 1 } });
-      const rSort = await queryUpstream(CATALOG_PAGE_QUERY, { country: scopeCountry, first: 40, after: cursor, filter }).catch(() => null);
-      const sConn = rSort?.data?.popularTitles;
-      if (sConn && Array.isArray(sConn.edges)) {
-        const nowMs = Date.now();
-        const recencyBonus = (it) => {
-          const days = (nowMs - (Date.parse(it.releaseDate || "") || 0)) / 86400000;
-          return days <= 365 ? 0.8 : days <= 730 ? 0.4 : 0;
-        };
-        const items = sConn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title);
-        if (sort === "curated") {
-          items.sort((a, b) => (Number(b.imdb) + recencyBonus(b)) - (Number(a.imdb) + recencyBonus(a)));
-        } else {
-          items.sort((a, b) => (Date.parse(b.releaseDate || "") || 0) - (Date.parse(a.releaseDate || "") || 0) || (Number(b.year) || 0) - (Number(a.year) || 0));
-        }
-        const more = Boolean(sConn.pageInfo?.hasNextPage && sConn.pageInfo?.endCursor);
+      const streams =
+        sort === "curated"
+          ? [
+              { imdbScore: { min: 8.3 } },
+              { imdbScore: { min: 7.6, max: 8.29 } },
+              { imdbScore: { min: 7.0, max: 7.59 } }
+            ]
+          : [{ releaseYear: { min: curYear } }, { releaseYear: { min: curYear - 1, max: curYear - 1 } }];
+      const cursors = decodeMultiCursor(cursor, streams.length);
+      const results = await Promise.all(
+        streams.map((f, i) =>
+          cursors[i] === null
+            ? Promise.resolve(null)
+            : queryUpstream(CATALOG_PAGE_QUERY, { country: scopeCountry, first: 60, after: cursors[i] || null, filter: scope(f) }).catch(() => "ERR")
+        )
+      );
+      const okAny = results.some((r) => r && r !== "ERR" && r.data && r.data.popularTitles);
+      if (okAny) {
+        const seen = new Set();
+        const items = [];
+        const nextCursors = results.map((r, i) => {
+          if (r === null) return null;
+          if (r === "ERR") return cursors[i] || ""; // 这一路这次失败了，下次再试
+          const conn = r.data && r.data.popularTitles;
+          if (!conn) return null;
+          (conn.edges || []).forEach((e, idx) => {
+            const it = normalizeCatalogNode(e.node, platformId, idx);
+            if (!it || !it.title) return;
+            const key = it.jwId || it.enTitle;
+            if (seen.has(key)) return;
+            seen.add(key);
+            it._streamIdx = idx;
+            items.push(it);
+          });
+          return conn.pageInfo && conn.pageInfo.hasNextPage && conn.pageInfo.endCursor ? conn.pageInfo.endCursor : null;
+        });
+        rankItems(items, sort);
+        const more = nextCursors.some((c) => c !== null);
         return res.status(200).json({
           ok: true,
           feedType: "platform",
@@ -434,9 +514,9 @@ module.exports = async (req, res) => {
           platform: platformId,
           band: 0,
           nextBand: 0,
-          nextCursor: more ? sConn.pageInfo.endCursor : "",
+          nextCursor: more ? encodeMultiCursor(nextCursors) : "",
           hasMore: more,
-          items
+          items: stripPrivate(items)
         });
       }
       // 上游失败时落到下面的按评分分段逻辑
@@ -453,9 +533,11 @@ module.exports = async (req, res) => {
 
       const conn = rBand?.data?.popularTitles;
       if (conn && Array.isArray(conn.edges)) {
-        const items = sortScoreThenYearDesc(
-          conn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title)
-        );
+        // 高分：同一分数段里按“投票数修正后的分数”排，几千票的冷门高分片不再压在口碑大剧前面
+        const items = stripPrivate(rankItems(
+          conn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title),
+          "score"
+        ));
         const hasMoreInBand = Boolean(conn.pageInfo?.hasNextPage && conn.pageInfo?.endCursor);
         const nextBand = hasMoreInBand ? bandIdx : bandIdx + 1;
         const nextCursor = hasMoreInBand ? conn.pageInfo.endCursor : "";
@@ -498,7 +580,7 @@ module.exports = async (req, res) => {
       curAfter = hasNext ? dConn.pageInfo.endCursor : "";
     }
 
-    sortScoreThenYearDesc(collected);
+    rankItems(collected, "score");
 
     return res.status(200).json({
       ok: true,
@@ -509,7 +591,7 @@ module.exports = async (req, res) => {
       nextBand: 0,
       nextCursor: curAfter || "",
       hasMore: hasNext,
-      items: collected
+      items: stripPrivate(collected)
     });
   } catch (err) {
     return res.status(200).json({
