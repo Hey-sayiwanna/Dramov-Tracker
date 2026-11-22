@@ -2,6 +2,44 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
+  <!-- 开屏：深色底上三种颜色（蓝 / 红 / 紫，取自 App 图标）轻轻融在一起，中间是图标；首页大海报出来后淡出 -->
+  <style>
+    html, body { background: #05070d; }
+    #launchSplash {
+      position: fixed; inset: 0; z-index: 2147483000;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      background: #05070d;
+      transition: opacity 0.42s ease;
+    }
+    #launchSplash::before {
+      content: ""; position: absolute; inset: -30%;
+      background:
+        radial-gradient(52% 40% at 66% 34%, rgba(40, 84, 168, 0.72), rgba(40, 84, 168, 0) 72%),
+        radial-gradient(52% 40% at 34% 66%, rgba(158, 32, 52, 0.66), rgba(158, 32, 52, 0) 72%),
+        radial-gradient(46% 36% at 38% 40%, rgba(98, 56, 170, 0.5), rgba(98, 56, 170, 0) 72%),
+        radial-gradient(40% 32% at 62% 62%, rgba(70, 44, 140, 0.34), rgba(70, 44, 140, 0) 72%);
+      animation: splashDrift 6s ease-in-out infinite alternate;
+    }
+    #launchSplash img {
+      position: relative;
+      width: 108px; height: 108px; border-radius: 22.37%;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+      animation: splashIcon 0.5s ease-out both;
+    }
+    @media (min-width: 700px) and (min-height: 700px) {
+      #launchSplash img { width: 132px; height: 132px; }
+    }
+    @keyframes splashDrift {
+      from { transform: translate3d(-2%, -1.5%, 0) rotate(0deg) scale(1); }
+      to { transform: translate3d(2%, 1.5%, 0) rotate(8deg) scale(1.06); }
+    }
+    @keyframes splashIcon {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    #launchSplash.hide { opacity: 0; pointer-events: none; }
+  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dramov</title>
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -156,10 +194,6 @@
     }
 
     .hero-slide {
-      background-color: #05070d;
-      background-size: cover;
-      background-position: center 10%;
-      background-repeat: no-repeat;
       flex: 0 0 100%;
       width: 100%;
       height: 100%;
@@ -179,8 +213,6 @@
       object-position: center 10%;
       display: block;
     }
-
-    .hero-slide-img:not([src]) { visibility: hidden; }
 
     .hero-slide-fade {
       position: absolute;
@@ -1856,6 +1888,11 @@
   </style>
 </head>
 <body class="pager-mode">
+  <div id="launchSplash" aria-hidden="true"><img src="./icon-512.png?v=10" alt="" /></div>
+  <script>
+    // 保险：不管加载中出了什么问题，3 秒后一定撤掉开屏
+    setTimeout(function () { var e = document.getElementById("launchSplash"); if (e) e.remove(); }, 3000);
+  </script>
   <div id="mainViewsWrap">
   <!-- 首页 / 搜索 / 片单 / 设置：原生横向分页（左右滑动切换，系统滚动驱动；首页上的横滑榜单自己滚，不会带着翻页） -->
   <div id="tabPager">
@@ -3463,11 +3500,10 @@
 
       let heroLoopCount = 0;
       let heroTopList = [];
-      let lastHeroSig = "";
       let heroLoopResetTimer = null;
       let isHeroTeleporting = false;
 
-      function buildSingleHeroSlideHtml(cur, realIdx, isClone, eager = true) {
+      function buildSingleHeroSlideHtml(cur, realIdx, isClone) {
         const k = itemKey(cur);
         const fallbackSvg = makeEditorialPosterSvg(cur, true, false);
         const heroPick = heroImageFor(cur);
@@ -3476,18 +3512,11 @@
         const genreStr = zhGenres(cur.genres).slice(0, 2).join(" · ") || "热门";
         const ageStr = cur.ageRating || (cur.mediaType === "movie" ? "PG-13" : "TV-MA");
         const showEn = cur.enTitle && normalizeSimple(cur.enTitle) !== normalizeSimple(cur.title);
-        const prioAttr = eager ? 'fetchpriority="high"' : "";
-        // 大图没下载完之前，先用首页卡片同款的小图垫底（体积小、往往已经在手机里），不会一片黑
-        const thumb = heroPick.wide ? "" : getPosterUrl(cur, false, false);
-        const thumbStyle = thumb && !thumb.startsWith("data:") && thumb !== posterSrc
-          ? ` style="background-image:url(&quot;${escapeHtml(thumb)}&quot;)"`
-          : "";
-        // 只有当前这一张马上下载；其余几张等它出来后再依次下载，不和它抢网速
-        const srcAttr = eager ? `src="${escapeHtml(posterSrc)}"` : `data-src="${escapeHtml(posterSrc)}"`;
+        const prioAttr = !isClone && realIdx === 0 ? 'fetchpriority="high"' : "";
 
         return `
-          <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}"${thumbStyle}>
-            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" ${srcAttr}
+          <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}">
+            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
               alt="${escapeHtml(cur.title)}" ${prioAttr} decoding="async" referrerpolicy="no-referrer"
               onerror="dramovImgErr(this,'${fallbackSvg}')\" />
             <div class="hero-slide-fade"></div>
@@ -3524,14 +3553,7 @@
         if (!n) return;
         if (heroIdx >= n || heroIdx < 0) heroIdx = 0;
 
-        // 榜单刷新后内容没变：不重画，正在显示 / 已下载好的大海报原样保留
-        const heroSig = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false, true)).join("");
-        if (heroSig === lastHeroSig && track.children.length === n) {
-          if (!isDetailOpen && activeNav === "home" && topList[heroIdx || 0]) syncAmbientTopBarForItem(topList[heroIdx || 0]);
-          return;
-        }
-        lastHeroSig = heroSig;
-        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false, idx === heroIdx)).join("");
+        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join("");
 
         dots.innerHTML = topList
           .map(
@@ -3540,46 +3562,20 @@
           )
           .join("");
 
-        // 当前这张下载好后，再按“下一张、下下张……”的顺序依次下载并提前解码（滑过去时不用临时解码）
-        const imgs = Array.from(track.querySelectorAll('.hero-slide[data-clone="0"] img.hero-slide-img'));
-        const order = imgs.slice(heroIdx).concat(imgs.slice(0, heroIdx));
-        const first = order[0];
-        let started = false;
-        const startRest = () => {
-          if (started || track.firstElementChild !== imgs[0].parentElement) return;
-          started = true;
+        // 大海报提前在后台解码：滑到下一张时不用临时解码大图（以前偶尔卡一下的原因之一）
+        setTimeout(() => {
+          const imgs = Array.from(track.querySelectorAll('.hero-slide[data-clone="0"] img.hero-slide-img'));
+          const order = imgs.slice(heroIdx).concat(imgs.slice(0, heroIdx));
           let i = 0;
           const next = () => {
             const im = order[i++];
             if (!im) return;
-            if (!im.getAttribute("src") && im.dataset.src) im.setAttribute("src", im.dataset.src);
-            let moved = false;
-            const go = () => {
-              if (moved) return;
-              moved = true;
-              (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => setTimeout(next, 60));
-            };
+            const go = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => setTimeout(next, 60));
             if (im.complete) go();
-            else {
-              im.addEventListener("load", go, { once: true });
-              im.addEventListener("error", go, { once: true });
-              setTimeout(go, 6000); // 某张一直下不来也别卡住后面的
-            }
+            else im.addEventListener("load", go, { once: true });
           };
           next();
-        };
-        if (first && first.complete) setTimeout(startRest, 200);
-        else if (first) {
-          first.addEventListener("load", () => setTimeout(startRest, 200), { once: true });
-          first.addEventListener("error", startRest, { once: true });
-        }
-        setTimeout(startRest, 2500);
-        // 用户一碰大海报就把剩下的全部开始下载，滑到哪张都不会是空的
-        track.addEventListener("touchstart", () => {
-          imgs.forEach((im) => {
-            if (!im.getAttribute("src") && im.dataset.src) im.setAttribute("src", im.dataset.src);
-          });
-        }, { once: true, passive: true });
+        }, 400);
 
         // 停在当前这一张
         requestAnimationFrame(() => {
@@ -6346,8 +6342,29 @@
       renderActiveView();
       refreshLiveStreamingCharts(true);
 
+      // 首屏画好、第一张大海报出来（最多等 1.5 秒）后，开屏淡出
+      (function hideLaunchSplash() {
+        const el = document.getElementById("launchSplash");
+        if (!el) return;
+        let done = false;
+        const go = () => {
+          if (done) return;
+          done = true;
+          el.classList.add("hide");
+          setTimeout(() => el.remove(), 480);
+        };
+        const img = document.querySelector(".hero-slide-img");
+        if (img && !img.complete) {
+          img.addEventListener("load", () => requestAnimationFrame(go), { once: true });
+          img.addEventListener("error", go, { once: true });
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(go));
+        }
+        setTimeout(go, 1500);
+      })();
+
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v27";
+      const APP_BUILD = "dramov-pwa-v28";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
