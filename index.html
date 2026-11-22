@@ -44,7 +44,13 @@
       from { opacity: 0; transform: scale(0.94); }
       to { opacity: 1; transform: scale(1); }
     }
-    #launchSplash.hide { opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
+    /* 退场：毛玻璃图标放大并渐隐，开屏底色随后淡出（只动开屏自己，不碰首页） */
+    #launchSplash.hide { opacity: 0; pointer-events: none; transition: opacity 0.55s ease 0.05s; }
+    #launchSplash.hide .splash-tile {
+      transform: scale(1.55); opacity: 0;
+      transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.5s ease;
+      animation: none;
+    }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dramov</title>
@@ -179,6 +185,9 @@
       text-shadow: 0 3px 20px rgba(0, 0, 0, 0.68);
       pointer-events: none;
       line-height: 1;
+      /* iOS 上大海报每张都是独立图层，标题不单独成层会被盖住（海报一出来 Dramov 就不见了） */
+      transform: translateZ(0);
+      will-change: transform;
     }
 
     /* Native 120Hz GPU Scroll-Snap Track */
@@ -6349,7 +6358,7 @@
       refreshLiveStreamingCharts(true);
 
       // 开屏要等“眼前这张大海报”真正下载并解码好才退场（以前只等下载完就淡出，解码还没好，会露出一下空的黑底）
-      // 海报准备好后开屏直接撤掉（只做一下很短的淡出），首页就是最终画面；网络太慢最多等 3 秒
+      // 首页（第一张大海报）加载好 → 开屏图标放大渐隐、开屏淡出；首页本身不做任何动画。网络太慢最多等 3 秒
       (function hideLaunchSplash() {
         const el = document.getElementById("launchSplash");
         if (!el) return;
@@ -6359,7 +6368,7 @@
           done = true;
           clearInterval(poll);
           el.classList.add("hide");
-          setTimeout(() => el.remove(), 260);
+          setTimeout(() => el.remove(), 700);
         };
         let decoding = false;
         const check = () => {
@@ -6383,7 +6392,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v31";
+      const APP_BUILD = "dramov-pwa-v32";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
