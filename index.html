@@ -308,6 +308,9 @@
       justify-content: center;
       gap: 6px;
       z-index: 10;
+      transform: translateZ(0);
+      will-change: transform;
+      pointer-events: auto;
     }
 
     .hero-dot {
@@ -1411,6 +1414,17 @@
     .season-chip.active small {
       color: #475569;
     }
+    .season-chip.upcoming:not(.active) {
+      border-style: dashed;
+      color: #94a3b8;
+    }
+    .season-upcoming-note {
+      grid-column: 1 / -1;
+      padding: 14px 4px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
     .season-chip.done:not(.active) {
       border-color: rgba(52, 211, 153, 0.45);
     }
@@ -2325,6 +2339,8 @@
       Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
       Object.assign(I18N_EN, {"密钥在这里设置 ›": "Create a token here ›", "发现新版本，正在更新…": "Updating to the new version…"});
       Object.assign(I18N_HANT, {"密钥在这里设置 ›": "金鑰在這裡設定 ›", "发现新版本，正在更新…": "發現新版本，正在更新…"});
+      Object.assign(I18N_EN, {"待定档": "TBA", "播出后这里会出现分集": "Episodes will appear here once it airs"});
+      Object.assign(I18N_HANT, {"待定档": "待定檔", "播出后这里会出现分集": "播出後這裡會出現分集"});
       Object.assign(I18N_EN, {"新一季": "New season", "榜单地区": "Chart region", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "Daily charts rank by this country or region; services not offered there use the US chart", "美国（默认）": "United States (default)", "新加坡": "Singapore", "台湾": "Taiwan", "香港": "Hong Kong", "英国": "United Kingdom", "日本": "Japan", "韩国": "South Korea", "美区": "US", "正在切换榜单地区…": "Switching chart region…", "榜单地区已切换": "Chart region updated"});
       Object.assign(I18N_HANT, {"榜单地区": "榜單地區", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "每日熱度榜按這個國家 / 地區排名；該地區沒有的平台自動用美區", "美国（默认）": "美國（預設）", "台湾": "台灣", "正在切换榜单地区…": "正在切換榜單地區…", "榜单地区已切换": "榜單地區已切換"});
       Object.assign(I18N_EN, {"其他平台": "Other services", "正在全网搜索…": "Searching online…", "暂未查到正版流媒体平台": "No streaming service found yet", "Apple TV（租借 / 购买）": "Apple TV (rent / buy)"});
@@ -2355,6 +2371,11 @@
         [/共\s*(\d+)\s*集（已播\s*(\d+)\s*集）/, "$1 eps ($2 aired)"],
         [/更至\s*(\d+)\s*\/\s*(\d+)\s*集/, "Ep $1 of $2"],
         [/全\s*(\d+)\s*集/, "$1 eps"],
+        [/第\s*(\d+)\s*季\s*·\s*([\d/]+)\s*开播/, "Season $1 · premieres $2"],
+        [/第\s*(\d+)\s*季\s*·\s*尚未定档/, "Season $1 · date TBA"],
+        [/第\s*(\d+)\s*季\s*([\d/]+)\s*开播/, "Season $1 premieres $2"],
+        [/第\s*(\d+)\s*季待定档/, "Season $1 TBA"],
+        [/([\d/]+)\s*开播/, "Premieres $1"],
         [/第\s*(\d+)\s*季\s*·\s*已看\s*(\d+)\s*\/\s*已播\s*(\d+)\s*\/\s*共\s*(\d+)\s*集/, "Season $1 · watched $2 / aired $3 / total $4"],
         [/第\s*(\d+)\s*季追完打卡达成/, "Season $1 complete"],
         [/共\s*(\d+)\s*季/, "$1 seasons"],
@@ -3013,7 +3034,16 @@
         const c = enrichCache[itemKey(item)] || {};
         const today = todayIso();
         const jwCount = Number(item.seasonNumber) || 0;
-        const started = (Array.isArray(c.seasons) ? c.seasons : []).filter((x) => x[3] && x[3] <= today);
+        const allS = Array.isArray(c.seasons) ? c.seasons : [];
+        const started = allS.filter((x) => x[3] && x[3] <= today);
+        // 已官宣但还没开播的季（有定档日期就显示日期，没有就写待定档）
+        const upcoming = allS
+          .filter((x) => !(x[3] && x[3] <= today))
+          .map((x) => ({ n: x[0], total: x[1], aired: 0, start: x[3] || "", end: "", upcoming: true }));
+        const maxKnown = allS.reduce((m, x) => Math.max(m, x[0]), 0);
+        if (allS.length && jwCount > maxKnown) {
+          for (let n = maxKnown + 1; n <= jwCount; n++) upcoming.push({ n, total: 0, aired: 0, start: "", end: "", upcoming: true });
+        }
         const firstYearOf = (d) => Number(String(d || "").slice(0, 4)) || 0;
         if (!started.length) {
           const n = Math.max(1, jwCount);
@@ -3024,7 +3054,8 @@
             firstYear: Number(c.premiereYear || item.premiereYear || item.year) || 0,
             lastYear: 0,
             isNew: false,
-            fromTvmaze: false
+            fromTvmaze: false,
+            upcoming: []
           };
         }
         const seasons = started.map((x) => ({ n: x[0], total: x[1], aired: x[2], start: x[3], end: x[4] }));
@@ -3034,7 +3065,8 @@
         const lastYear = firstYearOf(last.aired > 0 && last.end && last.end <= today ? last.end : last.start) || firstYearOf(last.start);
         return {
           seasons,
-          count: Math.max(last.n, seasons.length, jwCount),
+          upcoming,
+          count: Math.max(last.n, seasons.length),
           latest: last.n,
           firstYear: firstYearOf(seasons[0].start) || Number(item.year) || 0,
           lastYear,
@@ -3084,7 +3116,7 @@
         const k = itemKey(item);
         const entry = Object.assign({}, enrichCache[k] || {});
         const fresh = entry.seasonsAt && Date.now() - entry.seasonsAt < SEASON_TTL_MS;
-        if (fresh && (entry.seasonsFull || !withEpisodes)) return false;
+        if (fresh && (entry.seasonsMerged || !withEpisodes)) return false;
         if (entry.seasonsMissAt && Date.now() - entry.seasonsMissAt < SEASON_TTL_MS) return false;
         try {
           const id = await findTvmazeId(item, entry);
@@ -3096,17 +3128,30 @@
           }
           entry.tvmazeId = id;
           let seasons = null;
+          // 季列表里有已官宣、还没播的季（带定档日期）；分集列表里有每季实际播了几集。详情页两个都要。
+          const sr = await fetch(`https://api.tvmaze.com/shows/${id}/seasons`);
+          const listed = sr.ok ? seasonsFromTvmazeSeasons(await sr.json()) : [];
           if (withEpisodes) {
             const r = await fetch(`https://api.tvmaze.com/shows/${id}/episodes`);
-            if (r.ok) seasons = seasonsFromEpisodes(await r.json());
+            const fromEps = r.ok ? seasonsFromEpisodes(await r.json()) : [];
+            const byN = new Map(fromEps.map((x) => [x[0], x]));
+            listed.forEach((x) => {
+              const ep = byN.get(x[0]);
+              if (ep) {
+                byN.set(x[0], [x[0], Math.max(ep[1], x[1]), ep[2], ep[3] || x[3], ep[4] || x[4]]);
+              } else {
+                byN.set(x[0], x);
+              }
+            });
+            seasons = Array.from(byN.values()).sort((a, b) => a[0] - b[0]);
           } else {
-            const r = await fetch(`https://api.tvmaze.com/shows/${id}/seasons`);
-            if (r.ok) seasons = seasonsFromTvmazeSeasons(await r.json());
+            seasons = listed;
           }
           if (!seasons || !seasons.length) return false;
           entry.seasons = seasons;
           entry.seasonsAt = Date.now();
           entry.seasonsFull = !!withEpisodes;
+          entry.seasonsMerged = !!withEpisodes;
           if (seasons[0][3]) entry.premiereYear = Number(seasons[0][3].slice(0, 4)) || entry.premiereYear;
           enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
           saveEnrichCache();
@@ -3333,19 +3378,7 @@
         if (!n) return;
         if (heroIdx >= n || heroIdx < 0) heroIdx = 0;
 
-        if (n > 1) {
-          const slidesHtml = [
-            // 两头各放两张替身：连续快速滑时，第二下也有地方可滑，不会顶到头
-            buildSingleHeroSlideHtml(topList[(n - 2 + n) % n], (n - 2 + n) % n, true),
-            buildSingleHeroSlideHtml(topList[n - 1], n - 1, true),
-            ...topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)),
-            buildSingleHeroSlideHtml(topList[0], 0, true),
-            buildSingleHeroSlideHtml(topList[1 % n], 1 % n, true)
-          ];
-          track.innerHTML = slidesHtml.join("");
-        } else {
-          track.innerHTML = buildSingleHeroSlideHtml(topList[0], 0, false);
-        }
+        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join("");
 
         dots.innerHTML = topList
           .map(
@@ -3369,15 +3402,12 @@
           next();
         }, 400);
 
-        // Position at real slide (heroIdx + 2) synchronously without animation
+        // 停在当前这一张
         requestAnimationFrame(() => {
           if (n > 1 && track.clientWidth > 0) {
-            isHeroTeleporting = true;
-            track.style.scrollBehavior = "auto";
-            track.scrollLeft = (heroIdx + 2) * track.clientWidth;
-            requestAnimationFrame(() => {
-              isHeroTeleporting = false;
-            });
+            track.style.scrollSnapType = "none";
+            track.scrollLeft = heroIdx * track.clientWidth;
+            track.style.scrollSnapType = "";
           }
         });
 
@@ -3965,6 +3995,44 @@
       };
       document.addEventListener("touchend", markTouchEnd, { passive: true, capture: true });
       document.addEventListener("touchcancel", markTouchEnd, { passive: true, capture: true });
+      // 列表 / 横滑区刚滚动完，iOS 偶尔会把下一次点按当成滚动的一部分：按下有反应，但不跳转，要点第二下。
+      // 对卡片自己判断轻点：手指几乎没动、按下时页面已经停稳、时间很短 → 直接打开。
+      // 按下时如果页面还在滚，这一下只是让它停住（和系统一样），不会误开。
+      (function bindFastTap() {
+        let start = null;
+        let lastScrollAt = 0;
+        document.addEventListener("scroll", () => {
+          lastScrollAt = performance.now();
+        }, { passive: true, capture: true });
+        document.addEventListener("touchstart", (e) => {
+          start = null;
+          if (!e.touches || e.touches.length !== 1) return;
+          const el = e.target.closest && e.target.closest("[data-openkey], [data-openplat], [data-openfeed]");
+          if (!el) return;
+          const t = e.touches[0];
+          const now = performance.now();
+          start = { x: t.clientX, y: t.clientY, t: now, el, scrolling: now - lastScrollAt < 120 };
+        }, { passive: true });
+        document.addEventListener("touchmove", (e) => {
+          if (!start || !e.touches || !e.touches[0]) return;
+          const t = e.touches[0];
+          if (Math.abs(t.clientX - start.x) > 10 || Math.abs(t.clientY - start.y) > 10) start = null;
+        }, { passive: true });
+        document.addEventListener("touchcancel", () => {
+          start = null;
+        }, { passive: true });
+        document.addEventListener("touchend", (e) => {
+          const s0 = start;
+          start = null;
+          if (!s0 || s0.scrolling) return;
+          const now = performance.now();
+          if (now - s0.t > 600 || lastScrollAt > s0.t) return; // 按太久或按的过程中有东西滚了：交给系统
+          if (!document.contains(s0.el)) return;
+          if (e.cancelable) e.preventDefault(); // 不再等系统的 click，避免这一下被吞或者触发两次
+          s0.el.click();
+        }, { passive: false });
+      })();
+
       const pendingIdleRenders = new Map();
       function runWhenTouchIdle(key, fn) {
         pendingIdleRenders.set(key, fn);
@@ -4565,15 +4633,50 @@
           epStr = `第 ${item.seasonNumber || 1} 季`;
         }
         const yr = seasonYearText(info, item.year);
+        const nx = (info.upcoming || [])[0];
+        const nextStr = nx ? ` · 第${nx.n}季${nx.start ? ` ${fmtPremiere(nx.start)} 开播` : "待定档"}` : "";
         const el = document.getElementById("detailSubMeta");
         el.innerHTML =
-          `${escapeHtml(`剧集 · ${genres} · ${epStr}${yr ? ` · ${yr}` : ""}`)}` +
+          `${escapeHtml(`剧集 · ${genres} · ${epStr}${yr ? ` · ${yr}` : ""}${nextStr}`)}` +
           (info.isNew ? ` <span class="new-season-chip">新一季</span>` : "");
       }
 
+      function fmtPremiere(d) {
+        const [y, m, dd] = String(d).split("-").map(Number);
+        if (!y) return "";
+        return `${y}/${m}/${dd}`;
+      }
       // 详情页：分季切换 + 当季分集打卡
       let detailSeasonSel = { key: "", n: 0 };
       let detailSeasonCtx = { n: 1, latest: 1, tot: 8, aired: 8 };
+      function renderSeasonChips(info, chipsAll, selN, rec) {
+        const seg = document.getElementById("detailSeasonSeg");
+        if (chipsAll.length < 2) {
+          seg.style.display = "none";
+          seg.innerHTML = "";
+          return;
+        }
+        seg.style.display = "flex";
+        seg.innerHTML = chipsAll
+          .map((x) => {
+            let sub;
+            if (x.upcoming) {
+              const [, m, d] = String(x.start || "").split("-").map(Number);
+              sub = x.start ? `${m}/${d} 开播` : "待定档";
+            } else {
+              sub = x.aired >= 0 && x.total && x.aired < x.total ? `更至${x.aired}/${x.total}` : (x.total ? `${x.total}集` : "");
+            }
+            const w = x.upcoming ? 0 : getSeasonWatched(rec, x.n, info.latest);
+            const done = !x.upcoming && x.total > 0 && w >= x.total;
+            return `<button type="button" class="season-chip${x.n === selN ? " active" : ""}${done ? " done" : ""}${x.upcoming ? " upcoming" : ""}" data-season="${x.n}">
+              <span>第${x.n}季</span>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</button>`;
+          })
+          .join("");
+        requestAnimationFrame(() => {
+          const act = seg.querySelector(".season-chip.active");
+          if (act) seg.scrollLeft = Math.max(0, act.offsetLeft - seg.clientWidth + act.offsetWidth + 12);
+        });
+      }
       function renderDetailSeasons(item) {
         const epBox = document.getElementById("detailEpisodeBox");
         if (!itemHasEpisodes(item)) {
@@ -4584,9 +4687,33 @@
         const k = itemKey(item);
         const rec = appState.userRecords[k] || { fav: false, watched: false, watchedEp: 0 };
         const info = getSeasonInfo(item);
-        if (detailSeasonSel.key !== k || !info.seasons.some((x) => x.n === detailSeasonSel.n)) {
+        const chipsAll = info.seasons.concat(info.upcoming || []);
+        if (detailSeasonSel.key !== k || !chipsAll.some((x) => x.n === detailSeasonSel.n)) {
           detailSeasonSel = { key: k, n: info.latest };
         }
+        const catchBtn = document.getElementById("detailCatchUpBtn");
+        const upSel = (info.upcoming || []).find((x) => x.n === detailSeasonSel.n);
+        if (upSel) {
+          // 选中的是还没开播的季：显示定档日期；有官宣集数就画出未播的格子
+          renderSeasonChips(info, chipsAll, upSel.n, appState.userRecords[k]);
+          document.getElementById("detailEpHeader").textContent = upSel.start
+            ? `第 ${upSel.n} 季 · ${fmtPremiere(upSel.start)} 开播`
+            : `第 ${upSel.n} 季 · 尚未定档`;
+          catchBtn.style.display = "none";
+          detailSeasonCtx = { n: upSel.n, latest: info.latest, tot: upSel.total || 0, aired: 0, multi: true };
+          const grid = document.getElementById("detailEpGrid");
+          if (upSel.total > 0) {
+            const cells = [];
+            for (let ep = 1; ep <= Math.min(80, upSel.total); ep++) {
+              cells.push(`<div class="ep-cell unaired" data-detep="${ep}" data-unaired="1" aria-disabled="true">${ep}</div>`);
+            }
+            grid.innerHTML = cells.join("");
+          } else {
+            grid.innerHTML = `<div class="season-upcoming-note">播出后这里会出现分集</div>`;
+          }
+          return;
+        }
+        catchBtn.style.display = "";
         const sel = info.seasons.find((x) => x.n === detailSeasonSel.n) || info.seasons[info.seasons.length - 1];
         const isLatest = sel.n === info.latest;
         let tot = sel.total || (isLatest ? Number(item.totalEpisodes) : 0) || 8;
@@ -4598,27 +4725,8 @@
         watchedEp = Math.min(watchedEp, aired);
         detailSeasonCtx = { n: sel.n, latest: info.latest, tot, aired, multi: info.seasons.length >= 2 };
 
-        const seg = document.getElementById("detailSeasonSeg");
-        if (info.seasons.length >= 2) {
-          seg.style.display = "flex";
-          seg.innerHTML = info.seasons
-            .map((x) => {
-              const sub = x.aired >= 0 && x.total && x.aired < x.total ? `更至${x.aired}/${x.total}` : (x.total ? `${x.total}集` : "");
-              const w = getSeasonWatched(rec, x.n, info.latest);
-              const done = x.total > 0 && w >= x.total;
-              return `<button type="button" class="season-chip${x.n === sel.n ? " active" : ""}${done ? " done" : ""}" data-season="${x.n}">
-                <span>第${x.n}季</span>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</button>`;
-            })
-            .join("");
-          requestAnimationFrame(() => {
-            const act = seg.querySelector(".season-chip.active");
-            if (act) seg.scrollLeft = Math.max(0, act.offsetLeft - seg.clientWidth + act.offsetWidth + 12);
-          });
-        } else {
-          seg.style.display = "none";
-          seg.innerHTML = "";
-        }
-        document.getElementById("detailEpHeader").textContent = info.seasons.length >= 2
+        renderSeasonChips(info, chipsAll, sel.n, rec);
+        document.getElementById("detailEpHeader").textContent = chipsAll.length >= 2
           ? `第 ${sel.n} 季 · 已看 ${watchedEp} / 已播 ${aired} / 共 ${tot} 集`
           : `分集进度（已看 ${watchedEp} / 已播 ${aired} / 共 ${tot} 集）`;
         const cells = [];
@@ -5525,38 +5633,14 @@
 
         // 8-Slide Seamless Infinite Loop Scroll-Snap Engine
         const heroTrack = document.getElementById("heroTrack");
-        // 无限循环：滑到首尾的「替身」那一格后，瞬移回真正的那一格。
-        // iPad 上惯性 / 吸附动画还没结束时直接改 scrollLeft 会被忽略，导致卡在最后一格滑不动，
-        // 所以先停掉惯性（临时 overflow hidden）、关掉吸附再跳，跳完检查一下，没到位就再试。
-        function heroTeleport(slot, tries) {
+        // 大海报：就是普通的原生横滑（不做替身、不做无限循环），由系统负责惯性和吸附，最顺滑也不会卡住。
+        let heroAmbientTimer = null;
+        function heroAlign(idx) {
           const w = heroTrack.clientWidth || window.innerWidth;
           if (!w) return;
-          isHeroTeleporting = true;
-          heroTrack.style.scrollBehavior = "auto";
           heroTrack.style.scrollSnapType = "none";
-          heroTrack.style.overflowX = "hidden";
-          heroTrack.scrollLeft = slot * w;
-          requestAnimationFrame(() => {
-            heroTrack.style.overflowX = "";
-            heroTrack.scrollLeft = slot * w;
-            heroTrack.style.scrollSnapType = "";
-            requestAnimationFrame(() => {
-              isHeroTeleporting = false;
-              if (Math.abs(heroTrack.scrollLeft - slot * w) > 2 && (tries || 0) < 6) {
-                setTimeout(() => heroTeleport(slot, (tries || 0) + 1), 60);
-              }
-            });
-          });
-        }
-        let heroAmbientTimer = null;
-        function settleInfiniteHeroIfAtClone() {
-          if (touchActive) return; // 手指还在上面：等松手（touchend 会再排一次）
-          const n = heroLoopCount;
-          const w = heroTrack.clientWidth || window.innerWidth;
-          if (n <= 1 || !w) return;
-          const rawSlot = Math.round(heroTrack.scrollLeft / w);
-          if (rawSlot <= 1) heroTeleport(rawSlot + n);
-          else if (rawSlot >= n + 2) heroTeleport(rawSlot - n);
+          heroTrack.scrollLeft = idx * w;
+          heroTrack.style.scrollSnapType = "";
         }
         // 屏幕尺寸变了（iPad 旋转 / 台前调度 / 分屏）：对齐到当前这一张；跨过宽 / 窄屏时换横版或竖版图
         {
@@ -5569,39 +5653,18 @@
               if (nowWide !== heroWasWide) {
                 heroWasWide = nowWide;
                 renderHeroCarousel();
-              } else if (heroLoopCount > 1) {
-                heroTeleport(heroIdx + 2);
+              } else {
+                heroAlign(heroIdx);
               }
             }, 150);
           });
         }
-        heroTrack.addEventListener("touchend", () => {
-          clearTimeout(heroLoopResetTimer);
-          heroLoopResetTimer = setTimeout(settleInfiniteHeroIfAtClone, 450);
-        }, { passive: true });
-        // 手指按下时如果正停在替身那一格（已对齐、内容和真的一模一样），立刻换到对应的真那一格：肉眼看不出来，
-        // 这样连续快速滑也不会顶到头
-        heroTrack.addEventListener("touchstart", () => {
-          const n = heroLoopCount;
-          const w = heroTrack.clientWidth || window.innerWidth;
-          if (n <= 1 || !w) return;
-          const raw = heroTrack.scrollLeft / w;
-          const slot = Math.round(raw);
-          if (Math.abs(raw - slot) > 0.02) return; // 还在动：不碰它
-          if (slot <= 1) heroTrack.scrollLeft = (slot + n) * w;
-          else if (slot >= n + 2) heroTrack.scrollLeft = (slot - n) * w;
-        }, { passive: true });
 
         heroTrack.addEventListener("scroll", () => {
-          if (isHeroTeleporting) return;
           const n = heroLoopCount;
           const w = heroTrack.clientWidth || window.innerWidth;
           if (!w || !n) return;
-          let realIdx = 0;
-          if (n > 1) {
-            const rawSlot = Math.round(heroTrack.scrollLeft / w);
-            realIdx = ((rawSlot - 2) % n + n) % n;
-          }
+          const realIdx = Math.max(0, Math.min(n - 1, Math.round(heroTrack.scrollLeft / w)));
           if (realIdx !== heroIdx) {
             heroIdx = realIdx;
             document.querySelectorAll("#heroDots .hero-dot").forEach((d, i) =>
@@ -5615,18 +5678,13 @@
               });
             }, 260);
           }
-          if (heroLoopResetTimer) clearTimeout(heroLoopResetTimer);
-          heroLoopResetTimer = setTimeout(settleInfiniteHeroIfAtClone, 130);
         }, { passive: true });
-
-        heroTrack.addEventListener("scrollend", settleInfiniteHeroIfAtClone, { passive: true });
 
         document.getElementById("heroDots").addEventListener("click", (e) => {
           const dot = e.target.closest("[data-hdot]");
           if (!dot) return;
           const idx = Number(dot.getAttribute("data-hdot")) || 0;
-          const offsetSlot = heroLoopCount > 1 ? idx + 2 : idx;
-          heroTrack.scrollTo({ left: offsetSlot * heroTrack.clientWidth, behavior: "smooth" });
+          heroTrack.scrollTo({ left: idx * heroTrack.clientWidth, behavior: "smooth" });
         });
 
         document.getElementById("platformSortSeg").addEventListener("click", (e) => {
@@ -6061,7 +6119,7 @@
       refreshLiveStreamingCharts(true);
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v20";
+      const APP_BUILD = "dramov-pwa-v21";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
