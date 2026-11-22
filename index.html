@@ -1771,25 +1771,51 @@
     .view-section.active {
       display: block;
     }
-    /* 搜索 / 片单 / 设置：横向拖动只交给 JS，竖向滚动仍是原生 */
-    #view-search,
-    #view-watchlist,
-    #view-settings {
-      touch-action: pan-y;
+    /* 搜索 / 片单 / 设置三页并排放在一个原生横向吸附滚动容器里：
+       左右滑动时旁边那页跟着手指一起进来，速度、惯性、吸附都由系统处理；每页各自上下滚动 */
+    #tabPager {
+      display: none;
     }
-    .view-section.tab-enter-from-right {
-      animation: tabEnterRight 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    body.pager-mode {
+      overflow: hidden;
     }
-    .view-section.tab-enter-from-left {
-      animation: tabEnterLeft 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    body.pager-mode #view-home {
+      display: none !important;
     }
-    @keyframes tabEnterRight {
-      from { transform: translate3d(36%, 0, 0); }
-      to { transform: translate3d(0, 0, 0); }
+    body.pager-mode #tabPager {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      overscroll-behavior-x: none; /* 到头了就停住，也不会触发浏览器后退 */
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      background: var(--bg-solid);
     }
-    @keyframes tabEnterLeft {
-      from { transform: translate3d(-36%, 0, 0); }
-      to { transform: translate3d(0, 0, 0); }
+    #tabPager::-webkit-scrollbar {
+      display: none;
+    }
+    #tabPager > .view-section {
+      display: block !important;
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+    }
+    #tabPager > .view-section::-webkit-scrollbar {
+      display: none;
     }
     #detailOverlay { scrollbar-width: none; }
     #detailOverlay::-webkit-scrollbar { display: none; }
@@ -1859,6 +1885,8 @@
     </div>
   </section>
 
+  <!-- 搜索 / 片单 / 设置：原生横向分页（左右滑动切换，系统滚动驱动） -->
+  <div id="tabPager">
   <!-- =========================================================================
        TAB 2: SEARCH & EXPLORE
        ========================================================================= -->
@@ -2027,6 +2055,7 @@
       </div>
     </div>
   </section>
+  </div><!-- /#tabPager -->
 
   <!-- Floating Capsule Bottom Navigation -->
   </div><!-- /#mainViewsWrap -->
@@ -3881,8 +3910,17 @@
         if (crSel) crSel.value = getChartRegion();
       }
 
+      // 分页里的其他两页：数据变了先记下来，滑到那页时再重画
+      const PAGER_TABS = ["search", "watchlist", "settings"];
+      const pagerDirty = new Set();
       function renderActiveView() {
         checkStalledPosters();
+        if (PAGER_TABS.includes(activeNav)) {
+          PAGER_TABS.forEach((t) => {
+            if (t !== activeNav) pagerDirty.add(t);
+          });
+          pagerDirty.delete(activeNav);
+        }
         if (activeNav === "home") {
           renderHeroCarousel();
           renderStreamingCharts();
@@ -5187,90 +5225,69 @@
           if (wrap) wrap.classList.toggle("minimized", minState);
         }
 
-        // 搜索 / 片单 / 设置 之间左右滑动切换。
-        // 首页不参与（首页要横滑看榜单）；设置往后、搜索往前都到头了，不会绕回首页。
-        const SWIPE_TABS = ["search", "watchlist", "settings"];
-        let tabEnterDir = "";
-        (function bindTabSwipe() {
-          const wrap = document.getElementById("mainViewsWrap");
-          const zone = document; // 片单 / 设置内容短，空白处也要能滑，所以监听整个页面
-          let sw = null;
-          let raf = 0;
-          function canScrollX(el) {
-            for (let n = el; n && n !== wrap && n !== document.body; n = n.parentElement) {
-              if (n.scrollWidth > n.clientWidth + 2) {
-                const ox = getComputedStyle(n).overflowX;
-                if (ox === "auto" || ox === "scroll") return true;
-              }
-            }
-            return false;
-          }
-          zone.addEventListener("touchstart", (e) => {
-            sw = null;
-            if (isDetailOpen || isPlatformOpen || !SWIPE_TABS.includes(activeNav) || !e.touches || e.touches.length !== 1) return;
-            if (e.target.closest("input, textarea, select, [contenteditable], [data-noswipe], #bottomNavWrap, .gpu-page-shell, .modal-backdrop")) return;
-            if (canScrollX(e.target)) return;
-            const t = e.touches[0];
-            sw = { x: t.clientX, y: t.clientY, dx: 0, lock: null, el: document.querySelector(".view-section.active"), pts: [] };
+        // 搜索 / 片单 / 设置：原生横向分页。首页不在里面（首页要横滑看榜单），两头也不会绕回首页。
+        const pagerEl = document.getElementById("tabPager");
+        let pagerSettleTimer = null;
+        function renderPagerPages() {
+          renderSearchView();
+          renderWatchlistView();
+          renderSettingsView();
+          pagerDirty.clear();
+        }
+        function pagerJumpTo(tab) {
+          const i = Math.max(0, PAGER_TABS.indexOf(tab));
+          pagerEl.style.scrollSnapType = "none";
+          pagerEl.scrollLeft = i * (pagerEl.clientWidth || window.innerWidth);
+          pagerEl.style.scrollSnapType = "";
+        }
+        function setLensFraction(idx, follow) {
+          const lens = document.getElementById("navSlidingLens");
+          if (!lens) return;
+          lens.style.transition = follow ? "none" : "";
+          lens.style.transform = `translate3d(${idx * 100}%, 0, 0) scale(1)`;
+        }
+        function pagerSettle() {
+          if (!document.body.classList.contains("pager-mode")) return;
+          const w = pagerEl.clientWidth || 1;
+          const tab = PAGER_TABS[Math.max(0, Math.min(PAGER_TABS.length - 1, Math.round(pagerEl.scrollLeft / w)))];
+          setLensFraction(NAV_ORDER.indexOf(tab), false);
+          if (!tab || tab === activeNav) return;
+          activeNav = tab;
+          document.querySelectorAll("#bottomNav .nav-btn").forEach((b) =>
+            b.classList.toggle("active", b.getAttribute("data-nav") === activeNav)
+          );
+          document.querySelectorAll(".view-section").forEach((sec) =>
+            sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav)
+          );
+          if (pagerDirty.has(tab)) renderActiveView();
+          const sec = document.getElementById(`view-${tab}`);
+          setNavMinimized(!!sec && sec.scrollTop > 60);
+        }
+        pagerEl.addEventListener("scroll", () => {
+          if (!document.body.classList.contains("pager-mode")) return;
+          const w = pagerEl.clientWidth || 1;
+          // 底栏的高亮胶囊跟着手指走（首页占第 0 格，所以 +1）
+          setLensFraction(1 + pagerEl.scrollLeft / w, true);
+          clearTimeout(pagerSettleTimer);
+          pagerSettleTimer = setTimeout(pagerSettle, 90);
+        }, { passive: true });
+        pagerEl.addEventListener("scrollend", pagerSettle, { passive: true });
+        // 每页自己上下滚动：照样自动收起 / 展开底栏
+        PAGER_TABS.forEach((t) => {
+          const sec = document.getElementById(`view-${t}`);
+          let lastY = 0;
+          sec.addEventListener("scroll", () => {
+            if (activeNav !== t || isDetailOpen || isPlatformOpen) return;
+            const y = Math.max(0, sec.scrollTop);
+            const dy = y - lastY;
+            lastY = y;
+            if (y <= 36) setNavMinimized(false);
+            else if (y > 60 && dy > 5) setNavMinimized(true);
           }, { passive: true });
-          zone.addEventListener("touchmove", (e) => {
-            if (!sw || !e.touches || e.touches.length !== 1) return;
-            const t = e.touches[0];
-            const dx = t.clientX - sw.x;
-            const dy = t.clientY - sw.y;
-            if (!sw.lock) {
-              if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-              sw.lock = Math.abs(dx) > Math.abs(dy) * 1.25 ? "h" : "v";
-              if (sw.lock === "h") sw.el.style.willChange = "transform";
-            }
-            if (sw.lock !== "h") return;
-            const idx = SWIPE_TABS.indexOf(activeNav);
-            const target = SWIPE_TABS[idx + (dx < 0 ? 1 : -1)];
-            sw.dx = target ? dx : dx * 0.22; // 到头了：带阻尼，拉不过去
-            sw.pts.push([performance.now(), dx]);
-            if (sw.pts.length > 6) sw.pts.shift();
-            if (!raf) {
-              raf = requestAnimationFrame(() => {
-                raf = 0;
-                if (sw && sw.lock === "h") sw.el.style.transform = `translate3d(${sw.dx}px, 0, 0)`;
-              });
-            }
-          }, { passive: true });
-          function end() {
-            const cur = sw;
-            sw = null;
-            if (!cur || cur.lock !== "h") return;
-            const el = cur.el;
-            const W = window.innerWidth || 375;
-            const idx = SWIPE_TABS.indexOf(activeNav);
-            const goNext = cur.dx < 0;
-            const target = SWIPE_TABS[idx + (goNext ? 1 : -1)];
-            const a = cur.pts[0];
-            const b = cur.pts[cur.pts.length - 1];
-            const v = a && b ? (b[1] - a[1]) / Math.max(1, b[0] - a[0]) : 0;
-            const fast = Math.abs(v) > 0.35 && Math.sign(v) === Math.sign(cur.dx);
-            if (target && (Math.abs(cur.dx) > W * 0.22 || fast)) {
-              el.style.transition = "transform 0.16s cubic-bezier(0.4, 0, 1, 1)";
-              el.style.transform = `translate3d(${goNext ? -W * 0.32 : W * 0.32}px, 0, 0)`;
-              setTimeout(() => {
-                el.style.transition = "";
-                el.style.transform = "";
-                el.style.willChange = "";
-                tabEnterDir = goNext ? "from-right" : "from-left";
-                switchMainTab(target);
-              }, 150);
-            } else {
-              el.style.transition = "transform 0.3s var(--push-ease)";
-              el.style.transform = "";
-              setTimeout(() => {
-                el.style.transition = "";
-                el.style.willChange = "";
-              }, 320);
-            }
-          }
-          zone.addEventListener("touchend", end, { passive: true });
-          zone.addEventListener("touchcancel", end, { passive: true });
-        })();
+        });
+        window.addEventListener("resize", () => {
+          if (document.body.classList.contains("pager-mode")) pagerJumpTo(activeNav);
+        });
 
         function switchMainTab(nextTab) {
           if (isDetailOpen) closeDetailPage();
@@ -5280,23 +5297,27 @@
             b.classList.toggle("active", b.getAttribute("data-nav") === activeNav)
           );
           positionSlidingLensToTab(activeNav);
-          document.querySelectorAll(".view-section").forEach((sec) => {
-            sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav);
-            sec.classList.remove("tab-enter-from-right", "tab-enter-from-left");
-          });
-          if (tabEnterDir) {
-            const sec = document.querySelector(`.view-section[data-view="${activeNav}"]`);
-            if (sec) {
-              void sec.offsetWidth;
-              sec.classList.add(`tab-enter-${tabEnterDir}`);
-              setTimeout(() => sec.classList.remove(`tab-enter-${tabEnterDir}`), 420);
-            }
-            tabEnterDir = "";
-          }
+          document.querySelectorAll(".view-section").forEach((sec) =>
+            sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav)
+          );
           setNavMinimized(false);
-          lastWindowScrollY = 0;
-          window.scrollTo(0, 0);
-          renderActiveView();
+          const inPager = PAGER_TABS.includes(activeNav);
+          const wasPager = document.body.classList.contains("pager-mode");
+          document.body.classList.toggle("pager-mode", inPager);
+          if (inPager) {
+            if (!wasPager) {
+              renderPagerPages();
+              void pagerEl.offsetWidth;
+              pagerJumpTo(activeNav); // 从首页进来：直接到那一页
+            } else {
+              if (pagerDirty.has(activeNav)) renderActiveView();
+              pagerEl.scrollTo({ left: PAGER_TABS.indexOf(activeNav) * pagerEl.clientWidth, behavior: "smooth" });
+            }
+          } else {
+            lastWindowScrollY = 0;
+            window.scrollTo(0, 0);
+            renderActiveView();
+          }
           if (activeNav !== "home") syncAmbientTopBarForItem(null);
         }
 
@@ -5591,6 +5612,7 @@
           let touching = false;
           let samples = [];
           let touchPts = [];
+          let touchStartPt = null;
           let idleTimer = null;
           const width = () => shellEl.clientWidth || window.innerWidth || 1;
           function onScroll() {
@@ -5613,23 +5635,22 @@
             clearTimeout(idleTimer);
             if (!touching) idleTimer = setTimeout(settle, 120);
           }
-          function velocity() {
-            // 往右（关闭方向）为正，单位 px/ms，取最近约 100ms；手指轨迹和滚动位置取较大的那个
+          // 往右（关闭方向）为正，单位 px/ms，取最近约 120ms
+          function scrollVelocity() {
             const now = performance.now();
-            let v = 0;
             const recent = samples.filter((p) => now - p[0] < 120);
-            if (recent.length >= 2) {
-              const a = recent[0];
-              const b = recent[recent.length - 1];
-              v = (a[1] - b[1]) / Math.max(1, b[0] - a[0]);
-            }
+            if (recent.length < 2) return 0;
+            const a = recent[0];
+            const b = recent[recent.length - 1];
+            return (a[1] - b[1]) / Math.max(1, b[0] - a[0]);
+          }
+          function fingerVelocity() {
+            const now = performance.now();
             const tp = touchPts.filter((p) => now - p[0] < 120);
-            if (tp.length >= 2) {
-              const a = tp[0];
-              const b = tp[tp.length - 1];
-              v = Math.max(v, (b[1] - a[1]) / Math.max(1, b[0] - a[0]));
-            }
-            return v;
+            if (tp.length < 2) return 0;
+            const a = tp[0];
+            const b = tp[tp.length - 1];
+            return (b[1] - a[1]) / Math.max(1, b[0] - a[0]);
           }
           function settle() {
             if (!isOpenFn() || !shellEl.classList.contains("open")) return;
@@ -5637,9 +5658,9 @@
             const x = shellEl.scrollLeft;
             if (x >= W - 1) return;
             const prog = 1 - x / W;
-            const v = velocity();
+            const v = scrollVelocity();
             shellEl.style.overflowX = "hidden"; // 停住系统惯性，后面由动画接手
-            if (prog > 0.28 || v > 0.3) {
+            if (prog > 0.33 || (v > 0.45 && prog > 0.08)) {
               // 继续滑走：用位移动画从当前位置收尾，甩得越快收得越快
               const dur = Math.min(0.34, Math.max(0.14, (x / Math.max(v, 1.1) / 1000) * 1.4));
               closeFn({ dur: Number(dur.toFixed(3)), ease: "cubic-bezier(0.25, 0.9, 0.35, 1)" });
@@ -5667,11 +5688,12 @@
             touching = true;
             samples = [];
             touchPts = [];
+            touchStartPt = e.touches && e.touches[0] ? [e.touches[0].clientX, e.touches[0].clientY] : null;
             clearTimeout(idleTimer);
           }, { passive: true });
           shellEl.addEventListener("touchmove", (e) => {
             if (!e.touches || !e.touches[0]) return;
-            touchPts.push([performance.now(), e.touches[0].clientX]);
+            touchPts.push([performance.now(), e.touches[0].clientX, e.touches[0].clientY]);
             if (touchPts.length > 8) touchPts.shift();
           }, { passive: true });
           const onEnd = () => {
@@ -5679,9 +5701,14 @@
             touching = false;
             const W = width();
             const x = shellEl.scrollLeft;
-            const v = velocity();
-            const fingerDx = touchPts.length >= 2 ? touchPts[touchPts.length - 1][1] - touchPts[0][1] : 0;
-            if (v > 0.3 && fingerDx > 16 && isOpenFn() && shellEl.classList.contains("open")) {
+            const v = fingerVelocity();
+            const last = touchPts[touchPts.length - 1];
+            const totDx = touchStartPt && last ? last[1] - touchStartPt[0] : 0;
+            const totDy = touchStartPt && last ? last[2] - touchStartPt[1] : 0;
+            // 只有「明显横着往右甩」才算：横向至少 40px、几乎不带竖向、速度够快。
+            // 以前只看横向速度，上下滑时手指稍微偏右也会被当成返回。
+            const clearFlick = v > 0.45 && totDx > 40 && Math.abs(totDy) < totDx * 0.6;
+            if (clearFlick && isOpenFn() && shellEl.classList.contains("open")) {
               // 明显往右甩：直接收起（滚动位置可能还没来得及更新）
               shellEl.style.overflowX = "hidden";
               const dur = Math.min(0.3, Math.max(0.14, (x / Math.max(v, 1.1) / 1000) * 1.4));
@@ -5929,7 +5956,7 @@
       refreshLiveStreamingCharts(true);
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v17";
+      const APP_BUILD = "dramov-pwa-v18";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
