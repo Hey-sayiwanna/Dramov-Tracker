@@ -355,7 +355,8 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     enTitle: en.title || zh.title || "",
     imdbId: (en.externalIds && en.externalIds.imdbId) || "",
     mediaType: isShow ? "show" : "movie",
-    isDoc: rawGenres.some((g) => g.shortName === "doc"),
+    // 纪录片和视频播客（Podcast）都不进榜单
+    isDoc: rawGenres.some((g) => g.shortName === "doc") || /podcast/i.test(`${en.title || ""} ${zh.title || ""}`),
     hasEpisodes: isShow,
     platformId: defaultPlatformId || Array.from(providersSet)[0] || "netflix",
     providers: Array.from(providersSet),

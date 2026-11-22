@@ -200,6 +200,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
 
   // Strictly exclude Documentaries ('doc') per user preference!
   if (rawGenres.some((g) => g.shortName === "doc")) return null;
+  // 平台上架的视频播客（如 Netflix 的 Podcast）不是剧集，没有分季分集资料，不收录
+  if (/podcast/i.test(`${en.title || ""} ${zh.title || ""}`)) return null;
 
   const offers = Array.isArray(node.offers) ? node.offers : [];
   const providersSet = new Set();

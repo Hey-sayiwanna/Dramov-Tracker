@@ -2,10 +2,6 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <!-- 第一帧就是深色底（大段样式和脚本加载完之前） -->
-  <style>
-    html, body { background: #05070d; }
-  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dramov</title>
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2349,7 +2345,8 @@
       Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
       Object.assign(I18N_EN, {"密钥在这里设置 ›": "Create a token here ›", "发现新版本，正在更新…": "Updating to the new version…"});
       Object.assign(I18N_HANT, {"密钥在这里设置 ›": "金鑰在這裡設定 ›", "发现新版本，正在更新…": "發現新版本，正在更新…"});
-      Object.assign(I18N_EN, {"待定档": "TBA", "播出后这里会出现分集": "Episodes will appear here once it airs"});
+      Object.assign(I18N_EN, {"待定档": "TBA", "播出后这里会出现分集": "Episodes will appear here once it airs", "正在获取分集资料…": "Loading episodes…", "暂时没有这部剧的分集资料": "No episode info for this title yet"});
+      Object.assign(I18N_HANT, {"正在获取分集资料…": "正在取得分集資料…", "暂时没有这部剧的分集资料": "暫時沒有這部劇的分集資料"});
       Object.assign(I18N_HANT, {"待定档": "待定檔", "播出后这里会出现分集": "播出後這裡會出現分集"});
       Object.assign(I18N_EN, {"新一季": "New season", "榜单地区": "Chart region", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "Daily charts rank by this country or region; services not offered there use the US chart", "美国（默认）": "United States (default)", "新加坡": "Singapore", "台湾": "Taiwan", "香港": "Hong Kong", "英国": "United Kingdom", "日本": "Japan", "韩国": "South Korea", "美区": "US", "正在切换榜单地区…": "Switching chart region…", "榜单地区已切换": "Chart region updated"});
       Object.assign(I18N_HANT, {"榜单地区": "榜單地區", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "每日熱度榜按這個國家 / 地區排名；該地區沒有的平台自動用美區", "美国（默认）": "美國（預設）", "台湾": "台灣", "正在切换榜单地区…": "正在切換榜單地區…", "榜单地区已切换": "榜單地區已切換"});
@@ -2790,9 +2787,18 @@
 
       function saveEnrichCache() {
         try {
-          // 最多保留 300 条补图记录，避免越存越大
+          // 最多保留 600 条；超出时先删没有分季资料的旧记录，看过的剧的分季缓存尽量留着
           const keys = Object.keys(enrichCache);
-          if (keys.length > 300) keys.slice(0, keys.length - 300).forEach((k) => delete enrichCache[k]);
+          if (keys.length > 600) {
+            let over = keys.length - 600;
+            const plain = keys.filter((k) => !(enrichCache[k] && enrichCache[k].seasons));
+            for (const k of plain) {
+              if (over <= 0) break;
+              delete enrichCache[k];
+              over--;
+            }
+            if (over > 0) Object.keys(enrichCache).slice(0, over).forEach((k) => delete enrichCache[k]);
+          }
           localStorage.setItem(POSTER_CACHE_KEY, JSON.stringify(enrichCache));
         } catch (e) {}
       }
@@ -3018,6 +3024,17 @@
       // 来源：JustWatch 给季数 + TVmaze 给每季集数 / 播出日期，两边合并；TVmaze 查不到时退回 JustWatch。
       // 缓存在 enrichCache[k].seasons：[[季号, 总集数, 已播集数, 开播日, 完结日], ...]
       const SEASON_TTL_MS = 12 * 3600 * 1000;
+      // 分季缓存多久重新核对一次：还在播/有新季定档的剧 12 小时；已经完结很久的剧 14 天（数据基本不会再变）
+      function seasonTtlFor(entry) {
+        const ss = entry && Array.isArray(entry.seasons) ? entry.seasons : [];
+        if (!ss.length) return SEASON_TTL_MS;
+        const today = todayIso();
+        const last = ss[ss.length - 1];
+        const upcoming = ss.some((x) => x[3] && x[3] > today);
+        const end = last[4] || "";
+        if (!upcoming && end && end < today && Date.now() - Date.parse(end) > 120 * 86400000) return 14 * 86400000;
+        return SEASON_TTL_MS;
+      }
       function todayIso() {
         return new Date().toISOString().slice(0, 10);
       }
@@ -3193,11 +3210,20 @@
         }
       }
       // withEpisodes=true（详情页）：拉全部分集，算出每季已播几集；false（首页角标）：只拉季列表，更轻
+      // 分季资料和海报/演员是同时拉的：各自只写自己那几个字段，谁后写完都不会把对方刚拿到的数据盖掉
+      const SEASON_FIELDS = ["seasons", "seasonsAt", "seasonsFull", "seasonsMerged", "seasonsSource", "seasonsMissAt", "premiereYear", "tvmazeId"];
+      function writeSeasonFields(k, entry) {
+        const cur = Object.assign({}, enrichCache[k] || {});
+        SEASON_FIELDS.forEach((f) => {
+          if (f in entry) cur[f] = entry[f];
+        });
+        enrichCache[k] = cur;
+      }
       async function ensureSeasonInfo(item, withEpisodes) {
         if (!item || item.mediaType !== "show") return false;
         const k = itemKey(item);
         const entry = Object.assign({}, enrichCache[k] || {});
-        const fresh = entry.seasonsAt && Date.now() - entry.seasonsAt < SEASON_TTL_MS;
+        const fresh = entry.seasonsAt && Date.now() - entry.seasonsAt < seasonTtlFor(entry);
         if (fresh && (entry.seasonsMerged || !withEpisodes)) return false;
         if (entry.seasonsMissAt && Date.now() - entry.seasonsMissAt < SEASON_TTL_MS) return false;
         try {
@@ -3212,12 +3238,12 @@
               entry.seasonsMerged = true;
               entry.seasonsSource = "itunes";
               if (it[0][3]) entry.premiereYear = Number(it[0][3].slice(0, 4)) || entry.premiereYear;
-              enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+              writeSeasonFields(k, entry);
               saveEnrichCache();
               return true;
             }
             entry.seasonsMissAt = Date.now();
-            enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+            writeSeasonFields(k, entry);
             saveEnrichCache();
             return false;
           }
@@ -3259,7 +3285,7 @@
           entry.seasonsFull = !!withEpisodes;
           entry.seasonsMerged = !!withEpisodes;
           if (seasons[0][3]) entry.premiereYear = Number(seasons[0][3].slice(0, 4)) || entry.premiereYear;
-          enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+          writeSeasonFields(k, entry);
           saveEnrichCache();
           return true;
         } catch (e) {
@@ -3278,7 +3304,7 @@
           if (it.mediaType !== "show" || seen.has(k)) return;
           seen.add(k);
           const c = enrichCache[k] || {};
-          if (c.seasonsAt && Date.now() - c.seasonsAt < SEASON_TTL_MS) return;
+          if (c.seasonsAt && Date.now() - c.seasonsAt < seasonTtlFor(c)) return;
           if (c.seasonsMissAt && Date.now() - c.seasonsMissAt < SEASON_TTL_MS) return;
           queue.push(it);
         });
@@ -4711,6 +4737,24 @@
         }
         syncAmbientTopBarForItem(item);
 
+        // 分季资料和海报/演员同时去拉，不再排队等海报拉完；本机已有缓存的直接显示，后台核对有变化才刷新
+        const seasonsJob = item.mediaType === "show" ? ensureSeasonInfo(item, true) : Promise.resolve(false);
+        if (item.mediaType === "show") {
+          detailSeasonsLoading = k;
+          // 首屏已经画了「没有分集资料」：改成「正在获取」，等资料回来再定
+          if (document.querySelector("#detailEpGrid .season-upcoming-note")) renderDetailSeasons(getEnrichedItem(item));
+          seasonsJob.then((changedSeasons) => {
+            if (detailSeasonsLoading === k) detailSeasonsLoading = "";
+            if (!currentDetailItem || itemKey(currentDetailItem) !== k) return;
+            const fresh = getEnrichedItem(item);
+            currentDetailItem = fresh;
+            if (changedSeasons) {
+              const g = zhGenres(fresh.genres).slice(0, 2).join(" · ") || "剧集";
+              renderDetailShowMeta(fresh, g);
+            }
+            renderDetailSeasons(fresh);
+          });
+        }
         enrichSingleItemMedia(item).then((updated) => {
           if (updated && currentDetailItem && itemKey(currentDetailItem) === k) {
             const fresh = getEnrichedItem(item);
@@ -4726,14 +4770,6 @@
             renderDetailCastAndStills(fresh);
           }
           return updated;
-        }).then(async (updated) => (await ensureSeasonInfo(item, true)) || updated).then((changedSeasons) => {
-          if (changedSeasons && currentDetailItem && itemKey(currentDetailItem) === k) {
-            const fresh = getEnrichedItem(item);
-            currentDetailItem = fresh;
-            const g = zhGenres(fresh.genres).slice(0, 2).join(" · ") || "剧集";
-            renderDetailShowMeta(fresh, g);
-            renderDetailSeasons(fresh);
-          }
         });
       }
 
@@ -4766,6 +4802,7 @@
       }
       // 详情页：分季切换 + 当季分集打卡
       let detailSeasonSel = { key: "", n: 0 };
+      let detailSeasonsLoading = "";
       let detailSeasonCtx = { n: 1, latest: 1, tot: 8, aired: 8 };
       function renderSeasonChips(info, chipsAll, selN, rec) {
         const seg = document.getElementById("detailSeasonSeg");
@@ -4829,8 +4866,18 @@
           }
           return;
         }
-        catchBtn.style.display = "";
         const sel = info.seasons.find((x) => x.n === detailSeasonSel.n) || info.seasons[info.seasons.length - 1];
+        if (!info.fromTvmaze && !(Number(sel.total) > 0)) {
+          // 资料源里查不到这部剧的分集：不再编一个「8 集」出来，直接说明
+          renderSeasonChips(info, chipsAll, sel.n, rec);
+          setEpHeader(`第 ${sel.n} 季`, "");
+          catchBtn.style.display = "none";
+          detailSeasonCtx = { n: sel.n, latest: info.latest, tot: 0, aired: 0, multi: false };
+          document.getElementById("detailEpGrid").innerHTML =
+            `<div class="season-upcoming-note">${detailSeasonsLoading === k ? "正在获取分集资料…" : "暂时没有这部剧的分集资料"}</div>`;
+          return;
+        }
+        catchBtn.style.display = "";
         const isLatest = sel.n === info.latest;
         let tot = sel.total || (isLatest ? Number(item.totalEpisodes) : 0) || 8;
         let aired = sel.aired >= 0 ? sel.aired : (isLatest ? Number(item.airedEpisodes) : 0);
@@ -5160,6 +5207,13 @@
           delete entry.posterTriedAt;
         } else {
           entry.posterTriedAt = Date.now();
+        }
+        // 分季资料已由 ensureSeasonInfo 合并好（TVmaze 季列表 + 分集 + iTunes）：以它为准，不用这里的简化版覆盖
+        const curSeasons = enrichCache[k] || {};
+        if (curSeasons.seasonsMerged) {
+          SEASON_FIELDS.forEach((f) => {
+            if (f in curSeasons) entry[f] = curSeasons[f];
+          });
         }
         enrichCache[k] = entry;
         saveEnrichCache();
@@ -6246,7 +6300,7 @@
       refreshLiveStreamingCharts(true);
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v24";
+      const APP_BUILD = "dramov-pwa-v25";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
