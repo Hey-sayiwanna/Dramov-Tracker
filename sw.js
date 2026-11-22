@@ -1,4 +1,4 @@
-const CACHE_NAME = "dramov-pwa-v16";
+const CACHE_NAME = "dramov-pwa-v17";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -30,6 +30,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   if (
+    url.pathname.endsWith("/sw.js") || // 版本检查：每次直连网络，不进缓存
     url.pathname.startsWith("/api/") ||
     url.hostname.includes("github.com") ||
     url.hostname.includes("justwatch.com") ||

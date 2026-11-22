@@ -95,6 +95,7 @@
       color: var(--text-primary);
       font-variant-numeric: tabular-nums;
       overscroll-behavior-y: none;
+      overscroll-behavior-x: none; /* 横滑不触发浏览器的「后退」手势 */
       -webkit-font-smoothing: antialiased;
     }
 
@@ -555,7 +556,6 @@
       display: flex;
       overflow-x: auto;
       overflow-y: hidden;
-      scroll-snap-type: x mandatory;
       overscroll-behavior: none;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
@@ -1413,6 +1413,13 @@
     .season-chip.done:not(.active) {
       border-color: rgba(52, 211, 153, 0.45);
     }
+    .inline-link {
+      margin-left: 4px;
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
     .region-tag {
       font-size: 10.5px;
       font-weight: 700;
@@ -1764,6 +1771,26 @@
     .view-section.active {
       display: block;
     }
+    /* 搜索 / 片单 / 设置：横向拖动只交给 JS，竖向滚动仍是原生 */
+    #view-search,
+    #view-watchlist,
+    #view-settings {
+      touch-action: pan-y;
+    }
+    .view-section.tab-enter-from-right {
+      animation: tabEnterRight 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .view-section.tab-enter-from-left {
+      animation: tabEnterLeft 0.38s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    @keyframes tabEnterRight {
+      from { transform: translate3d(36%, 0, 0); }
+      to { transform: translate3d(0, 0, 0); }
+    }
+    @keyframes tabEnterLeft {
+      from { transform: translate3d(-36%, 0, 0); }
+      to { transform: translate3d(0, 0, 0); }
+    }
     #detailOverlay { scrollbar-width: none; }
     #detailOverlay::-webkit-scrollbar { display: none; }
     #view-search,
@@ -1979,7 +2006,7 @@
       <div class="surface-card" style="margin-bottom: 14px;">
         <div style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">跨设备无损云同步（GitHub 私密 Gist）</div>
         <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px;">
-          独立读写专属文件 <code style="font-weight: 600; color: var(--accent);">dramov-tracker-sync-v1.json</code>，同步你的片单进度与首页平台顺序。
+          独立读写专属文件 <code style="font-weight: 600; color: var(--accent);">dramov-tracker-sync-v1.json</code>，同步你的片单进度与首页平台顺序。<a class="inline-link" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Dramov%20Sync" target="_blank" rel="noopener noreferrer">密钥在这里设置 ›</a>
         </div>
         <input id="gistTokenInput" type="password" class="app-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx（需 gist 权限）" style="margin-bottom: 10px;" />
         <div id="gistSyncStatus" style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">尚未执行云端同步</div>
@@ -2264,6 +2291,8 @@
       const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果", "分钟": "分鐘", "钟头": "鐘頭", "时钟": "時鐘", "闹钟": "鬧鐘", "钟声": "鐘聲"};
       Object.assign(I18N_EN, {"赛程时区": "Schedule time zone", "擂台的比赛时间按这里换算，默认跟随本机": "Fight times use this time zone; defaults to your device", "本机时区（默认）": "Device time zone (default)", "北京时间": "Beijing", "香港时间": "Hong Kong", "台北时间": "Taipei", "东京时间": "Tokyo", "首尔时间": "Seoul", "新加坡时间": "Singapore", "伦敦时间": "London", "美东时间": "US Eastern", "美中时间": "US Central", "美西时间": "US Pacific", "悉尼时间": "Sydney", "赛程时区已更新": "Time zone updated", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "Times follow Settings › Schedule time zone · Schedules may change"});
       Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
+      Object.assign(I18N_EN, {"密钥在这里设置 ›": "Create a token here ›", "发现新版本，正在更新…": "Updating to the new version…"});
+      Object.assign(I18N_HANT, {"密钥在这里设置 ›": "金鑰在這裡設定 ›", "发现新版本，正在更新…": "發現新版本，正在更新…"});
       Object.assign(I18N_EN, {"新一季": "New season", "榜单地区": "Chart region", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "Daily charts rank by this country or region; services not offered there use the US chart", "美国（默认）": "United States (default)", "新加坡": "Singapore", "台湾": "Taiwan", "香港": "Hong Kong", "英国": "United Kingdom", "日本": "Japan", "韩国": "South Korea", "美区": "US", "正在切换榜单地区…": "Switching chart region…", "榜单地区已切换": "Chart region updated"});
       Object.assign(I18N_HANT, {"榜单地区": "榜單地區", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "每日熱度榜按這個國家 / 地區排名；該地區沒有的平台自動用美區", "美国（默认）": "美國（預設）", "台湾": "台灣", "正在切换榜单地区…": "正在切換榜單地區…", "榜单地区已切换": "榜單地區已切換"});
       Object.assign(I18N_EN, {"其他平台": "Other services", "正在全网搜索…": "Searching online…", "暂未查到正版流媒体平台": "No streaming service found yet", "Apple TV（租借 / 购买）": "Apple TV (rent / buy)"});
@@ -4169,6 +4198,9 @@
         scrim.style.opacity = "";
         // 先在屏幕外把内容画好（visible 但还在右边），下一帧再开始滑入
         shell.classList.add("prep");
+        shell.style.overflowX = "";
+        shell.style.transition = "";
+        shell.style.transform = "";
         snapShellToPage(shell);
         void shell.offsetWidth;
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -5155,6 +5187,91 @@
           if (wrap) wrap.classList.toggle("minimized", minState);
         }
 
+        // 搜索 / 片单 / 设置 之间左右滑动切换。
+        // 首页不参与（首页要横滑看榜单）；设置往后、搜索往前都到头了，不会绕回首页。
+        const SWIPE_TABS = ["search", "watchlist", "settings"];
+        let tabEnterDir = "";
+        (function bindTabSwipe() {
+          const wrap = document.getElementById("mainViewsWrap");
+          const zone = document; // 片单 / 设置内容短，空白处也要能滑，所以监听整个页面
+          let sw = null;
+          let raf = 0;
+          function canScrollX(el) {
+            for (let n = el; n && n !== wrap && n !== document.body; n = n.parentElement) {
+              if (n.scrollWidth > n.clientWidth + 2) {
+                const ox = getComputedStyle(n).overflowX;
+                if (ox === "auto" || ox === "scroll") return true;
+              }
+            }
+            return false;
+          }
+          zone.addEventListener("touchstart", (e) => {
+            sw = null;
+            if (isDetailOpen || isPlatformOpen || !SWIPE_TABS.includes(activeNav) || !e.touches || e.touches.length !== 1) return;
+            if (e.target.closest("input, textarea, select, [contenteditable], [data-noswipe], #bottomNavWrap, .gpu-page-shell, .modal-backdrop")) return;
+            if (canScrollX(e.target)) return;
+            const t = e.touches[0];
+            sw = { x: t.clientX, y: t.clientY, dx: 0, lock: null, el: document.querySelector(".view-section.active"), pts: [] };
+          }, { passive: true });
+          zone.addEventListener("touchmove", (e) => {
+            if (!sw || !e.touches || e.touches.length !== 1) return;
+            const t = e.touches[0];
+            const dx = t.clientX - sw.x;
+            const dy = t.clientY - sw.y;
+            if (!sw.lock) {
+              if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+              sw.lock = Math.abs(dx) > Math.abs(dy) * 1.25 ? "h" : "v";
+              if (sw.lock === "h") sw.el.style.willChange = "transform";
+            }
+            if (sw.lock !== "h") return;
+            const idx = SWIPE_TABS.indexOf(activeNav);
+            const target = SWIPE_TABS[idx + (dx < 0 ? 1 : -1)];
+            sw.dx = target ? dx : dx * 0.22; // 到头了：带阻尼，拉不过去
+            sw.pts.push([performance.now(), dx]);
+            if (sw.pts.length > 6) sw.pts.shift();
+            if (!raf) {
+              raf = requestAnimationFrame(() => {
+                raf = 0;
+                if (sw && sw.lock === "h") sw.el.style.transform = `translate3d(${sw.dx}px, 0, 0)`;
+              });
+            }
+          }, { passive: true });
+          function end() {
+            const cur = sw;
+            sw = null;
+            if (!cur || cur.lock !== "h") return;
+            const el = cur.el;
+            const W = window.innerWidth || 375;
+            const idx = SWIPE_TABS.indexOf(activeNav);
+            const goNext = cur.dx < 0;
+            const target = SWIPE_TABS[idx + (goNext ? 1 : -1)];
+            const a = cur.pts[0];
+            const b = cur.pts[cur.pts.length - 1];
+            const v = a && b ? (b[1] - a[1]) / Math.max(1, b[0] - a[0]) : 0;
+            const fast = Math.abs(v) > 0.35 && Math.sign(v) === Math.sign(cur.dx);
+            if (target && (Math.abs(cur.dx) > W * 0.22 || fast)) {
+              el.style.transition = "transform 0.16s cubic-bezier(0.4, 0, 1, 1)";
+              el.style.transform = `translate3d(${goNext ? -W * 0.32 : W * 0.32}px, 0, 0)`;
+              setTimeout(() => {
+                el.style.transition = "";
+                el.style.transform = "";
+                el.style.willChange = "";
+                tabEnterDir = goNext ? "from-right" : "from-left";
+                switchMainTab(target);
+              }, 150);
+            } else {
+              el.style.transition = "transform 0.3s var(--push-ease)";
+              el.style.transform = "";
+              setTimeout(() => {
+                el.style.transition = "";
+                el.style.willChange = "";
+              }, 320);
+            }
+          }
+          zone.addEventListener("touchend", end, { passive: true });
+          zone.addEventListener("touchcancel", end, { passive: true });
+        })();
+
         function switchMainTab(nextTab) {
           if (isDetailOpen) closeDetailPage();
           if (isPlatformOpen) closePlatformPage();
@@ -5163,9 +5280,19 @@
             b.classList.toggle("active", b.getAttribute("data-nav") === activeNav)
           );
           positionSlidingLensToTab(activeNav);
-          document.querySelectorAll(".view-section").forEach((sec) =>
-            sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav)
-          );
+          document.querySelectorAll(".view-section").forEach((sec) => {
+            sec.classList.toggle("active", sec.getAttribute("data-view") === activeNav);
+            sec.classList.remove("tab-enter-from-right", "tab-enter-from-left");
+          });
+          if (tabEnterDir) {
+            const sec = document.querySelector(`.view-section[data-view="${activeNav}"]`);
+            if (sec) {
+              void sec.offsetWidth;
+              sec.classList.add(`tab-enter-${tabEnterDir}`);
+              setTimeout(() => sec.classList.remove(`tab-enter-${tabEnterDir}`), 420);
+            }
+            tabEnterDir = "";
+          }
           setNavMinimized(false);
           lastWindowScrollY = 0;
           window.scrollTo(0, 0);
@@ -5457,14 +5584,23 @@
 
         // 右滑返回：外壳是原生横向吸附滚动，这里只读滚动位置来压暗背景、判断是否已经滑走
         function bindNativeSwipeBack(shellEl, scrimEl, isOpenFn, closeFn) {
+          // 手指拖动时：系统原生横向滚动，1:1 跟手。
+          // 松手时自己判断：拖过 28% 或者往右甩，就从当前位置继续滑走；否则弹回。
+          // 以前用吸附，要拖过一半才会关，所以感觉不灵敏。
           let raf = 0;
+          let touching = false;
+          let samples = [];
+          let touchPts = [];
+          let idleTimer = null;
+          const width = () => shellEl.clientWidth || window.innerWidth || 1;
           function onScroll() {
             raf = 0;
             if (!isOpenFn() || !shellEl.classList.contains("open")) return;
-            const w = shellEl.clientWidth || 1;
             const x = shellEl.scrollLeft;
+            const W = width();
+            samples.push([performance.now(), x]);
+            if (samples.length > 8) samples.shift();
             if (x <= 1) {
-              // 已经完全滑走：直接收起，不再播放关闭动画
               scrimEl.style.opacity = "0";
               closeFn({ dur: 0 });
               requestAnimationFrame(() => {
@@ -5472,12 +5608,92 @@
               });
               return;
             }
-            if (x >= w - 1) {
+            scrimEl.style.opacity = x >= W - 1 ? "" : String(Math.max(0, Math.min(1, x / W)));
+            // 触控板 / 鼠标横向滚动没有 touchend：停下 120ms 后同样判断一次
+            clearTimeout(idleTimer);
+            if (!touching) idleTimer = setTimeout(settle, 120);
+          }
+          function velocity() {
+            // 往右（关闭方向）为正，单位 px/ms，取最近约 100ms；手指轨迹和滚动位置取较大的那个
+            const now = performance.now();
+            let v = 0;
+            const recent = samples.filter((p) => now - p[0] < 120);
+            if (recent.length >= 2) {
+              const a = recent[0];
+              const b = recent[recent.length - 1];
+              v = (a[1] - b[1]) / Math.max(1, b[0] - a[0]);
+            }
+            const tp = touchPts.filter((p) => now - p[0] < 120);
+            if (tp.length >= 2) {
+              const a = tp[0];
+              const b = tp[tp.length - 1];
+              v = Math.max(v, (b[1] - a[1]) / Math.max(1, b[0] - a[0]));
+            }
+            return v;
+          }
+          function settle() {
+            if (!isOpenFn() || !shellEl.classList.contains("open")) return;
+            const W = width();
+            const x = shellEl.scrollLeft;
+            if (x >= W - 1) return;
+            const prog = 1 - x / W;
+            const v = velocity();
+            shellEl.style.overflowX = "hidden"; // 停住系统惯性，后面由动画接手
+            if (prog > 0.28 || v > 0.3) {
+              // 继续滑走：用位移动画从当前位置收尾，甩得越快收得越快
+              const dur = Math.min(0.34, Math.max(0.14, (x / Math.max(v, 1.1) / 1000) * 1.4));
+              closeFn({ dur: Number(dur.toFixed(3)), ease: "cubic-bezier(0.25, 0.9, 0.35, 1)" });
+            } else {
+              // 弹回：先把滚动位置归位，用同样的位移把画面接上，再动画回到原位
+              const off = W - x;
+              shellEl.scrollLeft = W;
+              shellEl.style.transition = "none";
+              shellEl.style.transform = `translate3d(${off}px, 0, 0)`;
+              void shellEl.offsetWidth;
+              shellEl.style.transition = "transform 0.32s var(--push-ease)";
+              shellEl.style.transform = "";
+              scrimEl.style.transition = "opacity 0.32s var(--push-ease)";
               scrimEl.style.opacity = "";
+              setTimeout(() => {
+                shellEl.style.transition = "";
+                shellEl.style.overflowX = "";
+                scrimEl.style.transition = "";
+              }, 340);
+            }
+            samples = [];
+            touchPts = [];
+          }
+          shellEl.addEventListener("touchstart", (e) => {
+            touching = true;
+            samples = [];
+            touchPts = [];
+            clearTimeout(idleTimer);
+          }, { passive: true });
+          shellEl.addEventListener("touchmove", (e) => {
+            if (!e.touches || !e.touches[0]) return;
+            touchPts.push([performance.now(), e.touches[0].clientX]);
+            if (touchPts.length > 8) touchPts.shift();
+          }, { passive: true });
+          const onEnd = () => {
+            if (!touching) return;
+            touching = false;
+            const W = width();
+            const x = shellEl.scrollLeft;
+            const v = velocity();
+            const fingerDx = touchPts.length >= 2 ? touchPts[touchPts.length - 1][1] - touchPts[0][1] : 0;
+            if (v > 0.3 && fingerDx > 16 && isOpenFn() && shellEl.classList.contains("open")) {
+              // 明显往右甩：直接收起（滚动位置可能还没来得及更新）
+              shellEl.style.overflowX = "hidden";
+              const dur = Math.min(0.3, Math.max(0.14, (x / Math.max(v, 1.1) / 1000) * 1.4));
+              closeFn({ dur: Number(dur.toFixed(3)), ease: "cubic-bezier(0.25, 0.9, 0.35, 1)" });
+              samples = [];
+              touchPts = [];
               return;
             }
-            scrimEl.style.opacity = String(Math.max(0, Math.min(1, x / w)));
-          }
+            if (x < W - 1) settle();
+          };
+          shellEl.addEventListener("touchend", onEnd, { passive: true });
+          shellEl.addEventListener("touchcancel", onEnd, { passive: true });
           shellEl.addEventListener("scroll", () => {
             if (!raf) raf = requestAnimationFrame(onScroll);
           }, { passive: true });
@@ -5486,7 +5702,6 @@
           });
         }
 
-        document.addEventListener("touchstart", () => {}, { passive: true });
         bindNativeSwipeBack(detShellEl, detScrimEl, () => isDetailOpen, closeDetailPage);
         bindNativeSwipeBack(platShellEl, platScrimEl, () => isPlatformOpen && !isDetailOpen, closePlatformPage);
         document.getElementById("shareDetailBtn").addEventListener("click", () => {
@@ -5712,6 +5927,39 @@
       if (loadCachedLiveCharts()) preloadFirstScreenPosters();
       renderActiveView();
       refreshLiveStreamingCharts(true);
+
+      // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
+      const APP_BUILD = "dramov-pwa-v17";
+      let lastUpdateCheck = 0;
+      async function checkForNewVersion() {
+        if (!(location.protocol === "https:" || location.protocol === "http:")) return;
+        if (Date.now() - lastUpdateCheck < 2 * 60 * 1000) return;
+        lastUpdateCheck = Date.now();
+        try {
+          const r = await fetch(`./sw.js?check=${Date.now()}`, { cache: "no-store" });
+          if (!r.ok) return;
+          const m = (await r.text()).match(/CACHE_NAME\s*=\s*"([^"]+)"/);
+          if (!m || m[1] === APP_BUILD) return;
+          try {
+            const reg = navigator.serviceWorker && (await navigator.serviceWorker.getRegistration());
+            if (reg) await reg.update();
+          } catch (e) {}
+          const doReload = () => {
+            const typing = document.activeElement && document.activeElement.matches && document.activeElement.matches("input, textarea");
+            if (isDetailOpen || isPlatformOpen || typing) {
+              setTimeout(doReload, 4000);
+              return;
+            }
+            showToast("发现新版本，正在更新…");
+            setTimeout(() => location.reload(), 600);
+          };
+          doReload();
+        } catch (e) {}
+      }
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") checkForNewVersion();
+      });
+      setTimeout(checkForNewVersion, 8000);
 
       if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
         window.addEventListener("load", () => {
