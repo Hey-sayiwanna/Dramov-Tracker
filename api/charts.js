@@ -17,6 +17,9 @@ const PLATFORM_DEFS = [
   { id: "peacock", matchNames: ["peacock", "peacock premium", "peacock premium plus"], fallbackCodes: ["pct", "pcp"] }
 ];
 
+// 可选的排行地区（JustWatch 每日榜是按国家分的，没有真正的「全球榜」）
+const CHART_REGIONS = ["US", "SG", "TW", "HK", "GB", "JP", "KR"];
+
 // 地区专区：按出品地区筛选（港澳台用台湾片库，日韩用美区片库）
 const REGION_DEFS = [
   { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
@@ -227,6 +230,7 @@ function mapShortToPlatformId(shortName = "", clearName = "") {
 async function resolveProviderMeta(country = "US") {
   const codeMap = {};
   const iconMap = {};
+  const available = new Set();
   for (const def of PLATFORM_DEFS) codeMap[def.id] = [...def.fallbackCodes];
   try {
     const res = await queryUpstream(PACKAGES_QUERY, { country, platform: "WEB" });
@@ -238,13 +242,14 @@ async function resolveProviderMeta(country = "US") {
         return def.matchNames.some((m) => cn === m || tn === m.replace(/\s+/g, ""));
       });
       if (matched.length) {
+        available.add(def.id);
         codeMap[def.id] = Array.from(new Set([...matched.map((p) => p.shortName).filter(Boolean), ...def.fallbackCodes]));
         const ic = matched.find((p) => p.icon)?.icon;
         if (ic) iconMap[def.id] = formatImageUrl(ic, "s100");
       }
     }
   } catch (e) {}
-  return { codeMap, iconMap };
+  return { codeMap, iconMap, available };
 }
 
 async function fetchTitlesWithFilter(filter, count = 10, country = "US") {
@@ -439,13 +444,21 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
 
   try {
-    const country = "US";
+    const wanted = String((req.query && req.query.region) || "US").toUpperCase();
+    const country = CHART_REGIONS.includes(wanted) ? wanted : "US";
     const now = new Date();
     const curYear = now.getUTCFullYear();
     const minNewYear = now.getUTCMonth() <= 1 ? curYear - 1 : curYear;
 
-    const { codeMap, iconMap } = await resolveProviderMeta(country);
-    const allSixCodes = Array.from(new Set(Object.values(codeMap).flat()));
+    const { codeMap, iconMap, available } = await resolveProviderMeta(country);
+    // 该地区没有上线的平台（如新加坡没有 Hulu / Peacock）自动改用美区榜
+    const usMeta = country === "US" ? { codeMap, iconMap, available } : await resolveProviderMeta("US");
+    const regionOf = {};
+    PLATFORM_DEFS.forEach((def) => {
+      regionOf[def.id] = country !== "US" && available.size && !available.has(def.id) ? "US" : country;
+    });
+    const localCodes = PLATFORM_DEFS.filter((d) => regionOf[d.id] === country).flatMap((d) => codeMap[d.id]);
+    const allSixCodes = Array.from(new Set(localCodes.length ? localCodes : Object.values(codeMap).flat()));
 
     const tasks = [
       // Task 0: Hot NEW TV Shows released in the current window (for Homepage 8-Poster Hero)
@@ -477,16 +490,15 @@ module.exports = async (req, res) => {
         country
       ),
       // Tasks 3..: Per-platform Top 10 (Movies + TV Shows combined, excluding documentaries)
-      ...PLATFORM_DEFS.map((def) =>
-        fetchTitlesWithFilter(
-          {
-            packages: codeMap[def.id],
-            objectTypes: ["MOVIE", "SHOW"]
-          },
-          24,
-          country
-        )
-      ),
+      ...PLATFORM_DEFS.map(async (def) => {
+        const c = regionOf[def.id];
+        const codes = c === country ? codeMap[def.id] : usMeta.codeMap[def.id];
+        const edges = await fetchTitlesWithFilter({ packages: codes, objectTypes: ["MOVIE", "SHOW"] }, 24, c);
+        if (edges.length || c === "US") return edges;
+        // 所选地区查不到这个平台的榜：退回美区
+        regionOf[def.id] = "US";
+        return fetchTitlesWithFilter({ packages: usMeta.codeMap[def.id], objectTypes: ["MOVIE", "SHOW"] }, 24, "US");
+      }),
       // 地区专区
       ...REGION_DEFS.map((rg) =>
         fetchTitlesWithFilter(
@@ -565,7 +577,9 @@ module.exports = async (req, res) => {
       ok: totalFetched > 0,
       source: "Dramov Live Charts",
       fetchedAt: new Date().toISOString(),
-      providerIcons: iconMap,
+      providerIcons: Object.assign({}, usMeta.iconMap, iconMap),
+      region: country,
+      regionOf,
       heroNewShows,
       hotShowsTop,
       hotMoviesTop,

@@ -31,6 +31,7 @@
   <style>
     :root {
       --bg-solid: #05070d;
+      color-scheme: dark;
       --surface-col: #0c111d;
       --surface-elevated: #12192b;
       --surface-border: rgba(255, 255, 255, 0.08);
@@ -55,6 +56,7 @@
     }
 
     html[data-theme="light"] {
+      color-scheme: light;
       --bg-solid: #eef2f9;
       --surface-col: #ffffff;
       --surface-elevated: #ffffff;
@@ -361,7 +363,7 @@
     .platform-chart-col {
       contain: layout style paint;
       content-visibility: auto;
-      contain-intrinsic-size: 326px 940px;
+      contain-intrinsic-size: auto 326px auto 940px;
       flex: 0 0 83vw;
       max-width: 326px;
       min-width: 276px;
@@ -380,6 +382,16 @@
       .platform-chart-col {
         flex: 0 0 316px;
       }
+    }
+    /* iPad / 电脑：首页内容区放宽，横版剧照铺满大海报 */
+    @media (min-width: 1024px) {
+      .home-charts-wrap {
+        max-width: 1240px;
+      }
+    }
+    .hero-slide-img.is-wide,
+    .detail-hero img.is-wide {
+      object-position: center 30%;
     }
 
     .brand-icon-wrap {
@@ -535,15 +547,23 @@
     }
 
     /* Platform Secondary Catalog Shell & Title Detail Shell (Single-Layer 120Hz GPU Slide-Over) */
+    /* 外壳是一个横向吸附滚动容器：[左边透明空白][页面]。
+       右滑返回直接交给系统原生滚动，120Hz、带惯性和回弹，不需要 JS 每帧计算 */
     .gpu-page-shell {
       position: fixed;
       inset: 0;
-      background: #05070d !important;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      background: transparent;
       color: #f8fafc !important;
       transform: translate3d(102%, 0, 0);
       visibility: hidden;
       pointer-events: none;
-      box-shadow: -14px 0 36px rgba(0, 0, 0, 0.62);
       transition: transform var(--shell-dur, var(--pop-dur)) var(--shell-ease, var(--push-ease)),
         visibility 0s linear var(--shell-dur, var(--pop-dur));
       will-change: transform;
@@ -564,8 +584,23 @@
     #platformShell.open.page-under-anim {
       transition: transform var(--shell-dur, var(--push-dur)) var(--shell-ease, var(--push-ease)), visibility 0s linear 0s;
     }
-    .gpu-page-shell.dragging {
-      transition: none !important;
+    .gpu-page-shell::-webkit-scrollbar {
+      display: none;
+    }
+    .shell-gutter {
+      flex: 0 0 100%;
+      height: 100%;
+      scroll-snap-align: start;
+    }
+    .shell-page {
+      flex: 0 0 100%;
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      background: #05070d;
+      box-shadow: -14px 0 36px rgba(0, 0, 0, 0.62);
     }
 
     #platformScrim {
@@ -1309,7 +1344,13 @@
       border-bottom: 1px solid var(--surface-border);
     }
     .ring-row:last-child { border-bottom: none; }
-    #col-ring { content-visibility: visible; }
+    /* 擂台列不参与决定整排高度（size 包含），只跟着旁边榜单拉伸，多出来的行裁掉 */
+    #col-ring {
+      content-visibility: visible;
+      contain: size layout style paint;
+      overflow: hidden;
+      min-height: 560px;
+    }
     .ring-big { background: linear-gradient(90deg, rgba(220, 38, 38, 0.12), transparent 70%); border-radius: 12px; padding-left: 8px; }
     .ring-date { width: 44px; flex-shrink: 0; text-align: center; }
     .ring-day { font-size: 15px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
@@ -1327,6 +1368,86 @@
     .ring-group-head { font-size: 13px; font-weight: 800; color: var(--text-muted); margin: 16px 0 2px; }
 
     /* 首页热播 Top 10：大号描边排名数字半藏在海报后面 */
+    /* 分季：详情页季切换、角标 */
+    .season-seg {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin: 4px -2px 12px;
+      padding: 2px;
+    }
+    .season-seg::-webkit-scrollbar {
+      display: none;
+    }
+    .season-chip {
+      flex: 0 0 auto;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      min-width: 64px;
+      padding: 7px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .season-chip small {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #8b9bb4;
+    }
+    .season-chip.active {
+      background: #f8fafc;
+      color: #05070d;
+      border-color: #f8fafc;
+    }
+    .season-chip.active small {
+      color: #475569;
+    }
+    .season-chip.done:not(.active) {
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+    .region-tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      border: 1px solid var(--surface-border);
+      border-radius: 5px;
+      padding: 1px 5px;
+      white-space: nowrap;
+    }
+    .new-season-chip {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 1px 7px;
+      border-radius: 5px;
+      background: #e50914;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      vertical-align: 1px;
+    }
+    .new-season-pill {
+      position: absolute;
+      left: 50%;
+      bottom: 8px;
+      transform: translateX(-50%);
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: #e50914;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
+    }
     .rank-card {
       flex: 0 0 auto;
       display: flex;
@@ -1801,6 +1922,25 @@
         </div>
       </div>
 
+      <!-- 榜单地区 -->
+      <div class="surface-card" style="margin-bottom: 14px;">
+        <div class="row-between" style="gap: 12px;">
+          <div style="min-width: 0;">
+            <div style="font-size: 15px; font-weight: 700;">榜单地区</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区</div>
+          </div>
+          <select id="chartRegionSelect" class="app-input" style="width: auto; max-width: 52%; flex-shrink: 0;">
+            <option value="US">美国（默认）</option>
+            <option value="SG">新加坡</option>
+            <option value="TW">台湾</option>
+            <option value="HK">香港</option>
+            <option value="GB">英国</option>
+            <option value="JP">日本</option>
+            <option value="KR">韩国</option>
+          </select>
+        </div>
+      </div>
+
       <!-- 擂台赛程时区 -->
       <div class="surface-card" style="margin-bottom: 14px;">
         <div class="row-between" style="gap: 12px;">
@@ -1910,6 +2050,8 @@
   <!-- Platform Secondary Catalog Page (Top 10 Ranked + Endless Score-Sorted Catalog) -->
   <div id="platformScrim"></div>
   <div id="platformShell" class="gpu-page-shell" role="dialog" aria-modal="true">
+    <div class="shell-gutter" aria-hidden="true"></div>
+    <div class="shell-page">
     <div class="detail-topbar" id="platformTopbar">
       <button id="closePlatformBtn" type="button" class="detail-circle-btn" aria-label="返回">‹</button>
       <div id="platformStickyTitle" class="detail-center-pill"></div>
@@ -1940,11 +2082,14 @@
         </div>
       </div>
     </div>
+      </div>
   </div>
 
   <!-- Title Detail Page Shell (Out-of-flow topbar + y=0 status-bar bleed + single-layer swipe-back) -->
   <div id="detailScrim"></div>
   <div id="detailShell" class="gpu-page-shell" role="dialog" aria-modal="true">
+    <div class="shell-gutter" aria-hidden="true"></div>
+    <div class="shell-page">
     <div class="detail-topbar" id="detailTopbar">
       <button id="closeDetailBtn" type="button" class="detail-circle-btn" aria-label="返回">‹</button>
       <div id="detailCenterTitle" class="detail-center-pill"></div>
@@ -1983,6 +2128,7 @@
             一键追平已播集
           </button>
         </div>
+        <div id="detailSeasonSeg" class="season-seg" style="display: none;"></div>
         <div id="detailEpGrid" class="ep-grid"></div>
       </div>
 
@@ -2005,6 +2151,7 @@
       <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.22);"></div>
       <button id="detailWatchedBtn" type="button" class="detail-fab-btn" title="标记已看过">🍿</button>
     </div>
+      </div>
   </div><!-- /#detailShell -->
 
   <!-- 1:1 248x248 Square Celebration Modal -->
@@ -2041,7 +2188,25 @@
       // =========================================================================
       // 海报加载失败先自动重试一次（网络抖动时常见），再失败才显示占位图
       // JustWatch 海报有多种尺寸：重试时换一个尺寸（另一个地址），比原地址重试更容易成功
+      // 屏幕够宽（iPad 横屏 / 电脑）时，大海报用横版剧照，竖版海报放大会糊、会被裁
+      function isWideHeroScreen() {
+        return (window.innerWidth || 0) >= 700 && (window.innerWidth || 0) > (window.innerHeight || 0) * 0.9;
+      }
+      function wideStillUrl(item) {
+        const it = getEnrichedItem(item);
+        const b = Array.isArray(it.backdrops) ? it.backdrops.find((u) => typeof u === "string" && /^https?:/.test(u)) : null;
+        if (!b) return null;
+        return b.replace("/s1440/", "/s1920/");
+      }
+      function heroImageFor(item) {
+        if (isWideHeroScreen()) {
+          const still = wideStillUrl(item);
+          if (still) return { src: still, wide: true };
+        }
+        return { src: getPosterUrl(item, true, false), wide: false };
+      }
       function posterRetryUrl(src) {
+        if (/\/s1920\//.test(src)) return src.replace("/s1920/", "/s1440/");
         if (/\/s332\//.test(src)) return src.replace("/s332/", "/s718/");
         if (/\/s718\//.test(src)) return src.replace("/s718/", "/s332/");
         if (/400x600bb/.test(src)) return src.replace("400x600bb", "600x900bb");
@@ -2099,6 +2264,8 @@
       const I18N_HANT_PHRASES = {"皇后": "皇后", "太后": "太后", "王后": "王后", "影后": "影后", "天后": "天后", "后羿": "后羿", "特征": "特徵", "象征": "象徵", "征求": "徵求", "征兆": "徵兆", "征集": "徵集", "干净": "乾淨", "干杯": "乾杯", "饼干": "餅乾", "干燥": "乾燥", "干涉": "干涉", "干扰": "干擾", "若干": "若干", "干预": "干預", "干旱": "乾旱", "公里": "公里", "英里": "英里", "里程": "里程", "邻里": "鄰里", "故里": "故里", "千里": "千里", "关系": "關係", "联系": "聯絡", "系列": "系列", "体系": "體系", "日历": "日曆", "历法": "曆法", "周末": "週末", "周年": "週年", "每周": "每週", "一周": "一週", "上周": "上週", "下周": "下週", "本周": "本週", "范围": "範圍", "规范": "規範", "示范": "示範", "模范": "模範", "范例": "範例", "典范": "典範", "北斗": "北斗", "斗篷": "斗篷", "漏斗": "漏斗", "星斗": "星斗", "小丑": "小丑", "丑角": "丑角", "重复": "重複", "复杂": "複雜", "复制": "複製", "复数": "複數", "反复": "反覆", "答复": "答覆", "回复": "回覆", "覆盖": "覆蓋", "制作": "製作", "制造": "製造", "制片": "製片", "绘制": "繪製", "录制": "錄製", "订制": "訂製", "研制": "研製", "监制": "監製", "出品": "出品", "批准": "批准", "准许": "准許", "不准": "不準", "冲泡": "沖泡", "冲洗": "沖洗", "头发": "頭髮", "白发": "白髮", "理发": "理髮", "发型": "髮型", "金发": "金髮", "长发": "長髮", "短发": "短髮", "秀发": "秀髮", "白发苍苍": "白髮蒼蒼", "台风": "颱風", "吧台": "吧檯", "一只": "一隻", "两只": "兩隻", "放松": "放鬆", "轻松": "輕鬆", "松散": "鬆散", "稻谷": "稻穀", "防御": "防禦", "抵御": "抵禦", "面条": "麵條", "征途": "征途", "征服": "征服", "长征": "長征", "远征": "遠征", "出征": "出征", "征战": "征戰", "历史": "歷史", "经历": "經歷", "历险": "歷險", "历程": "歷程", "余生": "餘生", "其余": "其餘", "多余": "多餘", "剩余": "剩餘", "业余": "業餘", "云端": "雲端", "后来": "後來", "之后": "之後", "以后": "以後", "最后": "最後", "后面": "後面", "背后": "背後", "随后": "隨後", "后代": "後代", "后果": "後果", "分钟": "分鐘", "钟头": "鐘頭", "时钟": "時鐘", "闹钟": "鬧鐘", "钟声": "鐘聲"};
       Object.assign(I18N_EN, {"赛程时区": "Schedule time zone", "擂台的比赛时间按这里换算，默认跟随本机": "Fight times use this time zone; defaults to your device", "本机时区（默认）": "Device time zone (default)", "北京时间": "Beijing", "香港时间": "Hong Kong", "台北时间": "Taipei", "东京时间": "Tokyo", "首尔时间": "Seoul", "新加坡时间": "Singapore", "伦敦时间": "London", "美东时间": "US Eastern", "美中时间": "US Central", "美西时间": "US Pacific", "悉尼时间": "Sydney", "赛程时区已更新": "Time zone updated", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "Times follow Settings › Schedule time zone · Schedules may change"});
       Object.assign(I18N_HANT, {"赛程时区": "賽程時區", "擂台的比赛时间按这里换算，默认跟随本机": "擂台的比賽時間按這裡換算，預設跟隨本機", "本机时区（默认）": "本機時區（預設）", "北京时间": "北京時間", "香港时间": "香港時間", "台北时间": "台北時間", "东京时间": "東京時間", "首尔时间": "首爾時間", "新加坡时间": "新加坡時間", "伦敦时间": "倫敦時間", "美东时间": "美東時間", "美中时间": "美中時間", "美西时间": "美西時間", "悉尼时间": "悉尼時間", "赛程时区已更新": "賽程時區已更新", "时间按「设置 › 赛程时区」显示 · 节目安排以官方为准": "時間按「設定 › 賽程時區」顯示 · 節目安排以官方為準"});
+      Object.assign(I18N_EN, {"新一季": "New season", "榜单地区": "Chart region", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "Daily charts rank by this country or region; services not offered there use the US chart", "美国（默认）": "United States (default)", "新加坡": "Singapore", "台湾": "Taiwan", "香港": "Hong Kong", "英国": "United Kingdom", "日本": "Japan", "韩国": "South Korea", "美区": "US", "正在切换榜单地区…": "Switching chart region…", "榜单地区已切换": "Chart region updated"});
+      Object.assign(I18N_HANT, {"榜单地区": "榜單地區", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "每日熱度榜按這個國家 / 地區排名；該地區沒有的平台自動用美區", "美国（默认）": "美國（預設）", "台湾": "台灣", "正在切换榜单地区…": "正在切換榜單地區…", "榜单地区已切换": "榜單地區已切換"});
       Object.assign(I18N_EN, {"其他平台": "Other services", "正在全网搜索…": "Searching online…", "暂未查到正版流媒体平台": "No streaming service found yet", "Apple TV（租借 / 购买）": "Apple TV (rent / buy)"});
       Object.assign(I18N_HANT, {"正在全网搜索…": "正在全網搜尋…", "暂未查到正版流媒体平台": "暫未查到正版流媒體平台", "Apple TV（租借 / 购买）": "Apple TV（租借 / 購買）"});
       Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
@@ -2127,6 +2294,9 @@
         [/共\s*(\d+)\s*集（已播\s*(\d+)\s*集）/, "$1 eps ($2 aired)"],
         [/更至\s*(\d+)\s*\/\s*(\d+)\s*集/, "Ep $1 of $2"],
         [/全\s*(\d+)\s*集/, "$1 eps"],
+        [/第\s*(\d+)\s*季\s*·\s*已看\s*(\d+)\s*\/\s*已播\s*(\d+)\s*\/\s*共\s*(\d+)\s*集/, "Season $1 · watched $2 / aired $3 / total $4"],
+        [/第\s*(\d+)\s*季追完打卡达成/, "Season $1 complete"],
+        [/共\s*(\d+)\s*季/, "$1 seasons"],
         [/第\s*(\d+)\s*季/, "Season $1"],
         [/第\s*(\d+)\s*部/, "Item $1"],
         [/(\d+)\s*分钟/, "$1 min"],
@@ -2431,6 +2601,9 @@
       let appState = loadLocalState();
       let enrichCache = loadEnrichCache();
       let liveChartsByPlatform = {};
+      const CHART_REGION_KEY = "dramov_chart_region_v1";
+      let liveRegionOf = {};
+      let liveRegion = "US";
       let liveHeroNewShows = [];
       let liveHotShowsTop = [];
       let liveHotMoviesTop = [];
@@ -2720,6 +2893,175 @@
         return localizeItem(merged, raw);
       }
 
+      // ================= 分季信息 =================
+      // 来源：JustWatch 给季数 + TVmaze 给每季集数 / 播出日期，两边合并；TVmaze 查不到时退回 JustWatch。
+      // 缓存在 enrichCache[k].seasons：[[季号, 总集数, 已播集数, 开播日, 完结日], ...]
+      const SEASON_TTL_MS = 12 * 3600 * 1000;
+      function todayIso() {
+        return new Date().toISOString().slice(0, 10);
+      }
+      function seasonsFromEpisodes(eps) {
+        const today = todayIso();
+        const by = new Map();
+        (eps || []).forEach((e) => {
+          const n = Number(e.season) || 0;
+          if (n < 1 || e.number == null) return; // 跳过特别篇
+          if (!by.has(n)) by.set(n, []);
+          by.get(n).push(e);
+        });
+        return Array.from(by.keys())
+          .sort((a, b) => a - b)
+          .map((n) => {
+            const list = by.get(n);
+            const dates = list.map((e) => e.airdate).filter(Boolean).sort();
+            const aired = list.filter((e) => e.airdate && e.airdate <= today).length;
+            return [n, list.length, aired, dates[0] || "", dates[dates.length - 1] || ""];
+          });
+      }
+      function seasonsFromTvmazeSeasons(list) {
+        const today = todayIso();
+        return (list || [])
+          .filter((x) => Number(x.number) >= 1)
+          .map((x) => {
+            const tot = Number(x.episodeOrder) || 0;
+            const st = x.premiereDate || "";
+            const en = x.endDate || "";
+            let aired = -1; // -1 = 正在播，具体集数等打开详情时再算
+            if (!st || st > today) aired = 0;
+            else if (en && en <= today) aired = tot;
+            return [Number(x.number), tot, aired, st, en];
+          });
+      }
+      function getSeasonInfo(item) {
+        const c = enrichCache[itemKey(item)] || {};
+        const today = todayIso();
+        const jwCount = Number(item.seasonNumber) || 0;
+        const started = (Array.isArray(c.seasons) ? c.seasons : []).filter((x) => x[3] && x[3] <= today);
+        const firstYearOf = (d) => Number(String(d || "").slice(0, 4)) || 0;
+        if (!started.length) {
+          const n = Math.max(1, jwCount);
+          return {
+            seasons: [{ n, total: Number(item.totalEpisodes) || 0, aired: Number(item.airedEpisodes) || 0, start: "", end: "" }],
+            count: n,
+            latest: n,
+            firstYear: Number(c.premiereYear || item.premiereYear || item.year) || 0,
+            lastYear: 0,
+            isNew: false,
+            fromTvmaze: false
+          };
+        }
+        const seasons = started.map((x) => ({ n: x[0], total: x[1], aired: x[2], start: x[3], end: x[4] }));
+        const last = seasons[seasons.length - 1];
+        const lastStartMs = Date.parse(last.start);
+        const daysSince = Number.isNaN(lastStartMs) ? 9999 : (Date.now() - lastStartMs) / 86400000;
+        const lastYear = firstYearOf(last.aired > 0 && last.end && last.end <= today ? last.end : last.start) || firstYearOf(last.start);
+        return {
+          seasons,
+          count: Math.max(last.n, seasons.length, jwCount),
+          latest: last.n,
+          firstYear: firstYearOf(seasons[0].start) || Number(item.year) || 0,
+          lastYear,
+          isNew: last.n >= 2 && daysSince <= 60,
+          fromTvmaze: true
+        };
+      }
+      function seasonYearText(info, fallbackYear) {
+        const a = info.firstYear || Number(fallbackYear) || 0;
+        const b = info.lastYear || a;
+        if (!a) return "";
+        return b > a ? `${a}–${b}` : String(a);
+      }
+      function isNewSeasonItem(item) {
+        if (!item || item.mediaType !== "show") return false;
+        return getSeasonInfo(item).isNew;
+      }
+      // 每季的观看进度：rec.seasonEp = { 季号: 已看集数 }；旧记录 rec.watchedEp 视为最新一季
+      function getSeasonWatched(rec, n, latest) {
+        if (!rec) return 0;
+        if (rec.seasonEp && rec.seasonEp[n] != null) return Number(rec.seasonEp[n]) || 0;
+        if (n === latest) {
+          if (rec.watchedSeason && Number(rec.watchedSeason) !== latest) return 0;
+          return Number(rec.watchedEp) || 0;
+        }
+        return 0;
+      }
+      function setSeasonWatched(rec, n, latest, val) {
+        rec.seasonEp = Object.assign({}, rec.seasonEp || {}, { [n]: val });
+        if (n === latest) {
+          rec.watchedEp = val;
+          rec.watchedSeason = latest;
+        }
+      }
+      async function findTvmazeId(item, entry) {
+        if (entry.tvmazeId) return entry.tvmazeId;
+        const q = item.enTitle || item.title;
+        if (!q) return 0;
+        const sr = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`);
+        if (!sr.ok) return 0;
+        const picked = pickBestTvmazeShow(await sr.json(), item);
+        return picked && picked.id ? picked.id : 0;
+      }
+      // withEpisodes=true（详情页）：拉全部分集，算出每季已播几集；false（首页角标）：只拉季列表，更轻
+      async function ensureSeasonInfo(item, withEpisodes) {
+        if (!item || item.mediaType !== "show") return false;
+        const k = itemKey(item);
+        const entry = Object.assign({}, enrichCache[k] || {});
+        const fresh = entry.seasonsAt && Date.now() - entry.seasonsAt < SEASON_TTL_MS;
+        if (fresh && (entry.seasonsFull || !withEpisodes)) return false;
+        if (entry.seasonsMissAt && Date.now() - entry.seasonsMissAt < SEASON_TTL_MS) return false;
+        try {
+          const id = await findTvmazeId(item, entry);
+          if (!id) {
+            entry.seasonsMissAt = Date.now();
+            enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+            saveEnrichCache();
+            return false;
+          }
+          entry.tvmazeId = id;
+          let seasons = null;
+          if (withEpisodes) {
+            const r = await fetch(`https://api.tvmaze.com/shows/${id}/episodes`);
+            if (r.ok) seasons = seasonsFromEpisodes(await r.json());
+          } else {
+            const r = await fetch(`https://api.tvmaze.com/shows/${id}/seasons`);
+            if (r.ok) seasons = seasonsFromTvmazeSeasons(await r.json());
+          }
+          if (!seasons || !seasons.length) return false;
+          entry.seasons = seasons;
+          entry.seasonsAt = Date.now();
+          entry.seasonsFull = !!withEpisodes;
+          if (seasons[0][3]) entry.premiereYear = Number(seasons[0][3].slice(0, 4)) || entry.premiereYear;
+          enrichCache[k] = Object.assign({}, enrichCache[k] || {}, entry);
+          saveEnrichCache();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      // 打开 App 时给首页能看到的剧补一下分季信息（「新一季」角标、年份跨度），每部 12 小时最多一次，不在后台循环
+      let seasonWarmStarted = false;
+      async function warmSeasonBadgesQuietly() {
+        if (seasonWarmStarted) return;
+        seasonWarmStarted = true;
+        const queue = [];
+        const seen = new Set();
+        [...getGlobalTop5(), ...getMixedPopularItems("show").slice(0, 10)].forEach((it) => {
+          const k = itemKey(it);
+          if (it.mediaType !== "show" || seen.has(k)) return;
+          seen.add(k);
+          const c = enrichCache[k] || {};
+          if (c.seasonsAt && Date.now() - c.seasonsAt < SEASON_TTL_MS) return;
+          if (c.seasonsMissAt && Date.now() - c.seasonsMissAt < SEASON_TTL_MS) return;
+          queue.push(it);
+        });
+        let changed = false;
+        for (const it of queue.slice(0, 14)) {
+          if (await ensureSeasonInfo(it, false)) changed = true;
+          await new Promise((r) => setTimeout(r, 350)); // TVmaze 限流：每 10 秒 20 次
+        }
+        if (changed && !isDetailOpen) renderMixedHotShelves();
+      }
+
       function getPosterUrl(item, highRes, showSvgText = true) {
         const it = getEnrichedItem(item);
         if (highRes && it.posterHd) return it.posterHd;
@@ -2842,6 +3184,11 @@
         if (!itemHasEpisodes(item)) {
           return item.runtime ? `${tLabel} · ${item.runtime}分钟` : tLabel;
         }
+        if (item.mediaType === "show") {
+          const info = getSeasonInfo(item);
+          if (info.isNew) return `${tLabel} · 新一季`;
+          if (info.count >= 2) return `${tLabel} · 共${info.count}季`;
+        }
         if (item.totalEpisodes > 0 && item.airedEpisodes > 0) {
           return item.airedEpisodes >= item.totalEpisodes
             ? `${tLabel} · 全${item.totalEpisodes}集`
@@ -2858,7 +3205,8 @@
       function buildSingleHeroSlideHtml(cur, realIdx, isClone) {
         const k = itemKey(cur);
         const fallbackSvg = makeEditorialPosterSvg(cur, true, false);
-        const posterSrc = getPosterUrl(cur, true, false);
+        const heroPick = heroImageFor(cur);
+        const posterSrc = heroPick.src;
         const typeText = cur.mediaType === "movie" ? "电影" : "剧集";
         const genreStr = zhGenres(cur.genres).slice(0, 2).join(" · ") || "热门";
         const ageStr = cur.ageRating || (cur.mediaType === "movie" ? "PG-13" : "TV-MA");
@@ -2867,7 +3215,7 @@
 
         return `
           <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}">
-            <img class="hero-slide-img" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
+            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
               alt="${escapeHtml(cur.title)}" ${prioAttr} decoding="async" referrerpolicy="no-referrer"
               onerror="dramovImgErr(this,'${fallbackSvg}')\" />
             <div class="hero-slide-fade"></div>
@@ -2878,7 +3226,7 @@
 
               <div class="hero-meta-row">
                 ${renderBrandIconHtml(cur.platformId, "brand-icon-mini")}
-                <span>${cur.mediaType === "show" ? "新剧" : escapeHtml(typeText)} · ${escapeHtml(genreStr)}</span>
+                <span>${cur.mediaType === "show" ? (getSeasonInfo(cur).count >= 2 ? "新一季" : "新剧") : escapeHtml(typeText)} · ${escapeHtml(genreStr)}</span>
                 <span class="age-outline-badge">${escapeHtml(ageStr)}</span>
               </div>
 
@@ -3000,9 +3348,10 @@
                       <div class="mixed-plat-corner">
                         ${renderBrandIconHtml(it.platformId, "brand-icon-full")}
                       </div>
+                      ${isNewSeasonItem(it) ? `<span class="new-season-pill">新一季</span>` : ""}
                     </div>
                     <div class="rank-title">${escapeHtml(it.title)}</div>
-                    <div class="rank-meta">${escapeHtml((PLATFORM_MAP[it.platformId] || PLATFORMS[0]).name)} · ${escapeHtml(String(it.year || ""))}</div>
+                    <div class="rank-meta">${escapeHtml((PLATFORM_MAP[it.platformId] || PLATFORMS[0]).name)} · ${escapeHtml(it.mediaType === "show" ? seasonYearText(getSeasonInfo(it), it.year) : String(it.year || ""))}</div>
                   </div>
                 </div>
               `;
@@ -3080,6 +3429,7 @@
                   <div class="row-center">
                     ${renderBrandIconHtml(pid, "brand-icon-wrap")}
                     <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.03em;">${escapeHtml(pm.name.toUpperCase())}</span>
+                    ${liveRegion !== "US" && liveRegionOf[pid] === "US" ? `<span class="region-tag">美区</span>` : ""}
                   </div>
                   <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
                     <span style="white-space:nowrap;">热播库</span>
@@ -3296,21 +3646,29 @@
         const col = document.getElementById("col-ring");
         if (!col) return;
         const list = col.querySelector(".ring-list");
-        const ref = Array.from(document.querySelectorAll(".platform-chart-col")).find((c) => c.id !== "col-ring" && c.querySelector(".top10-row"));
-        if (!list || !ref) return;
-        const rows = ref.querySelectorAll(".top10-row");
-        const refBottom = rows[rows.length - 1].getBoundingClientRect().bottom - ref.getBoundingClientRect().top;
+        if (!list) return;
+        // 榜单列滚到屏幕里才会真正排版、高度才定下来；高度一变就重新填一次
+        if (window.ResizeObserver) {
+          if (!fillRingColumn.ro) fillRingColumn.ro = new ResizeObserver(() => requestAnimationFrame(fillRingColumn));
+          if (fillRingColumn.observed !== col) {
+            fillRingColumn.ro.disconnect();
+            fillRingColumn.ro.observe(col);
+            fillRingColumn.observed = col;
+          }
+        }
+        // 列高由旁边的榜单决定（CSS size 包含），这里只负责把这个高度填满、裁掉放不下的行
+        const limit = col.getBoundingClientRect().bottom - (parseFloat(getComputedStyle(col).paddingBottom) || 0);
         const all = buildRingSchedule(42);
         let n = list.children.length;
-        const colTop = col.getBoundingClientRect().top;
         let guard = 0;
         while (n < all.length && guard++ < 40) {
           const last = list.lastElementChild;
-          const bottom = last ? last.getBoundingClientRect().bottom - colTop : 0;
-          const avg = last ? last.getBoundingClientRect().height : 70;
-          if (bottom + avg > refBottom + 4) break;
+          if (last && last.getBoundingClientRect().bottom >= limit) break;
           list.insertAdjacentHTML("beforeend", ringRowHtml(all[n]));
           n++;
+        }
+        while (list.children.length > 1 && list.lastElementChild.getBoundingClientRect().bottom > limit + 1) {
+          list.lastElementChild.remove();
         }
       }
       function renderRingColumnRows() {
@@ -3334,6 +3692,15 @@
       // 排名趋势：JustWatch 每日榜给出的升 / 降 / 持平（没有数据就不显示）
       function scheduleRingFill() {
         requestAnimationFrame(() => requestAnimationFrame(fillRingColumn));
+      }
+      // 字体加载完、屏幕尺寸变化（旋转 iPad）后重新排一次
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => scheduleRingFill());
+      {
+        let ringResizeTimer = null;
+        window.addEventListener("resize", () => {
+          clearTimeout(ringResizeTimer);
+          ringResizeTimer = setTimeout(scheduleRingFill, 200);
+        });
       }
       function trendArrowHtml(it) {
         const t = String(it.trend || "").toUpperCase();
@@ -3481,6 +3848,8 @@
         document.querySelectorAll("#langSeg [data-lang]").forEach((b) => b.classList.toggle("active", b.getAttribute("data-lang") === LANG));
         const tzSel = document.getElementById("ringTzSelect");
         if (tzSel) tzSel.value = ringDisplayTz();
+        const crSel = document.getElementById("chartRegionSelect");
+        if (crSel) crSel.value = getChartRegion();
       }
 
       function renderActiveView() {
@@ -3763,8 +4132,10 @@
       // ---------- 页面推入 / 返回（二级页、详情页共用） ----------
       const PAGE_UNDER_SHIFT = 24; // 底层页面视差左移的百分比，和 CSS --under-shift 一致
       function underLayerFor(shell) {
-        if (shell && shell.id === "detailShell" && isPlatformOpen) return document.getElementById("platformShell");
-        return document.getElementById("mainViewsWrap");
+        return null; // 不再移动底层页面：整页跟着动太耗帧，只保留压暗
+      }
+      function snapShellToPage(shell) {
+        shell.scrollLeft = shell.scrollWidth; // 横向滚到「页面」那一格
       }
       function setShellTiming(els, dur, ease) {
         els.forEach((el) => {
@@ -3798,6 +4169,7 @@
         scrim.style.opacity = "";
         // 先在屏幕外把内容画好（visible 但还在右边），下一帧再开始滑入
         shell.classList.add("prep");
+        snapShellToPage(shell);
         void shell.offsetWidth;
         requestAnimationFrame(() => requestAnimationFrame(() => {
           if (shell._pushToken !== token) return;
@@ -3942,18 +4314,16 @@
           this.onerror = null;
           this.src = fallbackTall;
         };
-        heroImg.src = getPosterUrl(item, true, false);
+        const detailPick = heroImageFor(item);
+        heroImg.classList.toggle("is-wide", detailPick.wide);
+        heroImg.src = detailPick.src;
 
         const genres = zhGenres(item.genres).slice(0, 2).join(" · ") || (item.mediaType === "movie" ? "电影" : "剧集");
         if (item.mediaType === "movie") {
           document.getElementById("detailSubMeta").textContent =
             `电影 · ${genres}${item.runtime ? ` · ${item.runtime} 分钟` : ""}${item.year ? ` · ${item.year}` : ""}`;
         } else {
-          const epStr = item.totalEpisodes > 0
-            ? `共 ${item.totalEpisodes} 集（已播 ${item.airedEpisodes || item.totalEpisodes} 集）`
-            : `第 ${item.seasonNumber || 1} 季`;
-          document.getElementById("detailSubMeta").textContent =
-            `剧集 · ${genres} · ${epStr}${item.year ? ` · ${item.year}` : ""}`;
+          renderDetailShowMeta(item, genres);
         }
 
         document.getElementById("detailRatingStrip").innerHTML = buildAuthoritativeRatingRow(item);
@@ -3992,32 +4362,7 @@
             `<div style="font-size: 13px; color: var(--text-muted);">暂未查到正版流媒体平台</div>`;
         }
 
-        const epBox = document.getElementById("detailEpisodeBox");
-        if (!itemHasEpisodes(item)) {
-          epBox.style.display = "none";
-        } else {
-          epBox.style.display = "block";
-          const tot = Number(item.totalEpisodes) || 8;
-          const aired = Number(item.airedEpisodes) > 0 ? Math.min(tot, Number(item.airedEpisodes)) : tot;
-          const rawWatched = Number(rec.watchedEp) || (rec.watched ? aired : 0);
-          const watchedEp = Math.min(rawWatched, aired);
-          if (rawWatched > aired && appState.userRecords[k]) {
-            appState.userRecords[k].watchedEp = watchedEp;
-            if (watchedEp < tot) appState.userRecords[k].watched = false;
-            saveLocalState();
-          }
-          document.getElementById("detailEpHeader").textContent =
-            `分集进度（已看 ${watchedEp} / 已播 ${aired} / 共 ${tot} 集）`;
-          const cells = [];
-          for (let ep = 1; ep <= Math.min(60, tot); ep++) {
-            let cls = "unaired";
-            if (ep <= aired && ep <= watchedEp) cls = "watched";
-            else if (ep <= aired) cls = "aired";
-            const unairedAttr = ep > aired ? 'data-unaired="1" aria-disabled="true"' : "";
-            cells.push(`<div class="ep-cell ${cls}" data-detep="${ep}" ${unairedAttr}>${ep}</div>`);
-          }
-          document.getElementById("detailEpGrid").innerHTML = cells.join("");
-        }
+        renderDetailSeasons(item);
 
         renderDetailCastAndStills(item);
         updateDetailFabButtons(item);
@@ -4040,24 +4385,107 @@
           if (updated && currentDetailItem && itemKey(currentDetailItem) === k) {
             const fresh = getEnrichedItem(item);
             currentDetailItem = fresh;
-            if (fresh.posterHd) document.getElementById("detailHeroImg").src = fresh.posterHd;
-            renderDetailCastAndStills(fresh);
-            if (fresh.mediaType === "show" && fresh.totalEpisodes > 0 && !item.totalEpisodes) {
-              const recNow = appState.userRecords[k] || {};
-              const tot = fresh.totalEpisodes;
-              const aired = fresh.airedEpisodes || tot;
-              const wEp = Number(recNow.watchedEp) || (recNow.watched ? tot : 0);
-              document.getElementById("detailEpHeader").textContent =
-                `分集进度（已看 ${wEp} / 已播 ${aired} / 共 ${tot} 集）`;
-              const cells = [];
-              for (let ep = 1; ep <= Math.min(60, tot); ep++) {
-                let cls = ep <= wEp ? "watched" : (ep <= aired ? "aired" : "unaired");
-                cells.push(`<div class="ep-cell ${cls}" data-detep="${ep}">${ep}</div>`);
+            {
+              const pick = heroImageFor(fresh);
+              const hImg = document.getElementById("detailHeroImg");
+              if (pick.wide || fresh.posterHd) {
+                hImg.classList.toggle("is-wide", pick.wide);
+                if (hImg.getAttribute("src") !== pick.src) hImg.src = pick.src;
               }
-              document.getElementById("detailEpGrid").innerHTML = cells.join("");
             }
+            renderDetailCastAndStills(fresh);
+          }
+          return updated;
+        }).then(async (updated) => (await ensureSeasonInfo(item, true)) || updated).then((changedSeasons) => {
+          if (changedSeasons && currentDetailItem && itemKey(currentDetailItem) === k) {
+            const fresh = getEnrichedItem(item);
+            currentDetailItem = fresh;
+            const g = zhGenres(fresh.genres).slice(0, 2).join(" · ") || "剧集";
+            renderDetailShowMeta(fresh, g);
+            renderDetailSeasons(fresh);
           }
         });
+      }
+
+      // 详情页：剧集的副标题（共几季 · 年份跨度 · 新一季）
+      function renderDetailShowMeta(item, genres) {
+        const info = getSeasonInfo(item);
+        let epStr;
+        if (info.count >= 2) {
+          epStr = `共 ${info.count} 季`;
+        } else if (item.totalEpisodes > 0 || (info.seasons[0] && info.seasons[0].total > 0)) {
+          const tot = info.seasons[0].total || Number(item.totalEpisodes) || 0;
+          const aired = info.seasons[0].aired >= 0 ? info.seasons[0].aired || Number(item.airedEpisodes) || tot : tot;
+          epStr = `共 ${tot} 集（已播 ${Math.min(aired, tot) || tot} 集）`;
+        } else {
+          epStr = `第 ${item.seasonNumber || 1} 季`;
+        }
+        const yr = seasonYearText(info, item.year);
+        const el = document.getElementById("detailSubMeta");
+        el.innerHTML =
+          `${escapeHtml(`剧集 · ${genres} · ${epStr}${yr ? ` · ${yr}` : ""}`)}` +
+          (info.isNew ? ` <span class="new-season-chip">新一季</span>` : "");
+      }
+
+      // 详情页：分季切换 + 当季分集打卡
+      let detailSeasonSel = { key: "", n: 0 };
+      let detailSeasonCtx = { n: 1, latest: 1, tot: 8, aired: 8 };
+      function renderDetailSeasons(item) {
+        const epBox = document.getElementById("detailEpisodeBox");
+        if (!itemHasEpisodes(item)) {
+          epBox.style.display = "none";
+          return;
+        }
+        epBox.style.display = "block";
+        const k = itemKey(item);
+        const rec = appState.userRecords[k] || { fav: false, watched: false, watchedEp: 0 };
+        const info = getSeasonInfo(item);
+        if (detailSeasonSel.key !== k || !info.seasons.some((x) => x.n === detailSeasonSel.n)) {
+          detailSeasonSel = { key: k, n: info.latest };
+        }
+        const sel = info.seasons.find((x) => x.n === detailSeasonSel.n) || info.seasons[info.seasons.length - 1];
+        const isLatest = sel.n === info.latest;
+        let tot = sel.total || (isLatest ? Number(item.totalEpisodes) : 0) || 8;
+        let aired = sel.aired >= 0 ? sel.aired : (isLatest ? Number(item.airedEpisodes) : 0);
+        if (!(aired > 0)) aired = sel.aired === 0 ? 0 : tot;
+        aired = Math.min(tot, aired);
+        let watchedEp = getSeasonWatched(rec, sel.n, info.latest);
+        if (!watchedEp && isLatest && rec.watched && !rec.seasonEp) watchedEp = aired;
+        watchedEp = Math.min(watchedEp, aired);
+        detailSeasonCtx = { n: sel.n, latest: info.latest, tot, aired, multi: info.seasons.length >= 2 };
+
+        const seg = document.getElementById("detailSeasonSeg");
+        if (info.seasons.length >= 2) {
+          seg.style.display = "flex";
+          seg.innerHTML = info.seasons
+            .map((x) => {
+              const sub = x.aired >= 0 && x.total && x.aired < x.total ? `更至${x.aired}/${x.total}` : (x.total ? `${x.total}集` : "");
+              const w = getSeasonWatched(rec, x.n, info.latest);
+              const done = x.total > 0 && w >= x.total;
+              return `<button type="button" class="season-chip${x.n === sel.n ? " active" : ""}${done ? " done" : ""}" data-season="${x.n}">
+                <span>第${x.n}季</span>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</button>`;
+            })
+            .join("");
+          requestAnimationFrame(() => {
+            const act = seg.querySelector(".season-chip.active");
+            if (act) seg.scrollLeft = Math.max(0, act.offsetLeft - seg.clientWidth + act.offsetWidth + 12);
+          });
+        } else {
+          seg.style.display = "none";
+          seg.innerHTML = "";
+        }
+        document.getElementById("detailEpHeader").textContent = info.seasons.length >= 2
+          ? `第 ${sel.n} 季 · 已看 ${watchedEp} / 已播 ${aired} / 共 ${tot} 集`
+          : `分集进度（已看 ${watchedEp} / 已播 ${aired} / 共 ${tot} 集）`;
+        const cells = [];
+        for (let ep = 1; ep <= Math.min(80, tot); ep++) {
+          let cls = "unaired";
+          if (ep <= aired && ep <= watchedEp) cls = "watched";
+          else if (ep <= aired) cls = "aired";
+          const unairedAttr = ep > aired ? 'data-unaired="1" aria-disabled="true"' : "";
+          cells.push(`<div class="ep-cell ${cls}" data-detep="${ep}" ${unairedAttr}>${ep}</div>`);
+        }
+        document.getElementById("detailEpGrid").innerHTML = cells.join("");
       }
 
       function makeMonogramSvg(name) {
@@ -4310,6 +4738,18 @@
                 changed = true;
               }
               const eps = show._embedded?.episodes || [];
+              if (eps.length) {
+                // 顺手把分季信息也算好，详情页就不用再请求一次
+                const seasons = seasonsFromEpisodes(eps);
+                if (seasons.length) {
+                  entry.seasons = seasons;
+                  entry.seasonsAt = Date.now();
+                  entry.seasonsFull = true;
+                  entry.tvmazeId = show.id;
+                  if (seasons[0][3]) entry.premiereYear = Number(seasons[0][3].slice(0, 4)) || entry.premiereYear;
+                  changed = true;
+                }
+              }
               if (eps.length && !item.totalEpisodes) {
                 const maxSeason = Math.max(...eps.map((e) => Number(e.season) || 1));
                 const sEps = eps.filter((e) => (Number(e.season) || 1) === maxSeason);
@@ -4374,7 +4814,16 @@
       // 上次成功拿到的榜单存在本机：下次打开先直接显示（海报、演员表都在里面），再静默换成最新数据。
       // 不在后台定时刷新，只在打开 App 和手动刷新时请求一次。
       const LIVE_CACHE_KEY = "dramov_live_charts_v1";
+      function getChartRegion() {
+        try {
+          return localStorage.getItem(CHART_REGION_KEY) || "US";
+        } catch (e) {
+          return "US";
+        }
+      }
       function applyLiveChartsData(data) {
+        liveRegion = data.region || "US";
+        liveRegionOf = data.regionOf || {};
         liveChartsByPlatform = data.chartsByPlatform || {};
         liveHeroNewShows = Array.isArray(data.heroNewShows) ? data.heroNewShows : [];
         liveHotShowsTop = Array.isArray(data.hotShowsTop) ? data.hotShowsTop : [];
@@ -4388,6 +4837,7 @@
           if (!raw) return false;
           const c = JSON.parse(raw);
           if (!c || !c.data || !c.data.chartsByPlatform) return false;
+          if ((c.data.region || "US") !== getChartRegion()) return false; // 换了榜单地区，旧缓存不用
           if (Date.now() - (c.t || 0) > 7 * 86400000) return false; // 超过一周的旧榜单不用
           applyLiveChartsData(c.data);
           return true;
@@ -4427,7 +4877,7 @@
         let gotServerCharts = false;
         if (location.protocol === "http:" || location.protocol === "https:") {
           try {
-            const res = await fetch("./api/charts", { cache: "no-cache" });
+            const res = await fetch(`./api/charts?region=${encodeURIComponent(getChartRegion())}`, { cache: "no-cache" });
             if (res.ok) {
               const data = await res.json();
               if (data && data.ok && data.chartsByPlatform) {
@@ -4450,6 +4900,7 @@
         }
 
         warmMissingPostersQuietly();
+        setTimeout(() => warmSeasonBadgesQuietly(), 2500);
       }
 
       // 全网搜索：先查 JustWatch（美区 + 台湾区，中文名也能搜到，覆盖所有平台），再用 TVmaze / iTunes 补充
@@ -4852,23 +5303,58 @@
 
         // 8-Slide Seamless Infinite Loop Scroll-Snap Engine
         const heroTrack = document.getElementById("heroTrack");
+        // 无限循环：滑到首尾的「替身」那一格后，瞬移回真正的那一格。
+        // iPad 上惯性 / 吸附动画还没结束时直接改 scrollLeft 会被忽略，导致卡在最后一格滑不动，
+        // 所以先停掉惯性（临时 overflow hidden）、关掉吸附再跳，跳完检查一下，没到位就再试。
+        function heroTeleport(slot, tries) {
+          const w = heroTrack.clientWidth || window.innerWidth;
+          if (!w) return;
+          isHeroTeleporting = true;
+          heroTrack.style.scrollBehavior = "auto";
+          heroTrack.style.scrollSnapType = "none";
+          heroTrack.style.overflowX = "hidden";
+          heroTrack.scrollLeft = slot * w;
+          requestAnimationFrame(() => {
+            heroTrack.style.overflowX = "";
+            heroTrack.scrollLeft = slot * w;
+            heroTrack.style.scrollSnapType = "";
+            requestAnimationFrame(() => {
+              isHeroTeleporting = false;
+              if (Math.abs(heroTrack.scrollLeft - slot * w) > 2 && (tries || 0) < 6) {
+                setTimeout(() => heroTeleport(slot, (tries || 0) + 1), 60);
+              }
+            });
+          });
+        }
         function settleInfiniteHeroIfAtClone() {
           const n = heroLoopCount;
           const w = heroTrack.clientWidth || window.innerWidth;
           if (n <= 1 || !w) return;
           const rawSlot = Math.round(heroTrack.scrollLeft / w);
-          if (rawSlot === 0) {
-            isHeroTeleporting = true;
-            heroTrack.style.scrollBehavior = "auto";
-            heroTrack.scrollLeft = n * w;
-            requestAnimationFrame(() => { isHeroTeleporting = false; });
-          } else if (rawSlot === n + 1) {
-            isHeroTeleporting = true;
-            heroTrack.style.scrollBehavior = "auto";
-            heroTrack.scrollLeft = 1 * w;
-            requestAnimationFrame(() => { isHeroTeleporting = false; });
-          }
+          if (rawSlot <= 0) heroTeleport(n);
+          else if (rawSlot >= n + 1) heroTeleport(1);
         }
+        // 屏幕尺寸变了（iPad 旋转 / 台前调度 / 分屏）：对齐到当前这一张；跨过宽 / 窄屏时换横版或竖版图
+        {
+          let heroWasWide = isWideHeroScreen();
+          let heroResizeTimer = null;
+          window.addEventListener("resize", () => {
+            clearTimeout(heroResizeTimer);
+            heroResizeTimer = setTimeout(() => {
+              const nowWide = isWideHeroScreen();
+              if (nowWide !== heroWasWide) {
+                heroWasWide = nowWide;
+                renderHeroCarousel();
+              } else if (heroLoopCount > 1) {
+                heroTeleport(heroIdx + 1);
+              }
+            }, 150);
+          });
+        }
+        heroTrack.addEventListener("touchend", () => {
+          clearTimeout(heroLoopResetTimer);
+          heroLoopResetTimer = setTimeout(settleInfiniteHeroIfAtClone, 450);
+        }, { passive: true });
 
         heroTrack.addEventListener("scroll", () => {
           if (isHeroTeleporting) return;
@@ -4969,97 +5455,40 @@
         document.getElementById("closePlatformBtn").addEventListener("click", () => closePlatformPage());
         platScrimEl.addEventListener("click", () => closePlatformPage());
 
-        function bindSilkyShellSwipeBack(shellEl, scrimEl, isOpenFn, closeFn, hasUnderlyingMain) {
-          let st = null;
-          shellEl.addEventListener("touchstart", (e) => {
-            if (!isOpenFn() || !shellEl.classList.contains("open") || !e.touches || e.touches.length !== 1) {
-              st = null;
+        // 右滑返回：外壳是原生横向吸附滚动，这里只读滚动位置来压暗背景、判断是否已经滑走
+        function bindNativeSwipeBack(shellEl, scrimEl, isOpenFn, closeFn) {
+          let raf = 0;
+          function onScroll() {
+            raf = 0;
+            if (!isOpenFn() || !shellEl.classList.contains("open")) return;
+            const w = shellEl.clientWidth || 1;
+            const x = shellEl.scrollLeft;
+            if (x <= 1) {
+              // 已经完全滑走：直接收起，不再播放关闭动画
+              scrimEl.style.opacity = "0";
+              closeFn({ dur: 0 });
+              requestAnimationFrame(() => {
+                scrimEl.style.opacity = "";
+              });
               return;
             }
-            const t = e.touches[0];
-            const inHorizStrip = Boolean(e.target.closest(".cast-scroll, .authority-rating-strip, .sort-seg"));
-            const isLeftEdge = t.clientX <= 52;
-            const isRightEdge = t.clientX >= window.innerWidth - 44;
-            if (inHorizStrip && !isLeftEdge && !isRightEdge) {
-              st = null;
-              return;
-            }
-            const now = performance.now();
-            st = { startX: t.clientX, startY: t.clientY, isRightEdge, locked: null, lastDx: 0, prevX: t.clientX, prevT: now, vx: 0, under: null };
-          }, { passive: true });
-
-          shellEl.addEventListener("touchmove", (e) => {
-            if (!st || !e.touches || e.touches.length !== 1) return;
-            const t = e.touches[0];
-            const dx = t.clientX - st.startX;
-            const dy = t.clientY - st.startY;
-
-            if (st.locked === null) {
-              if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-              if (dx > 10 && dx > Math.abs(dy) * 1.2) st.locked = "ltr";
-              else if (st.isRightEdge && dx < -10 && Math.abs(dx) > Math.abs(dy) * 1.35) st.locked = "rtl-edge";
-              else {
-                st.locked = "vertical";
-                return;
-              }
-              st.under = underLayerFor(shellEl);
-              shellEl.classList.add("dragging");
-              scrimEl.classList.add("dragging");
-              if (st.under) st.under.classList.add("page-dragging", "page-moving");
-              if (hasUnderlyingMain()) document.body.classList.add("subpage-dragging");
-            }
-
-            if (st.locked === "ltr" || st.locked === "rtl-edge") {
-              if (e.cancelable) e.preventDefault(); // 横向拖动时不让页面跟着上下滚
-              const shift = st.locked === "ltr" ? Math.max(0, dx) : Math.max(0, -dx * 0.88);
-              const now = performance.now();
-              const instV = (shift - st.lastDx) / Math.max(1, now - st.prevT);
-              st.vx = st.vx * 0.6 + instV * 0.4;
-              st.prevT = now;
-              st.lastDx = shift;
-              const w = window.innerWidth || 375;
-              const prog = Math.min(1, shift / w);
-              shellEl.style.transform = `translate3d(${shift}px, 0, 0)`;
-              scrimEl.style.opacity = String(Math.max(0, 1 - prog));
-              if (st.under) st.under.style.transform = `translate3d(${(-PAGE_UNDER_SHIFT * (1 - prog)).toFixed(2)}%, 0, 0)`;
-            }
-          }, { passive: false });
-
-          function endSwipe() {
-            if (!st) return;
-            const cur = st;
-            st = null;
-            if (cur.locked !== "ltr" && cur.locked !== "rtl-edge") return;
-            document.body.classList.remove("subpage-dragging");
-            const w = window.innerWidth || 375;
-            const v = Math.max(0, cur.vx); // px/ms，手指松开时的速度
-            if (cur.lastDx > Math.min(110, w * 0.3) || (cur.lastDx > 24 && v > 0.35)) {
-              // 按手指速度把剩下的距离滑完，快甩就快收
-              const remaining = Math.max(0, w - cur.lastDx);
-              const dur = Math.min(0.36, Math.max(0.16, (remaining / Math.max(v, 0.9)) / 1000 * 1.5));
-              closeFn({ dur: Number(dur.toFixed(3)), ease: "cubic-bezier(0.25, 0.9, 0.35, 1)" });
-            } else {
-              // 回弹到原位
-              const under = cur.under;
-              setShellTiming([shellEl, scrimEl, under], 0.32);
-              markPageMoving([shellEl, under], 320);
-              shellEl.classList.remove("dragging");
-              scrimEl.classList.remove("dragging");
-              if (under) under.classList.remove("page-dragging");
-              shellEl.style.transform = "";
+            if (x >= w - 1) {
               scrimEl.style.opacity = "";
-              if (under) under.style.transform = "";
-              setTimeout(() => setShellTiming([shellEl, scrimEl, under], null), 400);
+              return;
             }
+            scrimEl.style.opacity = String(Math.max(0, Math.min(1, x / w)));
           }
-
-          shellEl.addEventListener("touchend", endSwipe, { passive: true });
-          shellEl.addEventListener("touchcancel", endSwipe, { passive: true });
+          shellEl.addEventListener("scroll", () => {
+            if (!raf) raf = requestAnimationFrame(onScroll);
+          }, { passive: true });
+          window.addEventListener("resize", () => {
+            if (shellEl.classList.contains("open")) snapShellToPage(shellEl);
+          });
         }
 
         document.addEventListener("touchstart", () => {}, { passive: true });
-        bindSilkyShellSwipeBack(detShellEl, detScrimEl, () => isDetailOpen, closeDetailPage, () => !isPlatformOpen);
-        bindSilkyShellSwipeBack(platShellEl, platScrimEl, () => isPlatformOpen && !isDetailOpen, closePlatformPage, () => true);
+        bindNativeSwipeBack(detShellEl, detScrimEl, () => isDetailOpen, closeDetailPage);
+        bindNativeSwipeBack(platShellEl, platScrimEl, () => isPlatformOpen && !isDetailOpen, closePlatformPage);
         document.getElementById("shareDetailBtn").addEventListener("click", () => {
           if (!currentDetailItem) return;
           const pm = PLATFORM_MAP[currentDetailItem.platformId] || PLATFORMS[0];
@@ -5075,41 +5504,43 @@
         document.getElementById("detailWatchedBtn").addEventListener("click", () => {
           if (currentDetailItem) toggleWatchedComplete(currentDetailItem);
         });
+        document.getElementById("detailSeasonSeg").addEventListener("click", (e) => {
+          const b = e.target.closest("[data-season]");
+          if (!b || !currentDetailItem) return;
+          detailSeasonSel = { key: itemKey(currentDetailItem), n: Number(b.getAttribute("data-season")) || 1 };
+          renderDetailSeasons(currentDetailItem);
+        });
         document.getElementById("detailEpGrid").addEventListener("click", (e) => {
           const cell = e.target.closest("[data-detep]");
           if (!cell || !currentDetailItem) return;
           const ep = Number(cell.getAttribute("data-detep")) || 0;
-          const tot = Number(currentDetailItem.totalEpisodes) || 8;
-          const aired = Number(currentDetailItem.airedEpisodes) > 0
-            ? Math.min(tot, Number(currentDetailItem.airedEpisodes))
-            : tot;
+          const { n: sn, latest, tot, aired, multi } = detailSeasonCtx;
           if (ep > aired || cell.getAttribute("data-unaired") === "1") {
             showToast(`第 ${ep} 集尚未播出，暂不可标记`);
             return;
           }
           const k = itemKey(currentDetailItem);
-          const prevEp = Math.min(aired, Number(appState.userRecords[k]?.watchedEp) || 0);
+          const prevEp = Math.min(aired, getSeasonWatched(appState.userRecords[k], sn, latest));
           const nextEp = prevEp === ep ? ep - 1 : ep;
           mutateRecord(currentDetailItem, (rec) => {
-            rec.watchedEp = Math.max(0, nextEp);
+            setSeasonWatched(rec, sn, latest, Math.max(0, nextEp));
             rec.fav = true;
-            rec.watched = tot > 0 && rec.watchedEp >= tot;
+            if (sn === latest) rec.watched = tot > 0 && rec.watchedEp >= tot;
           });
           openDetail(currentDetailItem);
           if (tot > 0 && nextEp >= tot && prevEp < tot) {
-            document.getElementById("celebrateHeading").textContent = "剧集追完打卡达成";
+            document.getElementById("celebrateHeading").textContent = multi ? `第 ${sn} 季追完打卡达成` : "剧集追完打卡达成";
             document.getElementById("celebrateTitle").textContent = `《${currentDetailItem.title}》`;
             document.getElementById("celebrateModal").classList.add("open");
           }
         });
         document.getElementById("detailCatchUpBtn").addEventListener("click", () => {
           if (!currentDetailItem) return;
-          const tot = Number(currentDetailItem.totalEpisodes) || 8;
-          const aired = Number(currentDetailItem.airedEpisodes) || tot;
+          const { n: sn, latest, tot, aired } = detailSeasonCtx;
           mutateRecord(currentDetailItem, (rec) => {
-            rec.watchedEp = aired;
+            setSeasonWatched(rec, sn, latest, aired);
             rec.fav = true;
-            rec.watched = tot > 0 && aired >= tot;
+            if (sn === latest) rec.watched = tot > 0 && aired >= tot;
           });
           openDetail(currentDetailItem);
           showToast(`已记录追平至第 ${aired} 集`);
@@ -5177,6 +5608,14 @@
           appState.settings.updatedAt = Date.now();
           saveLocalState();
           renderSettingsView();
+        });
+        document.getElementById("chartRegionSelect").addEventListener("change", (e) => {
+          try {
+            if (e.target.value && e.target.value !== "US") localStorage.setItem(CHART_REGION_KEY, e.target.value);
+            else localStorage.removeItem(CHART_REGION_KEY);
+          } catch (err) {}
+          showToast("正在切换榜单地区…");
+          refreshLiveStreamingCharts(true).then(() => showToast("榜单地区已切换"));
         });
         document.getElementById("ringTzSelect").addEventListener("change", (e) => {
           try {
