@@ -44,12 +44,7 @@
       from { opacity: 0; transform: scale(0.94); }
       to { opacity: 1; transform: scale(1); }
     }
-    #launchSplash.hide { opacity: 0; pointer-events: none; transition: opacity 0.55s ease 0.05s; }
-    #launchSplash.hide .splash-tile {
-      transform: scale(1.55); opacity: 0;
-      transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.5s ease;
-      animation: none;
-    }
+    #launchSplash.hide { opacity: 0; pointer-events: none; transition: opacity 0.22s ease; }
   </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Dramov</title>
@@ -223,15 +218,6 @@
       object-fit: cover;
       object-position: center 10%;
       display: block;
-    }
-
-    .hero-slide-img { transition: opacity 0.38s ease; }
-    .hero-slide-img.pending { opacity: 0; }
-    /* 开屏退场时，大海报从略微放大轻轻落定，和开屏的图标放大淡出接在一起 */
-    #heroTrack.settle .hero-slide-img { animation: heroSettle 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-    @keyframes heroSettle {
-      from { transform: scale(1.06); }
-      to { transform: scale(1); }
     }
 
     .hero-slide-fade {
@@ -3536,7 +3522,7 @@
 
         return `
           <div class="hero-slide" data-realidx="${realIdx}" data-clone="${isClone ? "1" : "0"}">
-            <img class="hero-slide-img pending${heroPick.wide ? " is-wide" : ""}" onload="this.classList.remove('pending')" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
+            <img class="hero-slide-img${heroPick.wide ? " is-wide" : ""}" data-heroimg="${escapeHtml(k)}" src="${escapeHtml(posterSrc)}"
               alt="${escapeHtml(cur.title)}" ${prioAttr} decoding="async" referrerpolicy="no-referrer"
               onerror="dramovImgErr(this,'${fallbackSvg}')\" />
             <div class="hero-slide-fade"></div>
@@ -3574,11 +3560,6 @@
         if (heroIdx >= n || heroIdx < 0) heroIdx = 0;
 
         track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join("");
-        // 已经在内存里的图直接显示，不做淡入（刷新榜单重画时不会闪一下）
-        track.querySelectorAll("img.hero-slide-img.pending").forEach((im) => {
-          if (im.complete && im.naturalWidth > 0) im.classList.remove("pending");
-        });
-        setTimeout(() => track.querySelectorAll("img.hero-slide-img.pending").forEach((im) => im.classList.remove("pending")), 8000);
 
         dots.innerHTML = topList
           .map(
@@ -6368,7 +6349,7 @@
       refreshLiveStreamingCharts(true);
 
       // 开屏要等“眼前这张大海报”真正下载并解码好才退场（以前只等下载完就淡出，解码还没好，会露出一下空的黑底）
-      // 退场时图标放大淡出、大海报从略大轻轻落定，衔接成一个动作；网络太慢最多等 3 秒
+      // 海报准备好后开屏直接撤掉（只做一下很短的淡出），首页就是最终画面；网络太慢最多等 3 秒
       (function hideLaunchSplash() {
         const el = document.getElementById("launchSplash");
         if (!el) return;
@@ -6377,13 +6358,8 @@
           if (done) return;
           done = true;
           clearInterval(poll);
-          const track = document.getElementById("heroTrack");
-          if (track) {
-            track.classList.add("settle");
-            setTimeout(() => track.classList.remove("settle"), 900);
-          }
           el.classList.add("hide");
-          setTimeout(() => el.remove(), 700);
+          setTimeout(() => el.remove(), 260);
         };
         let decoding = false;
         const check = () => {
@@ -6398,7 +6374,6 @@
           if (!(img.complete && img.naturalWidth > 0)) return;
           decoding = true;
           (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => {
-            img.classList.remove("pending");
             requestAnimationFrame(() => requestAnimationFrame(go));
           });
         };
@@ -6408,7 +6383,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v30";
+      const APP_BUILD = "dramov-pwa-v31";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
