@@ -26,6 +26,25 @@
       /* 三色先晕开，再慢慢流动 */
       animation: splashBgIn 0.7s ease-out both, splashDrift 6s ease-in-out infinite alternate;
     }
+    /* 屏幕最底下一段渐变成纯深色：iOS 主屏幕模式刚启动时，系统给网页的区域会先少底部一条（那条是系统画的深色），
+       过一下才扩到全屏。开屏底部和那条颜色一致，扩的时候就看不出接缝和“往下长”了 */
+    #launchSplash::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(80px + var(--splash-cy, 50vh) * 2 - 280px);
+      bottom: 0;
+      /* 底部那条系统区域最多约 34px：在离屏幕底边 45px 处已经是纯深色，往上 235px 慢慢过渡，看不出分界 */
+      background: linear-gradient(180deg,
+        rgba(5, 7, 13, 0) 0px,
+        rgba(5, 7, 13, 0.18) 60px,
+        rgba(5, 7, 13, 0.45) 120px,
+        rgba(5, 7, 13, 0.78) 180px,
+        rgba(5, 7, 13, 0.95) 215px,
+        #05070d 235px);
+      pointer-events: none;
+    }
     /* 毛玻璃底板：半透明 + 模糊，透出后面的三色，不再是一块深色卡片 */
     #launchSplash .splash-tile {
       /* 图标位置不跟着视口高度走：iOS 主屏幕模式刚启动时视口高度会变一下（先不含底部 Home 条，再变成全屏），
@@ -6714,7 +6733,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v40";
+      const APP_BUILD = "dramov-pwa-v41";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
