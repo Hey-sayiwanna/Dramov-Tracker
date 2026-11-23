@@ -21,6 +21,9 @@ const PLATFORM_DEFS = {
 // 地区专区（与 charts.js 保持一致）
 const REGION_DEFS = {
   gat: { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
+  kr: { id: "kr", country: "KR", productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" } },
+  jp: { id: "jp", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" } },
+  // 旧版「日韩」频道（已拆成韩国 / 日本），保留兼容旧链接
   jk: { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
 };
 
@@ -58,6 +61,27 @@ function withTimeout(promise, ms = 6200) {
   ]);
 }
 
+// 韩国 / 日本的片：榜单和片库按当地（KR / JP）算，但中文片名、简介取台湾的繁中资料，英文资料取美区，
+// 否则当地片在 KR / JP 区没有中文标题，只会显示韩文 / 日文或拼音
+function localizeQuery(query, variables) {
+  const v = Object.assign({}, variables || {});
+  if (!v.zhCountry && !v.enCountry) return { query, variables: v };
+  let q = query;
+  const decl = [];
+  for (const [lang, key] of [["zh", "zhCountry"], ["en", "enCountry"]]) {
+    if (!v[key]) continue;
+    const re = new RegExp('content\\(country: \\$country, language: "' + lang + '"\\)', "g");
+    if (re.test(q)) {
+      q = q.replace(re, 'content(country: $' + key + ', language: "' + lang + '")');
+      decl.push("$" + key + ": Country!");
+    } else {
+      delete v[key];
+    }
+  }
+  if (decl.length) q = q.replace(/\(\$country: Country!/, "($country: Country!, " + decl.join(", "));
+  return { query: q, variables: v };
+}
+
 async function queryUpstream(query, variables = {}, timeoutMs = 6200) {
   const res = await withTimeout(
     fetch(GRAPHQL_ENDPOINT, {
@@ -67,7 +91,7 @@ async function queryUpstream(query, variables = {}, timeoutMs = 6200) {
         "Content-Type": "application/json",
         Accept: "application/json"
       },
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify(localizeQuery(query, variables))
     }),
     timeoutMs
   );
@@ -458,6 +482,7 @@ module.exports = async (req, res) => {
     const region = REGION_DEFS[q.platform] || null;
     const platformId = region ? region.id : PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
     const scopeCountry = region ? region.country : country;
+    const regionLocale = (region && region.locale) || {};
     // 平台按上架服务筛，地区按出品国家筛
     const scopeFilter = region ? { productionCountries: region.productionCountries } : null;
     const bandIdx = Math.max(0, Math.min(SCORE_BANDS.length - 1, Number(q.band) || 0));
@@ -484,7 +509,7 @@ module.exports = async (req, res) => {
         streams.map((f, i) =>
           cursors[i] === null
             ? Promise.resolve(null)
-            : queryUpstream(CATALOG_PAGE_QUERY, { country: scopeCountry, first: 60, after: cursors[i] || null, filter: scope(f) }).catch(() => "ERR")
+            : queryUpstream(CATALOG_PAGE_QUERY, { country: scopeCountry, ...regionLocale, first: 60, after: cursors[i] || null, filter: scope(f) }).catch(() => "ERR")
         )
       );
       const okAny = results.some((r) => r && r !== "ERR" && r.data && r.data.popularTitles);
@@ -528,6 +553,7 @@ module.exports = async (req, res) => {
       const band = SCORE_BANDS[bandIdx];
       const rBand = await queryUpstream(CATALOG_PAGE_QUERY, {
         country: scopeCountry,
+        ...regionLocale,
         first: 60,
         after: cursor,
         filter: scope({ imdbScore: { min: band.min, max: band.max } })
@@ -565,6 +591,7 @@ module.exports = async (req, res) => {
     for (let step = 0; step < 3 && hasNext; step++) {
       const rDeep = await queryUpstream(CATALOG_PAGE_QUERY, {
         country: scopeCountry,
+        ...regionLocale,
         first: 65,
         after: curAfter,
         filter: scope()

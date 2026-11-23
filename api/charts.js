@@ -20,17 +20,77 @@ const PLATFORM_DEFS = [
 // 可选的排行地区（JustWatch 每日榜是按国家分的，没有真正的「全球榜」）
 const CHART_REGIONS = ["US", "SG", "TW", "HK", "GB", "JP", "KR"];
 
-// 地区专区：按出品地区筛选（港澳台用台湾片库，日韩用美区片库）
+// 地区专区：看“当地人在看什么”，用当地的每日流媒体榜（JustWatch 按该国用户的实际点击/观看意向统计，
+// 覆盖当地所有平台：韩国 TVING / Wavve / Coupang Play / Netflix…，日本 U-NEXT / ABEMA / TVer / Netflix…，
+// 台湾 friDay / myVideo / KKTV / CATCHPLAY+ / Netflix…，香港 myTV SUPER / Viu / Netflix…），只收当地出品的剧和电影。
+// 港澳台：台湾榜 + 香港榜合并计分（两边都热的排更前；JustWatch 没有澳门站）
 const REGION_DEFS = [
-  { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
-  { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
+  { id: "gat", countries: ["TW", "HK"], productionCountries: ["TW", "HK", "MO"] },
+  { id: "kr", countries: ["KR"], productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" } },
+  // 日本榜只收日剧和电影：动画番剧另算，不然会被动画占满
+  { id: "jp", countries: ["JP"], productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, skipAnimeShows: true }
 ];
+const REGION_TASKS = REGION_DEFS.flatMap((rg) => rg.countries.map((c) => ({ rg, country: c })));
+
+// 一个地区一份榜：各国榜按名次给分（第 1 名 1/2、第 2 名 1/3…，剧和电影各自排名），多国合并相加；
+// 最后取 7 部剧 + 3 部电影（不够时互相补齐），按分数排
+function buildRegionChart(rg, edgeLists) {
+  const scored = new Map();
+  edgeLists.forEach((edges) => {
+    const items = sortByChartRank(
+      (edges || [])
+        .map((e, i) => normalizeNode(e.node, rg.id, i))
+        .filter((x) => x.title && !x.isDoc && !(rg.skipAnimeShows && x.mediaType === "show" && x.isAnime))
+    );
+    const pos = { show: 0, movie: 0 };
+    items.forEach((it) => {
+      const p = pos[it.mediaType]++;
+      const key = it.jwId || it.enTitle;
+      const pts = 1 / (p + 2);
+      const cur = scored.get(key);
+      if (cur) {
+        cur.s += pts;
+        cur.best = Math.min(cur.best, p);
+      } else {
+        scored.set(key, { it, s: pts, best: p });
+      }
+    });
+  });
+  const byScore = (a, b) => b.s - a.s || a.best - b.best;
+  const all = Array.from(scored.values()).sort(byScore);
+  const shows = all.filter((x) => x.it.mediaType === "show");
+  const movies = all.filter((x) => x.it.mediaType === "movie");
+  const nMovies = Math.min(movies.length, Math.max(3, 10 - shows.length));
+  const nShows = Math.min(shows.length, 10 - nMovies);
+  return shows.slice(0, nShows).concat(movies.slice(0, nMovies)).sort(byScore).map((x) => x.it);
+}
 
 function withTimeout(promise, ms = 5800) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))
   ]);
+}
+
+// 韩国 / 日本的片：榜单和片库按当地（KR / JP）算，但中文片名、简介取台湾的繁中资料，英文资料取美区，
+// 否则当地片在 KR / JP 区没有中文标题，只会显示韩文 / 日文或拼音
+function localizeQuery(query, variables) {
+  const v = Object.assign({}, variables || {});
+  if (!v.zhCountry && !v.enCountry) return { query, variables: v };
+  let q = query;
+  const decl = [];
+  for (const [lang, key] of [["zh", "zhCountry"], ["en", "enCountry"]]) {
+    if (!v[key]) continue;
+    const re = new RegExp('content\\(country: \\$country, language: "' + lang + '"\\)', "g");
+    if (re.test(q)) {
+      q = q.replace(re, 'content(country: $' + key + ', language: "' + lang + '")');
+      decl.push("$" + key + ": Country!");
+    } else {
+      delete v[key];
+    }
+  }
+  if (decl.length) q = q.replace(/\(\$country: Country!/, "($country: Country!, " + decl.join(", "));
+  return { query: q, variables: v };
 }
 
 async function queryUpstream(query, variables = {}, timeoutMs = 5800) {
@@ -42,7 +102,7 @@ async function queryUpstream(query, variables = {}, timeoutMs = 5800) {
         "Content-Type": "application/json",
         Accept: "application/json"
       },
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify(localizeQuery(query, variables))
     }),
     timeoutMs
   );
@@ -258,8 +318,8 @@ async function resolveProviderMeta(country = "US") {
   return { codeMap, iconMap, available };
 }
 
-async function fetchTitlesWithFilter(filter, count = 10, country = "US") {
-  const vars = { country, first: count, filter };
+async function fetchTitlesWithFilter(filter, count = 10, country = "US", locale = null) {
+  const vars = Object.assign({ country, first: count, filter }, locale || {});
   try {
     const r0 = await queryUpstream(POPULAR_RICH_QUERY, vars);
     const edges0 = r0?.data?.popularTitles?.edges || [];
@@ -357,6 +417,7 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     mediaType: isShow ? "show" : "movie",
     // 纪录片和视频播客（Podcast）都不进榜单
     isDoc: rawGenres.some((g) => g.shortName === "doc") || /podcast/i.test(`${en.title || ""} ${zh.title || ""}`),
+    isAnime: rawGenres.some((g) => g.shortName === "ani"),
     hasEpisodes: isShow,
     platformId: defaultPlatformId || Array.from(providersSet)[0] || "netflix",
     providers: Array.from(providersSet),
@@ -530,15 +591,16 @@ module.exports = async (req, res) => {
         regionOf[def.id] = "US";
         return fetchTitlesWithFilter({ packages: usMeta.codeMap[def.id], objectTypes: ["MOVIE", "SHOW"] }, 24, "US");
       }),
-      // 地区专区
-      ...REGION_DEFS.map((rg) =>
+      // 地区专区：每个地区的每个国家各拉一份当地榜（当地出品，剧 + 电影）
+      ...REGION_TASKS.map(({ rg, country: c }) =>
         fetchTitlesWithFilter(
           {
             productionCountries: rg.productionCountries,
             objectTypes: ["MOVIE", "SHOW"]
           },
-          24,
-          rg.country
+          40,
+          c,
+          rg.locale || null
         )
       )
     ];
@@ -592,14 +654,14 @@ module.exports = async (req, res) => {
             ).slice(0, 10)
           : [];
     });
-    REGION_DEFS.forEach((rg, idx) => {
-      const s = settled[PLATFORM_DEFS.length + 3 + idx];
-      chartsByPlatform[rg.id] =
-        s && s.status === "fulfilled" && s.value.length
-          ? sortByChartRank(
-              s.value.map((e, rankIdx) => normalizeNode(e.node, rg.id, rankIdx)).filter((x) => x.title && !x.isDoc)
-            ).slice(0, 10)
-          : [];
+    REGION_DEFS.forEach((rg) => {
+      const lists = [];
+      REGION_TASKS.forEach((t, ti) => {
+        if (t.rg !== rg) return;
+        const s = settled[PLATFORM_DEFS.length + 3 + ti];
+        if (s && s.status === "fulfilled" && s.value.length) lists.push(s.value);
+      });
+      chartsByPlatform[rg.id] = lists.length ? buildRegionChart(rg, lists) : [];
     });
 
     const totalFetched = Object.values(chartsByPlatform).reduce((acc, arr) => acc + arr.length, 0);
