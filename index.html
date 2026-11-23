@@ -6,7 +6,11 @@
   <style>
     html, body { background: #05070d; }
     #launchSplash {
-      position: fixed; inset: 0; z-index: 2147483000;
+      /* 上下各多盖出一截：iPad / iPhone 主屏幕模式下 inset:0 有时盖不到最底下的 Home 条区域，会露出一条 */
+      position: fixed; top: -80px; left: 0; right: 0; bottom: -160px;
+      padding: 80px 0 160px;
+      box-sizing: border-box;
+      z-index: 2147483000;
       display: flex; align-items: center; justify-content: center;
       overflow: hidden;
       background: #05070d;
@@ -2003,14 +2007,11 @@
 
       <!-- Platform Reorder & Hide Section (Inline right inside Settings!) -->
       <div class="surface-card" style="margin-bottom: 14px;">
-        <div class="row-between" style="margin-bottom: 6px;">
+        <div class="row-between" style="margin-bottom: 12px;">
           <div style="font-size: 16px; font-weight: 700;">首页流媒体平台排序与隐藏</div>
           <button id="resetPlatformsBtn" type="button" style="border: none; background: transparent; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer;">
             恢复默认
           </button>
-        </div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
-          上下调换首页各平台 Top 10 榜单排列顺序，关闭开关即可隐藏该平台（首页顶部全网 8 部新剧巨幅海报也会自动从你开启的平台中选出）。
         </div>
         <div id="platformOrderList" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>
@@ -2360,13 +2361,17 @@
         if (/400x600bb/.test(src)) return src.replace("400x600bb", "600x900bb");
         return src + (src.includes("?") ? "&" : "?") + "r=1";
       }
+      // 海报加载失败：先换个尺寸重试，再带参数重试一次，都不行才用占位图（以前只重试一次，4G 抖一下就空着）
       window.dramovImgErr = function (img, fallback) {
         const src = img.getAttribute("src") || "";
-        if (!img.dataset.retried && src && !src.startsWith("data:")) {
-          img.dataset.retried = "1";
+        const tries = Number(img.dataset.retried || 0);
+        if (tries < 2 && src && !src.startsWith("data:")) {
+          img.dataset.retried = String(tries + 1);
+          img.dataset.orig = img.dataset.orig || src;
+          img.loading = "eager";
           setTimeout(() => {
-            img.src = posterRetryUrl(src);
-          }, 600);
+            img.src = tries === 0 ? posterRetryUrl(src) : img.dataset.orig + (img.dataset.orig.includes("?") ? "&" : "?") + "r=" + Date.now();
+          }, tries === 0 ? 500 : 1500);
           return;
         }
         img.onerror = null;
@@ -2380,20 +2385,51 @@
         if (now - lastStallArm < 1000) return; // 滚动事件很密，一秒最多重新计时一次
         lastStallArm = now;
         clearTimeout(stallTimer);
-        stallTimer = setTimeout(() => {
-          const vh = window.innerHeight;
-          const vw = window.innerWidth;
-          document.querySelectorAll("img[data-thumbimg]").forEach((img) => {
-            if (img.complete || img.dataset.retried) return;
-            const src = img.getAttribute("src") || "";
-            if (!src || src.startsWith("data:")) return;
-            const r = img.getBoundingClientRect();
-            if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw || !r.width) return;
-            img.dataset.retried = "1";
-            img.src = posterRetryUrl(src);
-          });
-        }, 8000);
+        stallTimer = setTimeout(posterWatchdog, 6000);
       }
+      // 海报看门狗：屏幕上（含附近）的海报，6 秒还没出来、或者“加载完了却是空图”，就当失败处理（重试 → 占位图）。
+      // iOS 上横向滚动区里的懒加载图偶尔一直不开始下载，所以先改成立即加载再重拉；以前只在滚动时检查一次，停着不动就一直空着
+      function posterWatchdog() {
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+        const now = Date.now();
+        document.querySelectorAll("img[data-thumbimg], img.hero-slide-img").forEach((img) => {
+          const src = img.getAttribute("src") || "";
+          if (!src || src.startsWith("data:")) return;
+          const r = img.getBoundingClientRect();
+          if (!r.width || r.bottom < -200 || r.top > vh + 200 || r.right < -200 || r.left > vw + 200) return;
+          const broken = img.complete && img.naturalWidth === 0;
+          if (img.complete && !broken) return;
+          if (!broken) {
+            // 还在加载：记下第一次看到它的时间，超过 6 秒再处理，不打断正常的慢加载
+            const seen = Number(img.dataset.wdSeen || 0);
+            if (!seen) {
+              img.dataset.wdSeen = String(now);
+              if (img.loading === "lazy") img.loading = "eager";
+              return;
+            }
+            if (now - seen < 6000) return;
+          }
+          img.dataset.wdSeen = String(now);
+          img.dispatchEvent(new Event("error"));
+        });
+      }
+      // 启动后的前 40 秒、以及每次回到前台，每 3 秒巡查一次
+      let watchdogTicks = 0;
+      let watchdogTimer = null;
+      function startPosterWatchdog() {
+        watchdogTicks = 0;
+        clearInterval(watchdogTimer);
+        watchdogTimer = setInterval(() => {
+          if (document.hidden) return;
+          posterWatchdog();
+          if (++watchdogTicks >= 14) clearInterval(watchdogTimer);
+        }, 3000);
+      }
+      startPosterWatchdog();
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) startPosterWatchdog();
+      });
       window.addEventListener("scroll", () => checkStalledPosters(), { passive: true });
       document.addEventListener("scroll", (e) => {
         if (e.target && e.target !== document) checkStalledPosters();
@@ -2425,8 +2461,8 @@
       Object.assign(I18N_HANT, {"榜单地区": "榜單地區", "每日热度榜按这个国家 / 地区排名；该地区没有的平台自动用美区": "每日熱度榜按這個國家 / 地區排名；該地區沒有的平台自動用美區", "美国（默认）": "美國（預設）", "台湾": "台灣", "正在切换榜单地区…": "正在切換榜單地區…", "榜单地区已切换": "榜單地區已切換"});
       Object.assign(I18N_EN, {"其他平台": "Other services", "正在全网搜索…": "Searching online…", "暂未查到正版流媒体平台": "No streaming service found yet", "Apple TV（租借 / 购买）": "Apple TV (rent / buy)"});
       Object.assign(I18N_HANT, {"正在全网搜索…": "正在全網搜尋…", "暂未查到正版流媒体平台": "暫未查到正版流媒體平台", "Apple TV（租借 / 购买）": "Apple TV（租借 / 購買）"});
-      Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "港澳台 · 当地人在看的本土剧和电影": "HK · Macau · TW: local hits", "韩国 · 韩国人在看的韩剧和电影": "Korea: what Koreans are watching", "日本 · 日本人在看的日剧和电影": "Japan: what Japan is watching", "韩国": "Korea", "日本": "Japan", "韩剧": "K-Drama", "日剧": "J-Drama", "支持切换地区": "Follows chart region", "仅美区榜单": "US chart only", "网络不太好，点这里重试": "Network issue. Tap to retry", "日本动画": "Anime", "日本动画 · 日本人在看的番剧和动画电影": "Anime: what Japan is watching", "港澳台 · 台湾为主的热播剧和电影": "HK · Macau · TW (Taiwan-led) hits", "内地": "Mainland", "在台湾能看的内地剧和电影，按热度和口碑排序": "Mainland titles available in Taiwan, ranked by buzz and ratings", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
-      Object.assign(I18N_HANT, {"日韩": "日韓", "韩国": "韓國", "韩剧": "韓劇", "日剧": "日劇", "支持切换地区": "支援切換地區", "仅美区榜单": "僅美區榜單", "网络不太好，点这里重试": "網路不太好，點這裡重試", "日本动画": "日本動畫", "日本动画 · 日本人在看的番剧和动画电影": "日本動畫 · 日本人在看的番劇和動畫電影", "港澳台 · 台湾为主的热播剧和电影": "港澳台 · 台灣為主的熱播劇和電影", "在台湾能看的内地剧和电影，按热度和口碑排序": "在台灣能看的內地劇和電影，按熱度和口碑排序", "港澳台 · 当地人在看的本土剧和电影": "港澳台 · 當地人在看的本土劇和電影", "韩国 · 韩国人在看的韩剧和电影": "韓國 · 韓國人在看的韓劇和電影", "日本 · 日本人在看的日剧和电影": "日本 · 日本人在看的日劇和電影", "完整赛程": "完整賽程", "未来六周赛程": "未來六週賽程", "时间待定": "時間待定", "大赛": "大賽", "榜单暂时没拿到，稍后下拉刷新": "榜單暫時沒拿到，稍後下拉刷新", "时间已换算为本机时区；节目安排以官方为准": "時間已換算為本機時區；節目安排以官方為準", "ESPN（美国）· Netflix（美国以外）": "ESPN（美國）· Netflix（美國以外）", "港澳台 · 华语出品": "港澳台 · 華語出品", "日韩 · 日剧韩剧动画": "日韓 · 日劇韓劇動畫", "擂台 · WWE / AEW / UFC 赛程": "擂台 · WWE / AEW / UFC 賽程", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏"});
+      Object.assign(I18N_EN, {"美国以外": "outside US", "美国": "US", "港澳台": "HK · Macau · TW", "日韩": "Japan & Korea", "擂台": "Wrestling & UFC", "完整赛程": "Full schedule", "未来六周赛程": "Next 6 weeks", "时间待定": "Time TBA", "大赛": "Big event", "榜单暂时没拿到，稍后下拉刷新": "Chart unavailable right now. Try refreshing later.", "时间已换算为本机时区；节目安排以官方为准": "Times are in your time zone. Schedules may change.", "ESPN（美国）· Netflix（美国以外）": "ESPN (US) · Netflix (outside US)", "港澳台 · 华语出品": "HK · Macau · Taiwan productions", "日韩 · 日剧韩剧动画": "Japanese & Korean shows and anime", "港澳台 · 当地人在看的本土剧和电影": "HK · Macau · TW: local hits", "韩国 · 韩国人在看的韩剧和电影": "Korea: what Koreans are watching", "日本 · 日本人在看的日剧和电影": "Japan: what Japan is watching", "韩国": "Korea", "日本": "Japan", "韩剧": "K-Drama", "日剧": "J-Drama", "支持切换地区": "Follows chart region", "仅美区榜单": "US chart only", "仅港澳台": "HK·MO·TW only", "仅韩区": "Korea only", "仅日区": "Japan only", "可换区": "Any region", "仅美区": "US only", "网络不太好，点这里重试": "Network issue. Tap to retry", "日本动画": "Anime", "日本动画 · 日本人在看的番剧和动画电影": "Anime: what Japan is watching", "港澳台 · 台湾为主的热播剧和电影": "HK · Macau · TW (Taiwan-led) hits", "内地": "Mainland", "在台湾能看的内地剧和电影，按热度和口碑排序": "Mainland titles available in Taiwan, ranked by buzz and ratings", "擂台 · WWE / AEW / UFC 赛程": "Wrestling & UFC: WWE / AEW / UFC schedule", "已恢复默认六大平台顺序": "Order reset", "首页流媒体平台排序与隐藏": "Home channels: order & visibility"});
+      Object.assign(I18N_HANT, {"日韩": "日韓", "韩国": "韓國", "韩剧": "韓劇", "日剧": "日劇", "支持切换地区": "支援切換地區", "仅美区榜单": "僅美區榜單", "仅港澳台": "僅港澳台", "仅韩区": "僅韓區", "仅日区": "僅日區", "可换区": "可換區", "仅美区": "僅美區", "网络不太好，点这里重试": "網路不太好，點這裡重試", "日本动画": "日本動畫", "日本动画 · 日本人在看的番剧和动画电影": "日本動畫 · 日本人在看的番劇和動畫電影", "港澳台 · 台湾为主的热播剧和电影": "港澳台 · 台灣為主的熱播劇和電影", "在台湾能看的内地剧和电影，按热度和口碑排序": "在台灣能看的內地劇和電影，按熱度和口碑排序", "港澳台 · 当地人在看的本土剧和电影": "港澳台 · 當地人在看的本土劇和電影", "韩国 · 韩国人在看的韩剧和电影": "韓國 · 韓國人在看的韓劇和電影", "日本 · 日本人在看的日剧和电影": "日本 · 日本人在看的日劇和電影", "完整赛程": "完整賽程", "未来六周赛程": "未來六週賽程", "时间待定": "時間待定", "大赛": "大賽", "榜单暂时没拿到，稍后下拉刷新": "榜單暫時沒拿到，稍後下拉刷新", "时间已换算为本机时区；节目安排以官方为准": "時間已換算為本機時區；節目安排以官方為準", "ESPN（美国）· Netflix（美国以外）": "ESPN（美國）· Netflix（美國以外）", "港澳台 · 华语出品": "港澳台 · 華語出品", "日韩 · 日剧韩剧动画": "日韓 · 日劇韓劇動畫", "擂台 · WWE / AEW / UFC 赛程": "擂台 · WWE / AEW / UFC 賽程", "已恢复默认六大平台顺序": "已恢復預設六大平台順序", "首页流媒体平台排序与隐藏": "首頁流媒體平台排序與隱藏"});
       // 按首字建索引，逐字转换时只比对以该字开头的词
       const I18N_HANT_PHRASE_INDEX = new Map();
       Object.keys(I18N_HANT_PHRASES)
@@ -4185,16 +4221,16 @@
             const isShown = !hidden.has(pid);
             return `
               <div class="row-between" style="background: var(--pill-bg); border: 1px solid var(--pill-border); border-radius: 14px; padding: 10px 12px;">
-                <div class="row-center" style="min-width: 0; flex: 1; margin-right: 8px;">
+                <div class="row-center" style="min-width: 0; flex: 1; margin-right: 4px;">
                   ${renderBrandIconHtml(pid, "brand-icon-wrap")}
-                  <div style="min-width: 0; flex: 1;">
-                    <div style="font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(pm.cnName)}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">${isShown ? `首页顺位 #${idx + 1}` : "已在首页隐藏"}${pm.kind ? "" : ` · ${platformFollowsRegion(pid) ? "支持切换地区" : "仅美区榜单"}`}</div>
+                  <div style="min-width: 0; flex: 1; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden;">
+                    <span style="font-size: 13.5px; font-weight: 700; flex-shrink: 0;">${escapeHtml(pm.name)}</span>
+                    ${platformRegionTag(pid) ? `<span style="font-size: 11px; color: var(--text-muted); flex-shrink: 0;">${platformRegionTag(pid)}</span>` : ""}
                   </div>
                 </div>
-                <div class="row-center" style="flex-shrink: 0;">
-                  <button type="button" class="btn-action" data-pmove="up" data-pid="${pid}" style="flex:0 0 auto;width:32px;height:30px;padding:0;" ${idx === 0 ? "disabled" : ""}>↑</button>
-                  <button type="button" class="btn-action" data-pmove="down" data-pid="${pid}" style="flex:0 0 auto;width:32px;height:30px;padding:0;" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
+                <div class="row-center" style="flex-shrink: 0; gap: 5px;">
+                  <button type="button" class="btn-action" data-pmove="up" data-pid="${pid}" style="flex:0 0 auto;width:28px;height:30px;padding:0;" ${idx === 0 ? "disabled" : ""}>↑</button>
+                  <button type="button" class="btn-action" data-pmove="down" data-pid="${pid}" style="flex:0 0 auto;width:28px;height:30px;padding:0;" ${idx === order.length - 1 ? "disabled" : ""}>↓</button>
                   <button type="button" class="switch-btn ${isShown ? "on" : ""}" data-ptoggle="${pid}" role="switch" aria-checked="${isShown}">
                     <span class="switch-knob"></span>
                   </button>
@@ -4661,10 +4697,7 @@
           b.classList.toggle("active", b.getAttribute("data-sort") === platformSort);
         });
         const note = document.getElementById("platformListNote");
-        if (note && feedKey === "gat") {
-          note.textContent = "在台湾能看的内地剧和电影，按热度和口碑排序";
-          note.style.display = platformSort === "mainland" ? "block" : "none";
-        }
+        if (note && feedKey === "gat") note.style.display = "none";
       }
 
       function switchPlatformSort(nextSort) {
@@ -5256,7 +5289,13 @@
         const sm = thumbSrc || hdSrc;
         if (sm) {
           document.querySelectorAll(`img[data-thumbimg="${CSS.escape(k)}"]`).forEach((img) => {
-            if (img.src !== sm) img.src = sm;
+            if (img.src !== sm) {
+              // 换了新海报地址：重试计数清零，看门狗重新计时
+              delete img.dataset.retried;
+              delete img.dataset.orig;
+              delete img.dataset.wdSeen;
+              img.src = sm;
+            }
           });
         }
       }
@@ -5461,6 +5500,15 @@
         if (region === "US") return !usOnly;
         if (liveRegionOf && liveRegionOf[pid]) return liveRegionOf[pid] === region;
         return !usOnly;
+      }
+      // 设置里平台名后面的地区说明（擂台不写）
+      function platformRegionTag(pid) {
+        const pm = PLATFORM_MAP[pid];
+        if (!pm || pm.kind === "schedule") return "";
+        // 字要短，和名字排成一行不被截断
+        const fixed = { gat: "仅港澳台", kr: "仅韩区", jp: "仅日区", jpani: "仅日区" };
+        if (pm.kind === "region") return fixed[pid] || "";
+        return platformFollowsRegion(pid) ? "可换区" : "仅美区";
       }
       function getChartRegion() {
         try {
@@ -6599,7 +6647,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v36";
+      const APP_BUILD = "dramov-pwa-v37";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
