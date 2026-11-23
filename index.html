@@ -1965,7 +1965,12 @@
         var screenH = land ? Math.min(sw, sh) : Math.max(sw, sh);
         var h = window.innerHeight;
         var useH = screenH && h >= screenH * 0.85 && h <= screenH ? screenH : h;
-        document.getElementById("launchSplash").style.setProperty("--splash-cy", useH / 2 + "px");
+        var sp = document.getElementById("launchSplash");
+        sp.style.setProperty("--splash-cy", useH / 2 + "px");
+        // 开屏整块的高度也按屏幕定死（上下各多出一截），不跟着视口变：
+        // iPad 刚启动时视口高度会变一下，以前开屏底边和底部的颜色会跟着往下挪
+        sp.style.bottom = "auto";
+        sp.style.height = Math.max(useH, h) + 240 + "px";
       } catch (e) {}
     })();
     // 保险：不管加载中出了什么问题，3 秒后一定撤掉开屏
@@ -6709,7 +6714,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v39";
+      const APP_BUILD = "dramov-pwa-v40";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
