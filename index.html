@@ -64,6 +64,14 @@
     /* 退场：毛玻璃图标放大并渐隐，开屏底色随后淡出（只动开屏自己，不碰首页） */
     /* 用关键帧做退场：出场动画带 fill-mode，iOS 上直接改 transform 不会触发过渡，图标就不会放大 */
     #launchSplash.hide { pointer-events: none; animation: splashBgOut 0.45s ease 0.3s both; }
+    /* 开屏期间先把底部毛玻璃导航栏藏起来：iPhone 上带模糊的固定元素偶尔会穿透到开屏上面闪一下。
+       开屏淡完后导航栏再从下方轻轻升上来（只动位置，不动透明度） */
+    html.splash-on #bottomNavWrap { visibility: hidden; }
+    #bottomNavWrap.nav-enter { animation: navEnter 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    @keyframes navEnter {
+      from { transform: translate3d(0, 26px, 0); }
+      to { transform: translate3d(0, 0, 0); }
+    }
     #launchSplash.hide .splash-tile { animation: splashIconOut 0.6s ease-out both; }
     @keyframes splashIconOut {
       0% { opacity: 1; transform: scale(1); }
@@ -1961,7 +1969,12 @@
       } catch (e) {}
     })();
     // 保险：不管加载中出了什么问题，3 秒后一定撤掉开屏
-    setTimeout(function () { var e = document.getElementById("launchSplash"); if (e) e.remove(); }, 5000);
+    document.documentElement.classList.add("splash-on");
+    setTimeout(function () {
+      var e = document.getElementById("launchSplash");
+      if (e) e.remove();
+      document.documentElement.classList.remove("splash-on");
+    }, 5000);
   </script>
   <div id="mainViewsWrap">
   <!-- 首页 / 搜索 / 片单 / 设置：原生横向分页（左右滑动切换，系统滚动驱动；首页上的横滑榜单自己滚，不会带着翻页） -->
@@ -6654,6 +6667,15 @@
           const wait = Math.max(0, (window.__splashT0 || 0) + ENTER_MS - performance.now());
           setTimeout(() => {
             el.classList.add("hide");
+            // 开屏淡完（0.3s 延迟 + 0.45s）的那一刻放出导航栏，再撤掉开屏
+            setTimeout(() => {
+              const nav = document.getElementById("bottomNavWrap");
+              document.documentElement.classList.remove("splash-on");
+              if (nav) {
+                nav.classList.add("nav-enter");
+                setTimeout(() => nav.classList.remove("nav-enter"), 500);
+              }
+            }, 720);
             setTimeout(() => el.remove(), 900);
           }, wait);
         };
@@ -6687,7 +6709,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v38";
+      const APP_BUILD = "dramov-pwa-v39";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
