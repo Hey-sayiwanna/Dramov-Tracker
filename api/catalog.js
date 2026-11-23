@@ -20,12 +20,13 @@ const PLATFORM_DEFS = {
 
 // 地区专区（与 charts.js 保持一致）
 const REGION_DEFS = {
-  gat: { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
-  kr: { id: "kr", country: "KR", productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" } },
-  jp: { id: "jp", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, skipAnime: true },
-  jpani: { id: "jpani", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, animeOnly: true },
+  gat: { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"], home: ["TW", "HK", "MO", "CN"], script: /[\u3400-\u9fff]/ },
+  kr: { id: "kr", country: "KR", productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" }, home: ["KR"], script: /[\uac00-\ud7af]/ },
+  jp: { id: "jp", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, skipAnime: true, home: ["JP"], script: /[\u3040-\u30ff\u3400-\u9fff]/ },
+  jpani: { id: "jpani", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, animeOnly: true, home: ["JP"], script: /[\u3040-\u30ff\u3400-\u9fff]/ },
   // 港澳台 ›「内地」：在台湾有上架的内地剧和电影
-  gatcn: { id: "gat", country: "TW", productionCountries: ["CN"], requireOffer: true },
+  // 在台湾有上架就收（包括在内地下架、被禁的），出品方必须都是内地（含与港台合拍）
+  gatcn: { id: "gat", country: "TW", productionCountries: ["CN"], requireOffer: true, home: ["CN"], script: /[\u3400-\u9fff]/ },
   // 旧版「日韩」频道（已拆成韩国 / 日本），保留兼容旧链接
   jk: { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
 };
@@ -99,7 +100,13 @@ async function queryUpstream(query, variables = {}, timeoutMs = 6200) {
     timeoutMs
   );
   if (!res.ok) throw new Error("Upstream HTTP " + res.status);
-  return res.json();
+  const json = await res.json();
+  // 万一 JustWatch 不认新加的字段（出品国家 / 原名），去掉这两个字段再查一次，片库不至于整个空掉
+  if (json && json.errors && !(json.data && json.data.popularTitles) && /originalTitle|productionCountries/.test(query)) {
+    const q2 = query.replace(/\n\s*originalTitle\b/g, "").replace(/\n\s*productionCountries\b(?!:)/g, "");
+    if (q2 !== query) return queryUpstream(q2, variables, timeoutMs);
+  }
+  return json;
 }
 
 const PACKAGES_QUERY = `
@@ -130,6 +137,8 @@ query GetPlatformCatalog($country: Country!, $first: Int!, $after: String, $filt
         }
         contentEn: content(country: $country, language: "en") {
           title
+          originalTitle
+          productionCountries
           originalReleaseYear
           originalReleaseDate
           shortDescription
@@ -216,6 +225,14 @@ async function resolveCodeMap(country = "US") {
     });
   } catch (e) {}
   return map;
+}
+
+// 出品地核对：JustWatch 的「出品国家」筛选会把有当地资金参与的好莱坞片也算进来，再看一遍出品国家 / 原名
+function isHomeProduction(it, homeCountries, script) {
+  const pcs = Array.isArray(it._pcs) ? it._pcs.filter(Boolean) : [];
+  if (pcs.length) return pcs.every((c) => homeCountries.includes(c));
+  if (it._origTitle) return script.test(it._origTitle);
+  return true;
 }
 
 function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
@@ -305,6 +322,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     heat: Math.round((Number(sc.tmdbPopularity) || Math.max(50, 1000 - rankOrder * 8)) * 10) / 10,
     _pop: Number(sc.tmdbPopularity) || 0,
     _isAnime: rawGenres.some((g) => g.shortName === "ani"),
+    _pcs: Array.isArray(en.productionCountries) ? en.productionCountries : null,
+    _origTitle: en.originalTitle || "",
     _hasOffer: offers.some((o) => o && o.monetizationType !== "CINEMA"),
     _imdbRaw: imdb || 0,
     imdb: finalScore,
@@ -366,6 +385,8 @@ function stripPrivate(items) {
     const o = Object.assign({}, it);
     delete o._pop;
     delete o._isAnime;
+    delete o._pcs;
+    delete o._origTitle;
     delete o._hasOffer;
     delete o._imdbRaw;
     delete o._streamIdx;
@@ -491,7 +512,11 @@ module.exports = async (req, res) => {
     // 地区片库的额外规则：日本剧和动画分开；港澳台的内地片必须在台湾有上架
     const keepForRegion = (it) =>
       !region ||
-      ((!region.skipAnime || !it._isAnime) && (!region.animeOnly || it._isAnime) && (!region.requireOffer || it._hasOffer));
+      ((!region.skipAnime || !it._isAnime) &&
+        (!region.animeOnly || it._isAnime) &&
+        (!region.requireOffer || it._hasOffer) &&
+        (!region.home || isHomeProduction(it, region.home, region.script)));
+
     const platformId = region ? region.id : PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
     const scopeCountry = region ? region.country : country;
     const regionLocale = (region && region.locale) || {};

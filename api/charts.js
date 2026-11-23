@@ -27,10 +27,22 @@ const CHART_REGIONS = ["US", "SG", "TW", "HK", "GB", "JP", "KR"];
 //         内地剧还必须在台湾有引进（只在香港能看的不算）。前十完全按热度，谁热谁上
 // 日本：剧和动画分开，「日本」只收真人剧和电影，「日本动画」只收动画番剧和动画电影
 const LOCALE_ZH_TW = { zhCountry: "TW", enCountry: "US" };
+// 出品地核对：JustWatch 的「出品国家」筛选会把有当地资金参与的好莱坞片也算进来（比如《小人物》《3 体》），
+// 所以再看一遍：出品国家全部在当地范围内；拿不到出品国家时，看原名是不是当地文字
+const SCRIPT_HAN = /[\u3400-\u9fff]/;
+const SCRIPT_KR = /[\uac00-\ud7af]/;
+const SCRIPT_JP = /[\u3040-\u30ff\u3400-\u9fff]/;
+function isHomeProduction(it, homeCountries, script) {
+  const pcs = Array.isArray(it.productionCountries) ? it.productionCountries.filter(Boolean) : [];
+  if (pcs.length) return pcs.every((c) => homeCountries.includes(c));
+  if (it.originalTitle) return script.test(it.originalTitle);
+  return true;
+}
 const REGION_DEFS = [
   {
     id: "gat",
     requireOffer: true,
+    home: { countries: ["CN", "HK", "TW", "MO"], script: SCRIPT_HAN },
     mix: [7, 3],
     sources: [
       { country: "TW", productionCountries: ["TW", "HK", "MO"], weight: 1 },
@@ -39,9 +51,9 @@ const REGION_DEFS = [
       { country: "HK", productionCountries: ["CN"], weight: 0.5, mustBeInTW: true }
     ]
   },
-  { id: "kr", mix: [7, 3], sources: [{ country: "KR", productionCountries: ["KR"], weight: 1, locale: LOCALE_ZH_TW }] },
-  { id: "jp", mix: [7, 3], skipAnime: true, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] },
-  { id: "jpani", mix: null, animeOnly: true, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] }
+  { id: "kr", mix: [7, 3], home: { countries: ["KR"], script: SCRIPT_KR }, sources: [{ country: "KR", productionCountries: ["KR"], weight: 1, locale: LOCALE_ZH_TW }] },
+  { id: "jp", mix: [7, 3], skipAnime: true, home: { countries: ["JP"], script: SCRIPT_JP }, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] },
+  { id: "jpani", mix: null, animeOnly: true, home: { countries: ["JP"], script: SCRIPT_JP }, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] }
 ];
 // 相同的查询（日本 / 日本动画共用一份日本榜）只发一次
 const REGION_TASKS = [];
@@ -60,6 +72,7 @@ function regionKeep(rg, it) {
   if (rg.skipAnime && it.isAnime) return false;
   if (rg.animeOnly && !it.isAnime) return false;
   if (rg.requireOffer && !it.hasLocalOffer) return false;
+  if (rg.home && !isHomeProduction(it, rg.home.countries, rg.home.script)) return false;
   return true;
 }
 
@@ -184,6 +197,8 @@ query GetPopularBilingual($country: Country!, $first: Int!, $filter: TitleFilter
         }
         contentEn: content(country: $country, language: "en") {
           title
+          originalTitle
+          productionCountries
           originalReleaseYear
           originalReleaseDate
           shortDescription
@@ -373,6 +388,12 @@ async function fetchTitlesWithFilter(filter, count = 10, country = "US", locale 
     const r0 = await queryUpstream(POPULAR_RICH_QUERY, vars);
     const edges0 = r0?.data?.popularTitles?.edges || [];
     if (edges0.length) return edges0;
+    // 万一 JustWatch 不认新加的「原名 / 出品国家」字段：去掉这两个字段再试一次，保留每日榜排名
+    if (r0 && r0.errors) {
+      const r0b = await queryUpstream(POPULAR_RICH_QUERY.replace(/\n\s*originalTitle\b/g, "").replace(/\n\s*productionCountries\b(?!:)/g, ""), vars);
+      const edges0b = r0b?.data?.popularTitles?.edges || [];
+      if (edges0b.length) return edges0b;
+    }
   } catch (e) {}
   try {
     const r1 = await queryUpstream(POPULAR_BILINGUAL_QUERY, vars);
@@ -467,6 +488,8 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     // 纪录片和视频播客（Podcast）都不进榜单
     isDoc: rawGenres.some((g) => g.shortName === "doc") || /podcast/i.test(`${en.title || ""} ${zh.title || ""}`),
     isAnime: rawGenres.some((g) => g.shortName === "ani"),
+    originalTitle: en.originalTitle || "",
+    productionCountries: Array.isArray(en.productionCountries) ? en.productionCountries : null,
     // 当地有上架（订阅 / 免费 / 租买都算，影院不算）
     hasLocalOffer: offers.some((o) => o && o.monetizationType !== "CINEMA"),
     hasEpisodes: isShow,
