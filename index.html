@@ -28,8 +28,14 @@
     }
     /* 毛玻璃底板：半透明 + 模糊，透出后面的三色，不再是一块深色卡片 */
     #launchSplash .splash-tile {
-      position: relative;
-      width: 116px; height: 116px; border-radius: 26px;
+      /* 图标位置不跟着视口高度走：iOS 主屏幕模式刚启动时视口高度会变一下（先不含底部 Home 条，再变成全屏），
+         以前按视口居中，图标就会肉眼可见地往下挪一点。现在按“最大视口高度”(lvh) 固定在屏幕正中，从第一帧到退场都不动 */
+      --tile: 116px;
+      position: fixed;
+      left: calc(50vw - var(--tile) / 2);
+      top: calc(50vh - var(--tile) / 2);
+      top: calc(var(--splash-cy, 50lvh) - var(--tile) / 2);
+      width: var(--tile); height: var(--tile); border-radius: 26px;
       background: rgba(255, 255, 255, 0.07);
       -webkit-backdrop-filter: blur(20px);
       backdrop-filter: blur(20px);
@@ -40,7 +46,7 @@
     }
     #launchSplash .splash-tile svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
     @media (min-width: 700px) and (min-height: 700px) {
-      #launchSplash .splash-tile { width: 140px; height: 140px; border-radius: 31px; }
+      #launchSplash .splash-tile { --tile: 140px; border-radius: 31px; }
     }
     @keyframes splashDrift {
       from { transform: translate3d(-2%, -1.5%, 0) rotate(0deg) scale(1); }
@@ -657,6 +663,25 @@
     /* 详情页盖在二级页上时，二级页本身也是底层，需要同时保留它的推入动画 */
     #platformShell.open.page-under-anim {
       transition: transform var(--shell-dur, var(--push-dur)) var(--shell-ease, var(--push-ease)), visibility 0s linear 0s;
+    }
+    /* 页面在滑动 / 返回动画时，页内的毛玻璃按钮先换成实色：手机上边移动边实时模糊很吃力，是返回时掉帧的主要原因 */
+    .gpu-page-shell.page-moving .detail-circle-btn,
+    .gpu-page-shell.swiping .detail-circle-btn {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      background: rgba(44, 50, 66, 0.9) !important;
+    }
+    .gpu-page-shell.page-moving .detail-floating-actions,
+    .gpu-page-shell.swiping .detail-floating-actions {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      background: rgba(32, 38, 54, 0.92) !important;
+    }
+    .gpu-page-shell.page-moving .detail-topbar.scrolled,
+    .gpu-page-shell.swiping .detail-topbar.scrolled {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      background: rgba(5, 7, 13, 0.97) !important;
     }
     .gpu-page-shell::-webkit-scrollbar {
       display: none;
@@ -1923,6 +1948,18 @@
   <div id="launchSplash" aria-hidden="true"><div class="splash-tile"><svg viewBox="0 0 120 120" aria-hidden="true"><path transform="translate(-6 5)" d="M48 36.5c0-4.2 4.6-6.8 8.2-4.6l29.6 18.4c3.4 2.1 3.4 7.1 0 9.2L56.2 77.9c-3.6 2.2-8.2-.4-8.2-4.6z" fill="#f3f4f6"/></svg></div></div>
   <script>
     window.__splashT0 = performance.now(); // 开屏入场动画开始的时间
+    // 第一帧之前就把图标的竖直位置定死在“整块屏幕”的正中：iOS 主屏幕模式刚启动时视口会先少一截再变成全屏，
+    // 按视口算的话图标会往下挪一下。台前调度 / 分屏这种窗口明显比屏幕小的情况，才按窗口算
+    (function () {
+      try {
+        var land = window.innerWidth > window.innerHeight;
+        var sw = screen.width || 0, sh = screen.height || 0;
+        var screenH = land ? Math.min(sw, sh) : Math.max(sw, sh);
+        var h = window.innerHeight;
+        var useH = screenH && h >= screenH * 0.85 && h <= screenH ? screenH : h;
+        document.getElementById("launchSplash").style.setProperty("--splash-cy", useH / 2 + "px");
+      } catch (e) {}
+    })();
     // 保险：不管加载中出了什么问题，3 秒后一定撤掉开屏
     setTimeout(function () { var e = document.getElementById("launchSplash"); if (e) e.remove(); }, 5000);
   </script>
@@ -4753,6 +4790,7 @@
         scrim.style.opacity = "";
         // 先在屏幕外把内容画好（visible 但还在右边），下一帧再开始滑入
         shell.classList.add("prep");
+        shell.classList.remove("swiping");
         shell.style.overflowX = "";
         shell.style.transition = "";
         shell.style.transform = "";
@@ -4777,7 +4815,7 @@
         const dur = opts && typeof opts.dur === "number" ? opts.dur : 0.36;
         setShellTiming([shell, scrim, under], dur, opts && opts.ease);
         markPageMoving([shell, under], dur * 1000);
-        shell.classList.remove("prep", "dragging");
+        shell.classList.remove("prep", "dragging", "swiping");
         scrim.classList.remove("dragging");
         if (under) under.classList.remove("page-dragging");
         shell.style.transform = "";
@@ -6254,6 +6292,7 @@
               return;
             }
             scrimEl.style.opacity = x >= W - 1 ? "" : String(Math.max(0, Math.min(1, x / W)));
+            shellEl.classList.toggle("swiping", x < W - 1);
             // 触控板 / 鼠标横向滚动没有 touchend：停下 120ms 后同样判断一次
             clearTimeout(idleTimer);
             if (!touching) idleTimer = setTimeout(settle, 120);
@@ -6325,6 +6364,7 @@
                 shellEl.style.transition = "";
                 shellEl.style.overflowX = "";
                 scrimEl.style.transition = "";
+                shellEl.classList.remove("swiping");
               }, 340);
             }
             samples = [];
@@ -6647,7 +6687,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v37";
+      const APP_BUILD = "dramov-pwa-v38";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
