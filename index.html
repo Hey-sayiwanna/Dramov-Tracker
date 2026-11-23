@@ -4381,11 +4381,7 @@
                   prefetchMapAt = now;
                 }
                 const it = prefetchMapCache.get(ok);
-                if (it) {
-                  const im = new Image();
-                  im.referrerPolicy = "no-referrer";
-                  im.src = heroImageFor(it).src;
-                }
+                if (it) warmHeroFor(it); // 开始下载并解码
               } catch (err) {}
             }, 20);
           }
@@ -4443,6 +4439,7 @@
         if (activeNav === "home") {
           renderHeroCarousel();
           renderStreamingCharts();
+          scheduleHeroPrefetch();
         } else if (activeNav === "search") {
           renderSearchView();
         } else if (activeNav === "watchlist") {
@@ -5098,48 +5095,158 @@
         });
       }
 
-      // 详情页大图：先用卡片小图垫底（已在手机里，瞬间出现），高清图解码好后淡入盖上；
-      // 第一次打开时设置；补完资料后只在“还没有成功显示高清图”时才换，避免图片来回跳
+      // 详情页大图：每次打开都换一张全新的 <img>（iOS 上复用同一张时，新图没到之前会继续显示上一部的图）。
+      // 预热过、已解码的图直接放进去，没有任何过渡；还没好时先用卡片小图垫底，好了再轻轻淡入，只换这一次。
+      const heroReady = new Map(); // 地址 -> 已开始加载 / 已解码的 <img>，只留最近 8 张，省内存
+      function warmHeroImage(url) {
+        if (!url || url.startsWith("data:")) return null;
+        let im = heroReady.get(url);
+        if (im) {
+          heroReady.delete(url);
+          heroReady.set(url, im);
+          return im;
+        }
+        im = new Image();
+        im.referrerPolicy = "no-referrer";
+        im.decoding = "async";
+        im.alt = "Poster";
+        im._ready = new Promise((res) => {
+          im.onload = () => res(true);
+          im.onerror = () => res(false);
+        }).then((ok) => {
+          if (!ok) return false;
+          return im.decode ? im.decode().then(() => true, () => true) : true;
+        }).then((ok) => {
+          im.onload = im.onerror = null;
+          im._ok = ok;
+          if (!ok && heroReady.get(url) === im) heroReady.delete(url);
+          return ok;
+        });
+        im.src = url;
+        heroReady.set(url, im);
+        while (heroReady.size > 8) heroReady.delete(heroReady.keys().next().value);
+        return im;
+      }
+      function warmHeroFor(item) {
+        try {
+          return warmHeroImage(heroImageFor(item).src);
+        } catch (e) {
+          return null;
+        }
+      }
+
       function setDetailHeroImage(item, isOpen) {
-        const heroImg = document.getElementById("detailHeroImg");
-        const box = heroImg.parentElement;
+        const old = document.getElementById("detailHeroImg");
+        const box = old.parentElement;
         const pick = heroImageFor(item);
         if (!isOpen) {
-          if (heroImg.dataset.ok === "1" || heroImg.getAttribute("src") === pick.src) return;
+          if (old.dataset.ok === "1" || old.getAttribute("src") === pick.src) return;
         }
         const thumb = getPosterUrl(item, false, false);
         const thumbOk = thumb && !thumb.startsWith("data:") && !pick.wide;
         box.style.backgroundImage = thumbOk ? `url("${thumb.replace(/"/g, "%22")}")` : "none";
         box.classList.toggle("is-wide-bg", pick.wide);
-        const fallbackTall = makeEditorialPosterSvg(item, true, false);
-        heroImg.dataset.ok = "";
-        heroImg.classList.add("hd-pending");
-        heroImg.classList.toggle("is-wide", pick.wide);
-        const reveal = () => {
-          heroImg.dataset.ok = heroImg.getAttribute("src") === pick.src ? "1" : "";
-          // 下一帧再去掉隐藏，让 0.22 秒的淡入生效；已在缓存里的图几乎看不出淡入
-          requestAnimationFrame(() => heroImg.classList.remove("hd-pending"));
-        };
-        heroImg.onload = () => {
-          const p = heroImg.decode ? heroImg.decode().catch(() => {}) : Promise.resolve();
-          p.then(reveal);
-        };
-        heroImg.onerror = function () {
-          this.onerror = null;
-          if (thumbOk) {
-            // 高清图拿不到：就用已经垫着的小图，不再换成占位图
-            this.onload = reveal;
-            this.src = thumb;
-          } else {
-            this.onload = reveal;
-            this.src = fallbackTall;
-          }
-        };
-        heroImg.src = pick.src;
-        if (heroImg.complete && heroImg.naturalWidth > 0) {
-          heroImg.dataset.ok = "1";
-          heroImg.classList.remove("hd-pending");
+
+        let im = warmHeroImage(pick.src);
+        if (!im) {
+          im = new Image();
+          im.alt = "Poster";
+          im._ready = Promise.resolve(false);
         }
+        if (im !== old) {
+          old.removeAttribute("id");
+          old.onload = old.onerror = null;
+          im.id = "detailHeroImg";
+          old.replaceWith(im);
+        }
+        im.classList.toggle("is-wide", pick.wide);
+        if (im._ok) {
+          // 已经解码好：直接就是最终图片
+          im.dataset.ok = "1";
+          im.classList.remove("hd-pending");
+          return;
+        }
+        im.dataset.ok = "";
+        im.classList.add("hd-pending");
+        const reveal = () => {
+          if (document.getElementById("detailHeroImg") !== im) return;
+          requestAnimationFrame(() => im.classList.remove("hd-pending"));
+        };
+        im._ready.then((ok) => {
+          if (document.getElementById("detailHeroImg") !== im) return;
+          if (ok) {
+            im.dataset.ok = "1";
+            reveal();
+            return;
+          }
+          // 高清图拿不到：有小图就一直用垫着的小图，没有才用占位图
+          if (thumbOk) return;
+          heroReady.delete(pick.src);
+          im.onload = reveal;
+          im.src = makeEditorialPosterSvg(item, true, false);
+        });
+      }
+
+      // 点卡片：高清图如果已在手机里，最多等 0.1 秒让它解码完再打开，页面滑出来时就是最终图片
+      let pendingOpenToken = 0;
+      function openDetailWhenReady(it) {
+        const token = ++pendingOpenToken; // 连点两张卡片时只打开最后一张
+        const im = warmHeroFor(it);
+        if (!im || im._ok) {
+          openDetail(it);
+          return;
+        }
+        let done = false;
+        const go = () => {
+          if (done || token !== pendingOpenToken) return;
+          done = true;
+          openDetail(it);
+        };
+        im._ready.then(go);
+        setTimeout(go, 100);
+      }
+
+      // 首页上出现的条目：空闲时把详情高清图提前下载进本地缓存（只下载不解码，几乎不占内存）
+      const heroPrefetched = new Set();
+      let heroPrefetchTimer = null;
+      function scheduleHeroPrefetch() {
+        clearTimeout(heroPrefetchTimer);
+        heroPrefetchTimer = setTimeout(() => {
+          if (document.documentElement.classList.contains("splash-on")) return scheduleHeroPrefetch();
+          let map;
+          try {
+            map = getAllKnownItemsMap();
+          } catch (e) {
+            return;
+          }
+          const urls = [];
+          const cap = isWideHeroScreen() ? 30 : 60; // iPad 的横版大图更大，少预取一些
+          document.querySelectorAll("[data-openkey]").forEach((el) => {
+            if (urls.length >= cap) return;
+            const it = map.get(el.getAttribute("data-openkey"));
+            if (!it) return;
+            let u;
+            try {
+              u = heroImageFor(it).src;
+            } catch (e) {
+              return;
+            }
+            if (u && !u.startsWith("data:") && !heroPrefetched.has(u) && !urls.includes(u)) urls.push(u);
+          });
+          let i = 0;
+          const next = () => {
+            if (i >= urls.length) return;
+            if (touchActive || document.hidden) return setTimeout(next, 600);
+            const u = urls[i++];
+            heroPrefetched.add(u);
+            const im = new Image();
+            im.referrerPolicy = "no-referrer";
+            im.onload = im.onerror = () => setTimeout(next, 30);
+            im.src = u;
+          };
+          next();
+          next(); // 两路并行，不抢首页图片的带宽太多
+        }, 2500);
       }
 
       // 详情页：剧集的副标题（共几季 · 年份跨度 · 新一季）
@@ -6319,7 +6426,7 @@
           if (openEl) {
             const k = openEl.getAttribute("data-openkey");
             const it = getAllKnownItemsMap().get(k);
-            if (it) openDetail(it);
+            if (it) openDetailWhenReady(it);
           }
         });
 
@@ -6786,7 +6893,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v42";
+      const APP_BUILD = "dramov-pwa-v43";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
