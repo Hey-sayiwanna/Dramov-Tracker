@@ -22,31 +22,79 @@ const CHART_REGIONS = ["US", "SG", "TW", "HK", "GB", "JP", "KR"];
 
 // 地区专区：看“当地人在看什么”，用当地的每日流媒体榜（JustWatch 按该国用户的实际点击/观看意向统计，
 // 覆盖当地所有平台：韩国 TVING / Wavve / Coupang Play / Netflix…，日本 U-NEXT / ABEMA / TVer / Netflix…，
-// 台湾 friDay / myVideo / KKTV / CATCHPLAY+ / Netflix…，香港 myTV SUPER / Viu / Netflix…），只收当地出品的剧和电影。
-// 港澳台：台湾榜 + 香港榜合并计分（两边都热的排更前；JustWatch 没有澳门站）
+// 台湾 friDay / myVideo / KKTV / CATCHPLAY+ / Netflix…，香港 myTV SUPER / Viu / Netflix…）。
+// 港澳台：台湾为主（权重 1）、香港为辅（权重 0.5）；台港澳出品 + 内地出品都算，但必须在当地真的能看（有上架），
+//         内地剧还必须在台湾有引进（只在香港能看的不算）。前十完全按热度，谁热谁上
+// 日本：剧和动画分开，「日本」只收真人剧和电影，「日本动画」只收动画番剧和动画电影
+const LOCALE_ZH_TW = { zhCountry: "TW", enCountry: "US" };
 const REGION_DEFS = [
-  { id: "gat", countries: ["TW", "HK"], productionCountries: ["TW", "HK", "MO"] },
-  { id: "kr", countries: ["KR"], productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" } },
-  // 日本榜只收日剧和电影：动画番剧另算，不然会被动画占满
-  { id: "jp", countries: ["JP"], productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, skipAnimeShows: true }
+  {
+    id: "gat",
+    requireOffer: true,
+    mix: [7, 3],
+    sources: [
+      { country: "TW", productionCountries: ["TW", "HK", "MO"], weight: 1 },
+      { country: "TW", productionCountries: ["CN"], weight: 1 },
+      { country: "HK", productionCountries: ["TW", "HK", "MO"], weight: 0.5 },
+      { country: "HK", productionCountries: ["CN"], weight: 0.5, mustBeInTW: true }
+    ]
+  },
+  { id: "kr", mix: [7, 3], sources: [{ country: "KR", productionCountries: ["KR"], weight: 1, locale: LOCALE_ZH_TW }] },
+  { id: "jp", mix: [7, 3], skipAnime: true, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] },
+  { id: "jpani", mix: null, animeOnly: true, sources: [{ country: "JP", productionCountries: ["JP"], weight: 1, locale: LOCALE_ZH_TW, count: 60 }] }
 ];
-const REGION_TASKS = REGION_DEFS.flatMap((rg) => rg.countries.map((c) => ({ rg, country: c })));
+// 相同的查询（日本 / 日本动画共用一份日本榜）只发一次
+const REGION_TASKS = [];
+const regionTaskKey = (src) => `${src.country}|${src.productionCountries.join(",")}|${src.locale ? "L" : ""}`;
+REGION_DEFS.forEach((rg) =>
+  rg.sources.forEach((src) => {
+    const key = regionTaskKey(src);
+    const found = REGION_TASKS.find((t) => t.key === key);
+    if (found) found.count = Math.max(found.count, src.count || 40);
+    else REGION_TASKS.push({ key, src, count: src.count || 40 });
+  })
+);
 
-// 一个地区一份榜：各国榜按名次给分（第 1 名 1/2、第 2 名 1/3…，剧和电影各自排名），多国合并相加；
-// 最后取 7 部剧 + 3 部电影（不够时互相补齐），按分数排
-function buildRegionChart(rg, edgeLists) {
+function regionKeep(rg, it) {
+  if (!it.title || it.isDoc) return false;
+  if (rg.skipAnime && it.isAnime) return false;
+  if (rg.animeOnly && !it.isAnime) return false;
+  if (rg.requireOffer && !it.hasLocalOffer) return false;
+  return true;
+}
+
+// 一个地区一份榜：每个国家把该国的几份榜合起来按当地每日榜名次排（剧和电影各自排名），按名次给分
+// （第 1 名 1/2、第 2 名 1/3…）再乘该国权重，多国相加；mix=[7,3] 时取 7 部剧 + 3 部电影（不够互相补齐）
+function buildRegionChart(rg, resultsByKey) {
+  const perCountry = new Map();
+  rg.sources.forEach((src) => {
+    const edges = resultsByKey.get(regionTaskKey(src)) || [];
+    const arr = perCountry.get(src.country) || [];
+    edges.forEach((e, i) => {
+      const it = normalizeNode(e.node, rg.id, i);
+      if (regionKeep(rg, it)) arr.push({ it, src });
+    });
+    perCountry.set(src.country, arr);
+  });
+  // 在台湾真的能看的片（内地剧只在香港能看的不算）
+  const inTW = new Set((perCountry.get("TW") || []).map((x) => x.it.jwId || x.it.enTitle));
   const scored = new Map();
-  edgeLists.forEach((edges) => {
-    const items = sortByChartRank(
-      (edges || [])
-        .map((e, i) => normalizeNode(e.node, rg.id, i))
-        .filter((x) => x.title && !x.isDoc && !(rg.skipAnimeShows && x.mediaType === "show" && x.isAnime))
-    );
+  perCountry.forEach((arr) => {
+    const seen = new Set();
+    const uniq = arr.filter((x) => {
+      const key = x.it.jwId || x.it.enTitle;
+      if (seen.has(key)) return false;
+      if (x.src.mustBeInTW && !inTW.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const weightOf = new Map(uniq.map((x) => [x.it, x.src.weight || 1]));
+    const ranked = sortByChartRank(uniq.map((x) => x.it));
     const pos = { show: 0, movie: 0 };
-    items.forEach((it) => {
+    ranked.forEach((it) => {
       const p = pos[it.mediaType]++;
       const key = it.jwId || it.enTitle;
-      const pts = 1 / (p + 2);
+      const pts = (weightOf.get(it) || 1) / (p + 2);
       const cur = scored.get(key);
       if (cur) {
         cur.s += pts;
@@ -58,9 +106,10 @@ function buildRegionChart(rg, edgeLists) {
   });
   const byScore = (a, b) => b.s - a.s || a.best - b.best;
   const all = Array.from(scored.values()).sort(byScore);
+  if (!rg.mix) return all.slice(0, 10).map((x) => x.it);
   const shows = all.filter((x) => x.it.mediaType === "show");
   const movies = all.filter((x) => x.it.mediaType === "movie");
-  const nMovies = Math.min(movies.length, Math.max(3, 10 - shows.length));
+  const nMovies = Math.min(movies.length, Math.max(rg.mix[1], 10 - shows.length));
   const nShows = Math.min(shows.length, 10 - nMovies);
   return shows.slice(0, nShows).concat(movies.slice(0, nMovies)).sort(byScore).map((x) => x.it);
 }
@@ -418,6 +467,8 @@ function normalizeNode(node, defaultPlatformId, rankIdx = 0) {
     // 纪录片和视频播客（Podcast）都不进榜单
     isDoc: rawGenres.some((g) => g.shortName === "doc") || /podcast/i.test(`${en.title || ""} ${zh.title || ""}`),
     isAnime: rawGenres.some((g) => g.shortName === "ani"),
+    // 当地有上架（订阅 / 免费 / 租买都算，影院不算）
+    hasLocalOffer: offers.some((o) => o && o.monetizationType !== "CINEMA"),
     hasEpisodes: isShow,
     platformId: defaultPlatformId || Array.from(providersSet)[0] || "netflix",
     providers: Array.from(providersSet),
@@ -591,16 +642,16 @@ module.exports = async (req, res) => {
         regionOf[def.id] = "US";
         return fetchTitlesWithFilter({ packages: usMeta.codeMap[def.id], objectTypes: ["MOVIE", "SHOW"] }, 24, "US");
       }),
-      // 地区专区：每个地区的每个国家各拉一份当地榜（当地出品，剧 + 电影）
-      ...REGION_TASKS.map(({ rg, country: c }) =>
+      // 地区专区：每份当地榜拉一次（当地出品，剧 + 电影）
+      ...REGION_TASKS.map((t) =>
         fetchTitlesWithFilter(
           {
-            productionCountries: rg.productionCountries,
+            productionCountries: t.src.productionCountries,
             objectTypes: ["MOVIE", "SHOW"]
           },
-          40,
-          c,
-          rg.locale || null
+          t.count,
+          t.src.country,
+          t.src.locale || null
         )
       )
     ];
@@ -654,14 +705,13 @@ module.exports = async (req, res) => {
             ).slice(0, 10)
           : [];
     });
+    const regionResults = new Map();
+    REGION_TASKS.forEach((t, ti) => {
+      const s = settled[PLATFORM_DEFS.length + 3 + ti];
+      regionResults.set(t.key, s && s.status === "fulfilled" ? s.value : []);
+    });
     REGION_DEFS.forEach((rg) => {
-      const lists = [];
-      REGION_TASKS.forEach((t, ti) => {
-        if (t.rg !== rg) return;
-        const s = settled[PLATFORM_DEFS.length + 3 + ti];
-        if (s && s.status === "fulfilled" && s.value.length) lists.push(s.value);
-      });
-      chartsByPlatform[rg.id] = lists.length ? buildRegionChart(rg, lists) : [];
+      chartsByPlatform[rg.id] = buildRegionChart(rg, regionResults);
     });
 
     const totalFetched = Object.values(chartsByPlatform).reduce((acc, arr) => acc + arr.length, 0);

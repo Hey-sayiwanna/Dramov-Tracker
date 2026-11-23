@@ -22,7 +22,10 @@ const PLATFORM_DEFS = {
 const REGION_DEFS = {
   gat: { id: "gat", country: "TW", productionCountries: ["TW", "HK", "MO"] },
   kr: { id: "kr", country: "KR", productionCountries: ["KR"], locale: { zhCountry: "TW", enCountry: "US" } },
-  jp: { id: "jp", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" } },
+  jp: { id: "jp", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, skipAnime: true },
+  jpani: { id: "jpani", country: "JP", productionCountries: ["JP"], locale: { zhCountry: "TW", enCountry: "US" }, animeOnly: true },
+  // 港澳台 ›「内地」：在台湾有上架的内地剧和电影
+  gatcn: { id: "gat", country: "TW", productionCountries: ["CN"], requireOffer: true },
   // 旧版「日韩」频道（已拆成韩国 / 日本），保留兼容旧链接
   jk: { id: "jk", country: "US", productionCountries: ["JP", "KR"] }
 };
@@ -301,6 +304,8 @@ function normalizeCatalogNode(node, forcedPlatformId = null, rankOrder = 0) {
     otherOffers,
     heat: Math.round((Number(sc.tmdbPopularity) || Math.max(50, 1000 - rankOrder * 8)) * 10) / 10,
     _pop: Number(sc.tmdbPopularity) || 0,
+    _isAnime: rawGenres.some((g) => g.shortName === "ani"),
+    _hasOffer: offers.some((o) => o && o.monetizationType !== "CINEMA"),
     _imdbRaw: imdb || 0,
     imdb: finalScore,
     imdbVotes: sc.imdbVotes ? Number(sc.imdbVotes) : 0,
@@ -360,6 +365,8 @@ function stripPrivate(items) {
   return items.map((it) => {
     const o = Object.assign({}, it);
     delete o._pop;
+    delete o._isAnime;
+    delete o._hasOffer;
     delete o._imdbRaw;
     delete o._streamIdx;
     delete o._rank;
@@ -479,7 +486,12 @@ module.exports = async (req, res) => {
     // =========================================================================
     // MODE B: Single-Platform '热播库' (Sorted by Score Desc -> Year Desc!)
     // =========================================================================
-    const region = REGION_DEFS[q.platform] || null;
+    const sortParam = String(q.sort || "");
+    const region = (q.platform === "gat" && sortParam === "mainland" ? REGION_DEFS.gatcn : REGION_DEFS[q.platform]) || null;
+    // 地区片库的额外规则：日本剧和动画分开；港澳台的内地片必须在台湾有上架
+    const keepForRegion = (it) =>
+      !region ||
+      ((!region.skipAnime || !it._isAnime) && (!region.animeOnly || it._isAnime) && (!region.requireOffer || it._hasOffer));
     const platformId = region ? region.id : PLATFORM_DEFS[q.platform] ? q.platform : "netflix";
     const scopeCountry = region ? region.country : country;
     const regionLocale = (region && region.locale) || {};
@@ -489,15 +501,17 @@ module.exports = async (req, res) => {
     const mode = q.mode ? String(q.mode) : "auto";
     const packages = codeMap[platformId] || PLATFORM_DEFS.netflix.fallbackCodes;
     const scope = (extra) => Object.assign(scopeFilter || { packages }, { objectTypes: ["SHOW", "MOVIE"] }, extra || {});
-    const sort = ["curated", "new", "score"].includes(String(q.sort)) ? String(q.sort) : "score";
+    const sort = ["curated", "new", "score"].includes(sortParam) || (sortParam === "mainland" && region === REGION_DEFS.gatcn) ? sortParam : "score";
 
     // 精选：人气 + 口碑。三路并行（高分 / 中高分 / 合格分各取平台内最热门的一批），合在一起按口碑 + 人气打分
     //       ——《纸牌屋》《浴血黑帮》《鱿鱼游戏》这种公认的大剧会排在最前面
     // 最新：今年 + 去年上线的新片新剧两路并行，按“口碑 + 人气 + 越新越加分”排，而不是单纯按日期
-    if (sort === "curated" || sort === "new") {
+    if (sort === "curated" || sort === "new" || sort === "mainland") {
       const curYear = new Date().getUTCFullYear();
       const streams =
-        sort === "curated"
+        sort === "mainland"
+          ? [{}, { imdbScore: { min: 7.3 } }] // 热度一路 + 口碑一路；很多内地剧没有 IMDb 分，所以热度那路不卡分数
+          : sort === "curated"
           ? [
               { imdbScore: { min: 8.3 } },
               { imdbScore: { min: 7.6, max: 8.29 } },
@@ -523,7 +537,7 @@ module.exports = async (req, res) => {
           if (!conn) return null;
           (conn.edges || []).forEach((e, idx) => {
             const it = normalizeCatalogNode(e.node, platformId, idx);
-            if (!it || !it.title) return;
+            if (!it || !it.title || !keepForRegion(it)) return;
             const key = it.jwId || it.enTitle;
             if (seen.has(key)) return;
             seen.add(key);
@@ -532,7 +546,7 @@ module.exports = async (req, res) => {
           });
           return conn.pageInfo && conn.pageInfo.hasNextPage && conn.pageInfo.endCursor ? conn.pageInfo.endCursor : null;
         });
-        rankItems(items, sort);
+        rankItems(items, sort === "mainland" ? "curated" : sort);
         const more = nextCursors.some((c) => c !== null);
         return res.status(200).json({
           ok: true,
@@ -563,7 +577,7 @@ module.exports = async (req, res) => {
       if (conn && Array.isArray(conn.edges)) {
         // 高分：同一分数段里按“投票数修正后的分数”排，几千票的冷门高分片不再压在口碑大剧前面
         const items = stripPrivate(rankItems(
-          conn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title),
+          conn.edges.map((e, i) => normalizeCatalogNode(e.node, platformId, i)).filter((x) => x && x.title && keepForRegion(x)),
           "score"
         ));
         const hasMoreInBand = Boolean(conn.pageInfo?.hasNextPage && conn.pageInfo?.endCursor);
@@ -603,7 +617,7 @@ module.exports = async (req, res) => {
       }
       dConn.edges.forEach((e, idx) => {
         const norm = normalizeCatalogNode(e.node, platformId, idx);
-        if (norm && norm.title) collected.push(norm);
+        if (norm && norm.title && keepForRegion(norm)) collected.push(norm);
       });
       hasNext = Boolean(dConn.pageInfo?.hasNextPage && dConn.pageInfo?.endCursor);
       curAfter = hasNext ? dConn.pageInfo.endCursor : "";
