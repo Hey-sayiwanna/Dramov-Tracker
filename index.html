@@ -838,14 +838,22 @@
       min-height: 510px;
       max-height: 670px;
       overflow: hidden;
+      /* 打开详情时先铺上卡片那张小图（手机里已经有），高清图到了再盖上去：不会再闪出上一部片的图 */
+      background-color: #0b0f1a;
+      background-size: cover;
+      background-position: center 10%;
+      background-repeat: no-repeat;
     }
+    .detail-hero.is-wide-bg { background-position: center 30%; }
     .detail-hero img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       object-position: center 10%;
       display: block;
+      transition: opacity 0.22s ease;
     }
+    .detail-hero img.hd-pending { opacity: 0; transition: none; }
     .detail-hero-fade {
       position: absolute;
       inset: 0;
@@ -2920,10 +2928,8 @@
       let isPlatformOpen = false;
       let activePlatformPageId = null;
       let platformCatalogPools = {};
-      let catalogObserver = null;
       let isNavMinimized = false;
       let lastWindowScrollY = 0;
-      let savedScrollBeforeDetail = 0;
       let toastTimer = null;
 
       function loadLocalState() {
@@ -3664,8 +3670,6 @@
 
       let heroLoopCount = 0;
       let heroTopList = [];
-      let heroLoopResetTimer = null;
-      let isHeroTeleporting = false;
 
       function buildSingleHeroSlideHtml(cur, realIdx, isClone) {
         const k = itemKey(cur);
@@ -4353,6 +4357,8 @@
       (function bindFastTap() {
         let start = null;
         let lastScrollAt = 0;
+        let prefetchMapCache = null;
+        let prefetchMapAt = 0;
         document.addEventListener("scroll", () => {
           lastScrollAt = performance.now();
         }, { passive: true, capture: true });
@@ -4364,6 +4370,25 @@
           const t = e.touches[0];
           const now = performance.now();
           start = { x: t.clientX, y: t.clientY, t: now, el, scrolling: now - lastScrollAt < 120 };
+          // 手指一按下就先开始下载详情页的高清大图，等真正打开时大多已经到了
+          const ok = el.getAttribute("data-openkey");
+          if (ok && !start.scrolling) {
+            setTimeout(() => {
+              try {
+                // 条目表 5 秒内复用，不在每次按下时都重算
+                if (!prefetchMapCache || now - prefetchMapAt > 5000) {
+                  prefetchMapCache = getAllKnownItemsMap();
+                  prefetchMapAt = now;
+                }
+                const it = prefetchMapCache.get(ok);
+                if (it) {
+                  const im = new Image();
+                  im.referrerPolicy = "no-referrer";
+                  im.src = heroImageFor(it).src;
+                }
+              } catch (err) {}
+            }, 20);
+          }
         }, { passive: true });
         document.addEventListener("touchmove", (e) => {
           if (!start || !e.touches || !e.touches[0]) return;
@@ -4523,9 +4548,9 @@
       }
 
       // ---------- 片库首屏缓存：点进去先显示上次的第一页，后台再更新 ----------
-      // 只存每个片库（平台 + 排序）前 24 部、最多 10 个片库、6 小时内有效，占用很小
+      // 只存每个片库（平台 + 排序）前 24 部、最多 20 个片库、12 小时内有效，占用很小
       const FEED_CACHE_KEY = "dramov_feed_cache_v1";
-      const FEED_CACHE_TTL = 6 * 3600 * 1000;
+      const FEED_CACHE_TTL = 12 * 3600 * 1000;
       function readFeedCache() {
         try {
           return JSON.parse(localStorage.getItem(FEED_CACHE_KEY) || "{}") || {};
@@ -4553,7 +4578,7 @@
           const all = readFeedCache();
           all[pk] = Object.assign({ t: Date.now(), region: getChartRegion(), items: items.slice(0, 24).map(slimFeedItem) }, state);
           const keys = Object.keys(all).sort((a, b) => (all[b].t || 0) - (all[a].t || 0));
-          keys.slice(10).forEach((k) => delete all[k]);
+          keys.slice(20).forEach((k) => delete all[k]);
           localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(all));
         } catch (e) {}
       }
@@ -4788,7 +4813,6 @@
       }
 
       // ---------- 页面推入 / 返回（二级页、详情页共用） ----------
-      const PAGE_UNDER_SHIFT = 24; // 底层页面视差左移的百分比，和 CSS --under-shift 一致
       function underLayerFor(shell) {
         return null; // 不再移动底层页面：整页跟着动太耗帧，只保留压暗
       }
@@ -4979,15 +5003,7 @@
         const showEn = item.enTitle && normalizeSimple(item.enTitle) !== normalizeSimple(item.title);
         document.getElementById("detailEnTitle").textContent = showEn ? item.enTitle : "";
 
-        const heroImg = document.getElementById("detailHeroImg");
-        const fallbackTall = makeEditorialPosterSvg(item, true, false);
-        heroImg.onerror = function () {
-          this.onerror = null;
-          this.src = fallbackTall;
-        };
-        const detailPick = heroImageFor(item);
-        heroImg.classList.toggle("is-wide", detailPick.wide);
-        heroImg.src = detailPick.src;
+        setDetailHeroImage(item, true);
 
         const genres = zhGenres(item.genres).slice(0, 2).join(" · ") || (item.mediaType === "movie" ? "电影" : "剧集");
         if (item.mediaType === "movie") {
@@ -5074,18 +5090,56 @@
           if (updated && currentDetailItem && itemKey(currentDetailItem) === k) {
             const fresh = getEnrichedItem(item);
             currentDetailItem = fresh;
-            {
-              const pick = heroImageFor(fresh);
-              const hImg = document.getElementById("detailHeroImg");
-              if (pick.wide || fresh.posterHd) {
-                hImg.classList.toggle("is-wide", pick.wide);
-                if (hImg.getAttribute("src") !== pick.src) hImg.src = pick.src;
-              }
-            }
+            // 高清图已经好好显示着就不再换图（以前补完资料会再换一次，看着像图片在跳）
+            setDetailHeroImage(fresh, false);
             renderDetailCastAndStills(fresh);
           }
           return updated;
         });
+      }
+
+      // 详情页大图：先用卡片小图垫底（已在手机里，瞬间出现），高清图解码好后淡入盖上；
+      // 第一次打开时设置；补完资料后只在“还没有成功显示高清图”时才换，避免图片来回跳
+      function setDetailHeroImage(item, isOpen) {
+        const heroImg = document.getElementById("detailHeroImg");
+        const box = heroImg.parentElement;
+        const pick = heroImageFor(item);
+        if (!isOpen) {
+          if (heroImg.dataset.ok === "1" || heroImg.getAttribute("src") === pick.src) return;
+        }
+        const thumb = getPosterUrl(item, false, false);
+        const thumbOk = thumb && !thumb.startsWith("data:") && !pick.wide;
+        box.style.backgroundImage = thumbOk ? `url("${thumb.replace(/"/g, "%22")}")` : "none";
+        box.classList.toggle("is-wide-bg", pick.wide);
+        const fallbackTall = makeEditorialPosterSvg(item, true, false);
+        heroImg.dataset.ok = "";
+        heroImg.classList.add("hd-pending");
+        heroImg.classList.toggle("is-wide", pick.wide);
+        const reveal = () => {
+          heroImg.dataset.ok = heroImg.getAttribute("src") === pick.src ? "1" : "";
+          // 下一帧再去掉隐藏，让 0.22 秒的淡入生效；已在缓存里的图几乎看不出淡入
+          requestAnimationFrame(() => heroImg.classList.remove("hd-pending"));
+        };
+        heroImg.onload = () => {
+          const p = heroImg.decode ? heroImg.decode().catch(() => {}) : Promise.resolve();
+          p.then(reveal);
+        };
+        heroImg.onerror = function () {
+          this.onerror = null;
+          if (thumbOk) {
+            // 高清图拿不到：就用已经垫着的小图，不再换成占位图
+            this.onload = reveal;
+            this.src = thumb;
+          } else {
+            this.onload = reveal;
+            this.src = fallbackTall;
+          }
+        };
+        heroImg.src = pick.src;
+        if (heroImg.complete && heroImg.naturalWidth > 0) {
+          heroImg.dataset.ok = "1";
+          heroImg.classList.remove("hd-pending");
+        }
       }
 
       // 详情页：剧集的副标题（共几季 · 年份跨度 · 新一季）
@@ -6276,7 +6330,6 @@
         const platShellEl = document.getElementById("platformShell");
         const platScrollerEl = document.getElementById("platformScroller");
         const platScrimEl = document.getElementById("platformScrim");
-        const mainWrapEl = document.getElementById("mainViewsWrap");
 
         detOverlayEl.addEventListener("scroll", () => {
           if (isDetailOpen) {
@@ -6733,7 +6786,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v41";
+      const APP_BUILD = "dramov-pwa-v42";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;
