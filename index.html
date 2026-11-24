@@ -3711,6 +3711,42 @@
       }
 
       // 8-Slide Infinite Seamless Loop Carousel: [Clone(N-1), 0, 1, ..., N-1, Clone(0)]
+      // 首页刷新用：内容没变就什么都不动；变了也把已经显示出来的同一张图原样搬过去，
+      // 不重新建 <img>（重新建的话 iOS 会空一帧再画，iPad 大图尤其明显，看起来就是“闪一下”）
+      function setHtmlSmooth(el, html) {
+        if (!el) return false;
+        if (el._smoothHtml === html) return false;
+        el._smoothHtml = html;
+        const pool = new Map();
+        el.querySelectorAll("img").forEach((im) => {
+          if (!im.complete || !im.naturalWidth) return;
+          const keys = [im.getAttribute("src"), im.dataset.orig].filter(Boolean);
+          keys.forEach((k) => {
+            if (!pool.has(k)) pool.set(k, []);
+            pool.get(k).push(im);
+          });
+        });
+        const tpl = document.createElement("template");
+        tpl.innerHTML = html;
+        if (pool.size) {
+          const used = new Set();
+          tpl.content.querySelectorAll("img").forEach((nim) => {
+            const list = pool.get(nim.getAttribute("src"));
+            if (!list) return;
+            const old = list.find((o) => !used.has(o));
+            if (!old) return;
+            used.add(old);
+            for (const a of Array.from(nim.attributes)) {
+              if (a.name === "src") continue; // 地址不动，动了就会重新加载
+              if (old.getAttribute(a.name) !== a.value) old.setAttribute(a.name, a.value);
+            }
+            nim.replaceWith(old);
+          });
+        }
+        el.replaceChildren(tpl.content);
+        return true;
+      }
+
       function renderHeroCarousel() {
         const topList = getGlobalTop5();
         heroTopList = topList; // 滑动时直接用，不在滚动里重新计算
@@ -3721,14 +3757,22 @@
         if (!n) return;
         if (heroIdx >= n || heroIdx < 0) heroIdx = 0;
 
-        track.innerHTML = topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join("");
+        const slidesChanged = setHtmlSmooth(track, topList.map((cur, idx) => buildSingleHeroSlideHtml(cur, idx, false)).join(""));
 
-        dots.innerHTML = topList
-          .map(
-            (_, idx) =>
-              `<button type="button" class="hero-dot ${idx === heroIdx ? "active" : ""}" data-hdot="${idx}" aria-label="第${idx + 1}部"></button>`
-          )
-          .join("");
+        setHtmlSmooth(
+          dots,
+          topList
+            .map(
+              (_, idx) =>
+                `<button type="button" class="hero-dot ${idx === heroIdx ? "active" : ""}" data-hdot="${idx}" aria-label="第${idx + 1}部"></button>`
+            )
+            .join("")
+        );
+        if (!slidesChanged) {
+          // 大海报一张都没变：不重新对齐、不重新解码，原样留着
+          if (!isDetailOpen && activeNav === "home" && topList[heroIdx || 0]) syncAmbientTopBarForItem(topList[heroIdx || 0]);
+          return;
+        }
 
         // 大海报提前在后台解码：滑到下一张时不用临时解码大图（以前偶尔卡一下的原因之一）
         setTimeout(() => {
@@ -3804,7 +3848,7 @@
         const renderShelf = (trackId, items) => {
           const el = document.getElementById(trackId);
           if (!el) return;
-          el.innerHTML = items
+          setHtmlSmooth(el, items
             .slice(0, 10)
             .map((it, idx) => {
               const k = itemKey(it);
@@ -3829,7 +3873,7 @@
                 </div>
               `;
             })
-            .join("");
+            .join(""));
         };
 
         renderShelf("hotShowsShelfTrack", getMixedPopularItems("show"));
@@ -3842,7 +3886,7 @@
         const visibleIds = getVisiblePlatformIds();
         const wrap = document.getElementById("chartsColumnsContainer");
 
-        wrap.innerHTML = visibleIds
+        setHtmlSmooth(wrap, visibleIds
           .map((pid) => {
             const pm = PLATFORM_MAP[pid];
             if (pm.kind === "schedule") {
@@ -3915,7 +3959,7 @@
               </section>
             `;
           })
-          .join("");
+          .join(""));
       }
 
       // =========================================================================
@@ -6893,7 +6937,7 @@
       })();
 
       // 回到前台时看一眼有没有新版本（iPad / 电脑上 App 常驻后台，页面不会自己重新加载）
-      const APP_BUILD = "dramov-pwa-v43";
+      const APP_BUILD = "dramov-pwa-v44";
       let lastUpdateCheck = 0;
       async function checkForNewVersion() {
         if (!(location.protocol === "https:" || location.protocol === "http:")) return;

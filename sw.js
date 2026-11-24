@@ -1,4 +1,4 @@
-const CACHE_NAME = "dramov-pwa-v43";
+const CACHE_NAME = "dramov-pwa-v44";
 // 海报 / 剧照 / 平台图标的本机缓存：跨版本保留；看过的图下次直接从手机里读。
 // 最多 1500 张（海报一张几十 KB，满了大约一两百 MB，远低于 500MB），满了先删最早存的
 const IMG_CACHE = "dramov-img-v2";
